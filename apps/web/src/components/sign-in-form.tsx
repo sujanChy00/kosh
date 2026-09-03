@@ -37,6 +37,9 @@ export default function SignInForm({
           },
           onError: (error) => {
             toast.error(error.error.message || error.error.statusText);
+            if (error.error.code === "EMAIL_NOT_VERIFIED") {
+              console.log("redirect user to verify their email");
+            }
           },
         },
       );
