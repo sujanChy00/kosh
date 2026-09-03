@@ -1,0 +1,64 @@
+# Kosh App — Local Development Services
+# Usage:
+#   docker compose up -d          Start all services in background
+#   docker compose down            Stop all services
+#   docker compose down -v         Stop all services and remove volumes (DELETES DATA)
+#   docker compose logs -f         Follow all logs
+#   docker compose logs -f db      Follow Postgres logs only
+
+services:
+  # ─── PostgreSQL Database ────────────────────────────────────────────
+  db:
+    image: postgres:17-alpine
+    container_name: kosh-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: kosh
+    volumes:
+      - kosh_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── Mailpit — Local Email Testing ─────────────────────────────────
+  # Web UI:  http://localhost:8026 (view all captured emails)
+  # SMTP:    localhost:1026       (send emails here from the app)
+  # Docs:    https://mailpit.axllent.org
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: kosh-mailpit
+    restart: unless-stopped
+    ports:
+      - "1026:1025" # SMTP server
+      - "8026:8025" # Web UI
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+  # ─── Redis — Session Store / Cache / Pub-Sub ───────────────────────
+  # Used for: rate limiting, session caching, future chat pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: kosh-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - kosh_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  kosh_pgdata:
+    driver: local
+  kosh_redis:
+    driver: local

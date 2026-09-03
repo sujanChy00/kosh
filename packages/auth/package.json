@@ -1,0 +1,27 @@
+{
+  "name": "@kosh-app/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@better-auth/expo": "catalog:",
+    "@kosh-app/db": "workspace:*",
+    "@kosh-app/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "nodemailer": "^9.1.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@kosh-app/config": "workspace:*",
+    "@types/nodemailer": "^8.0.1",
+    "typescript": "^6.0.3"
+  }
+}
