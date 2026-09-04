@@ -9,7 +9,7 @@ import { AppThemeProvider, useAppTheme } from "@/contexts/app-theme-context";
 import { authClient } from "@/lib/auth-client";
 import { storage } from "@/utils/storage";
 import { queryClient } from "@/utils/trpc";
-import {} from "@kosh-app/constants";
+import { ONBOARDING_COMPLETED } from "@kosh-app/constants";
 
 export const unstable_settings = {
   initialRouteName: "(main)",
@@ -18,7 +18,9 @@ export const unstable_settings = {
 function StackLayout() {
   const { isDark } = useAppTheme();
   const { data: session } = authClient.useSession();
-  const ONBOARDING_COMPLETED = storage.getBoolean(ONBOARDING_COMPLETED);
+  const isOnboardingCompleted =
+    storage.getBoolean(ONBOARDING_COMPLETED) ?? false;
+  const isAuthenticated = session?.user != null;
   return (
     <>
       <StatusBar
@@ -31,27 +33,32 @@ function StackLayout() {
           headerBackButtonDisplayMode: "minimal",
         }}
       >
-        <Stack.Screen
-          name="onboarding"
-          options={{
-            headerShown: false,
-            headerBackButtonDisplayMode: "minimal",
-          }}
-        />
-        <Stack.Screen
-          name="(auth)"
-          options={{
-            headerShown: false,
-            headerBackButtonDisplayMode: "minimal",
-          }}
-        />
-        <Stack.Screen
-          name="(main)"
-          options={{
-            headerShown: false,
-            headerBackButtonDisplayMode: "minimal",
-          }}
-        />
+        <Stack.Protected guard={!isOnboardingCompleted}>
+          <Stack.Screen
+            name="onboarding"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack.Protected>
+
+        <Stack.Protected guard={isOnboardingCompleted && !isAuthenticated}>
+          <Stack.Screen
+            name="(auth)"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack.Protected>
+
+        <Stack.Protected guard={isOnboardingCompleted && isAuthenticated}>
+          <Stack.Screen
+            name="(main)"
+            options={{
+              headerShown: false,
+            }}
+          />
+        </Stack.Protected>
       </Stack>
     </>
   );
