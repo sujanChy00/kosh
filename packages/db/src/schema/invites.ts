@@ -9,9 +9,11 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { kosh } from "./kosh";
-import { inviteTypeEnum, inviteStatusEnum, joinRequestStatusEnum } from "./enums";
+import { inviteStatusEnum, joinRequestStatusEnum } from "./enums";
 
 // ─── Invites ────────────────────────────────────────────────────────────────
+// One invite type — a code/link/QR are all just different presentations of the
+// same underlying token. No email-targeted invites.
 export const invite = pgTable(
   "invite",
   {
@@ -19,13 +21,11 @@ export const invite = pgTable(
     koshId: uuid("kosh_id")
       .notNull()
       .references(() => kosh.id, { onDelete: "cascade" }),
-    type: inviteTypeEnum("type").notNull(),
     token: text("token").notNull().unique(),
-    invitedEmail: text("invited_email"), // only for targeted invites
     createdBy: text("created_by")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    maxUses: integer("max_uses"), // open_link only
+    maxUses: integer("max_uses"),
     useCount: integer("use_count").notNull().default(0),
     expiresAt: timestamp("expires_at").notNull(),
     status: inviteStatusEnum("status").notNull().default("active"),
@@ -33,11 +33,11 @@ export const invite = pgTable(
   },
   (table) => [
     index("invite_kosh_id_idx").on(table.koshId),
-    index("invite_invited_email_idx").on(table.invitedEmail),
   ],
 );
 
-// ─── Join Requests (open_link invites only) ─────────────────────────────────
+// ─── Join Requests ──────────────────────────────────────────────────────────
+// Every join goes through this table, regardless of invite channel.
 export const joinRequest = pgTable(
   "join_request",
   {
@@ -55,6 +55,7 @@ export const joinRequest = pgTable(
     requestedAt: timestamp("requested_at").defaultNow().notNull(),
     reviewedBy: text("reviewed_by").references(() => user.id),
     reviewedAt: timestamp("reviewed_at"),
+    rejectionReason: text("rejection_reason"),
   },
   (table) => [
     index("join_request_kosh_id_idx").on(table.koshId),

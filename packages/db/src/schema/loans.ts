@@ -11,7 +11,11 @@ import {
 import { user } from "./auth";
 import { kosh } from "./kosh";
 import { paymentMethod } from "./payment-methods";
-import { loanStatusEnum } from "./enums";
+import {
+  loanRequestOriginEnum,
+  loanRequestStatusEnum,
+  loanStatusEnum,
+} from "./enums";
 
 // ─── Non-Member Borrowers ───────────────────────────────────────────────────
 export const nonMemberBorrower = pgTable("non_member_borrower", {
@@ -24,6 +28,50 @@ export const nonMemberBorrower = pgTable("non_member_borrower", {
   notes: text("notes"),
 });
 
+// ─── Loan Requests ──────────────────────────────────────────────────────────
+// Covers both origin paths — member-requested in-app, or Adhyaksha entering
+// a loan requested outside the app; both converge on the same approval flow
+// and broadcast notifications to all kosh members.
+export const loanRequest = pgTable(
+  "loan_request",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    koshId: uuid("kosh_id")
+      .notNull()
+      .references(() => kosh.id, { onDelete: "cascade" }),
+    origin: loanRequestOriginEnum("origin").notNull(),
+    // The borrower — themselves if member_requested, or selected by Adhyaksha
+    // if admin_initiated.
+    requestedBy: text("requested_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    // Who actually submitted the record (equals requestedBy for
+    // member_requested; the Adhyaksha for admin_initiated).
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    amountRequested: decimal("amount_requested", { precision: 12, scale: 2 }).notNull(),
+    note: text("note"),
+    // pending_adhyaksha only applies to member_requested; admin_initiated
+    // skips straight to pending_koshadhyaksha since Adhyaksha creating it
+    // counts as their approval.
+    status: loanRequestStatusEnum("status").notNull().default("pending_adhyaksha"),
+    rejectionReason: text("rejection_reason"),
+    // Set once it clears approval and becomes an actual loan.
+    resultingLoanId: uuid("resulting_loan_id"),
+    // The Koshadhyaksha-approval wrapper transaction.
+    resultingTransactionId: uuid("resulting_transaction_id"),
+    adhyakshaDecidedBy: text("adhyaksha_decided_by").references(() => user.id),
+    adhyakshaDecidedAt: timestamp("adhyaksha_decided_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("loan_request_kosh_id_idx").on(table.koshId),
+    index("loan_request_status_idx").on(table.status),
+    index("loan_request_requested_by_idx").on(table.requestedBy),
+  ],
+);
+
 // ─── Loans ──────────────────────────────────────────────────────────────────
 export const loan = pgTable(
   "loan",
@@ -32,6 +80,10 @@ export const loan = pgTable(
     koshId: uuid("kosh_id")
       .notNull()
       .references(() => kosh.id, { onDelete: "cascade" }),
+    // null if Adhyaksha issued directly without a prior request
+    loanRequestId: uuid("loan_request_id").references(() => loanRequest.id, {
+      onDelete: "set null",
+    }),
     borrowerId: text("borrower_id").references(() => user.id, {
       onDelete: "set null",
     }), // null if non-member borrower
@@ -90,10 +142,40 @@ export const nonMemberBorrowerRelations = relations(
   }),
 );
 
+export const loanRequestRelations = relations(loanRequest, ({ one }) => ({
+  kosh: one(kosh, {
+    fields: [loanRequest.koshId],
+    references: [kosh.id],
+  }),
+  requester: one(user, {
+    fields: [loanRequest.requestedBy],
+    references: [user.id],
+    relationName: "loanRequestRequester",
+  }),
+  creator: one(user, {
+    fields: [loanRequest.createdBy],
+    references: [user.id],
+    relationName: "loanRequestCreator",
+  }),
+  adhyakshaDecider: one(user, {
+    fields: [loanRequest.adhyakshaDecidedBy],
+    references: [user.id],
+    relationName: "loanRequestAdhyakshaDecider",
+  }),
+  resultingLoan: one(loan, {
+    fields: [loanRequest.resultingLoanId],
+    references: [loan.id],
+  }),
+}));
+
 export const loanRelations = relations(loan, ({ one, many }) => ({
   kosh: one(kosh, {
     fields: [loan.koshId],
     references: [kosh.id],
+  }),
+  loanRequest: one(loanRequest, {
+    fields: [loan.loanRequestId],
+    references: [loanRequest.id],
   }),
   borrower: one(user, {
     fields: [loan.borrowerId],

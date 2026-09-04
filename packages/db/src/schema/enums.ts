@@ -22,11 +22,6 @@ export const paymentMethodTypeEnum = pgEnum("payment_method_type", [
 ]);
 
 // ─── Invites ────────────────────────────────────────────────────────────────
-export const inviteTypeEnum = pgEnum("invite_type", [
-  "targeted_email",
-  "open_link",
-]);
-
 export const inviteStatusEnum = pgEnum("invite_status", [
   "active",
   "revoked",
@@ -49,6 +44,18 @@ export const contributionStatusEnum = pgEnum("contribution_status", [
 ]);
 
 // ─── Loans ──────────────────────────────────────────────────────────────────
+export const loanRequestOriginEnum = pgEnum("loan_request_origin", [
+  "member_requested",
+  "admin_initiated",
+]);
+
+export const loanRequestStatusEnum = pgEnum("loan_request_status", [
+  "pending_adhyaksha",
+  "pending_koshadhyaksha",
+  "approved",
+  "rejected",
+]);
+
 export const loanStatusEnum = pgEnum("loan_status", [
   "active",
   "paid_off",
@@ -93,11 +100,24 @@ export const platformEnum = pgEnum("platform", ["ios", "android"]);
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 export const notificationTypeEnum = pgEnum("notification_type", [
-  "invite",
+  "join_request_submitted",
+  "join_request_approved",
+  "join_request_rejected",
+  "role_changed",
   "contribution_due",
-  "loan_due",
-  "approval_needed",
+  "contribution_late",
+  "loan_requested",
+  "loan_request_approved",
+  "loan_request_rejected",
+  "loan_repayment_due",
+  "loan_repayment_overdue",
+  "transaction_pending_approval",
   "transaction_approved",
   "transaction_rejected",
   "chat_message",
+  "kosh_ending_soon",
+  "kosh_end_payout_processed",
+  "member_removed",
+  "security_alert",
 ]);
+

@@ -3,11 +3,13 @@ import {
   pgTable,
   text,
   timestamp,
+  boolean,
   uuid,
   jsonb,
   index,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
+import { kosh } from "./kosh";
 import { platformEnum, notificationTypeEnum } from "./enums";
 
 // ─── Push Tokens ────────────────────────────────────────────────────────────
@@ -35,7 +37,11 @@ export const notification = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    koshId: uuid("kosh_id").references(() => kosh.id, {
+      onDelete: "cascade",
+    }), // null for account-scoped notifications (e.g. security alerts)
     type: notificationTypeEnum("type").notNull(),
+    requiresAction: boolean("requires_action").notNull().default(false),
     title: text("title").notNull(),
     body: text("body").notNull(),
     data: jsonb("data"), // deep-link target, e.g. { koshId, screen }
@@ -44,7 +50,9 @@ export const notification = pgTable(
   },
   (table) => [
     index("notification_user_id_idx").on(table.userId),
+    index("notification_kosh_id_idx").on(table.koshId),
     index("notification_read_at_idx").on(table.userId, table.readAt),
+    index("notification_type_idx").on(table.type),
   ],
 );
 
@@ -61,5 +69,9 @@ export const notificationRelations = relations(notification, ({ one }) => ({
   user: one(user, {
     fields: [notification.userId],
     references: [user.id],
+  }),
+  kosh: one(kosh, {
+    fields: [notification.koshId],
+    references: [kosh.id],
   }),
 }));
