@@ -4,11 +4,13 @@ import {
   text,
   timestamp,
   uuid,
+  jsonb,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { kosh } from "./kosh";
-import { chatThreadTypeEnum } from "./enums";
+import { chatThreadTypeEnum, chatMessageTypeEnum } from "./enums";
 
 // ─── Chat Threads ───────────────────────────────────────────────────────────
 export const chatThread = pgTable(
@@ -55,7 +57,10 @@ export const chatMessage = pgTable(
     senderId: text("sender_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    content: text("content").notNull(),
+    replyToId: uuid("reply_to_id"), // self-reference for message replies
+    type: chatMessageTypeEnum("type").notNull().default("text"),
+    content: text("content"), // optional if message contains media/attachments only
+    attachments: jsonb("attachments"), // array of { url, name, size, mimeType }
     createdAt: timestamp("created_at").defaultNow().notNull(),
     editedAt: timestamp("edited_at"),
     deletedAt: timestamp("deleted_at"),
@@ -63,6 +68,31 @@ export const chatMessage = pgTable(
   (table) => [
     index("chat_message_thread_id_idx").on(table.threadId),
     index("chat_message_created_at_idx").on(table.threadId, table.createdAt),
+    index("chat_message_reply_to_id_idx").on(table.replyToId),
+  ],
+);
+
+// ─── Chat Message Reactions ─────────────────────────────────────────────────
+export const chatMessageReaction = pgTable(
+  "chat_message_reaction",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    messageId: uuid("message_id")
+      .notNull()
+      .references(() => chatMessage.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("chat_reaction_message_id_idx").on(table.messageId),
+    uniqueIndex("chat_reaction_message_user_emoji_uidx").on(
+      table.messageId,
+      table.userId,
+      table.emoji,
+    ),
   ],
 );
 
@@ -91,7 +121,7 @@ export const chatThreadParticipantRelations = relations(
   }),
 );
 
-export const chatMessageRelations = relations(chatMessage, ({ one }) => ({
+export const chatMessageRelations = relations(chatMessage, ({ one, many }) => ({
   thread: one(chatThread, {
     fields: [chatMessage.threadId],
     references: [chatThread.id],
@@ -100,4 +130,25 @@ export const chatMessageRelations = relations(chatMessage, ({ one }) => ({
     fields: [chatMessage.senderId],
     references: [user.id],
   }),
+  replyTo: one(chatMessage, {
+    fields: [chatMessage.replyToId],
+    references: [chatMessage.id],
+    relationName: "chatMessageReplies",
+  }),
+  replies: many(chatMessage, { relationName: "chatMessageReplies" }),
+  reactions: many(chatMessageReaction),
 }));
+
+export const chatMessageReactionRelations = relations(
+  chatMessageReaction,
+  ({ one }) => ({
+    message: one(chatMessage, {
+      fields: [chatMessageReaction.messageId],
+      references: [chatMessage.id],
+    }),
+    user: one(user, {
+      fields: [chatMessageReaction.userId],
+      references: [user.id],
+    }),
+  }),
+);

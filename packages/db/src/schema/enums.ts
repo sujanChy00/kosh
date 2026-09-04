@@ -95,6 +95,14 @@ export const chatThreadTypeEnum = pgEnum("chat_thread_type", [
   "direct",
 ]);
 
+export const chatMessageTypeEnum = pgEnum("chat_message_type", [
+  "text",
+  "image",
+  "file",
+  "system",
+]);
+
+
 // ─── Push Tokens ────────────────────────────────────────────────────────────
 export const platformEnum = pgEnum("platform", ["ios", "android"]);
 

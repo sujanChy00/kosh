@@ -80,18 +80,19 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | created_at | timestamp | |
 
 ### invites
-*(one invite type — a code/link/QR are all just different presentations of the same token; no email targeting for now)*
+*(one invite type — plain code, link kosh-app://invite/TOKEN, and QR all resolve to the same underlying PREFIX-XXXX token)*
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
-| token | text, unique | encoded into the link/QR/plain code |
+| token | text, unique | format: `PREFIX-XXXX` (e.g. `SAGA-7XPK`), prefix from kosh name + 4-char Crockford Base32 suffix |
 | created_by | uuid, fk → users | |
-| max_uses | int, nullable | |
-| use_count | int, default 0 | |
-| expires_at | timestamp | |
+| max_uses | int, nullable | nullable = unlimited (default 50 or custom override) |
+| use_count | int, default 0 | incremented on each redeem attempt |
+| expires_at | timestamp | default 7 days from creation |
 | status | enum(active, revoked, expired) | |
 | created_at | timestamp | |
+
 
 ### join_requests
 *(every join goes through this table now, regardless of invite channel)*
@@ -263,10 +264,24 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | id | uuid, pk | |
 | thread_id | uuid, fk → chat_threads | |
 | sender_id | uuid, fk → users | |
-| content | text | |
+| reply_to_id | uuid, fk → chat_messages, nullable | self-reference for message replies |
+| type | enum(text, image, file, system) | default 'text' |
+| content | text, nullable | optional if message contains attachments only |
+| attachments | jsonb, nullable | array of { url, name, size, mimeType } |
 | created_at | timestamp | |
 | edited_at | timestamp, nullable | |
 | deleted_at | timestamp, nullable | |
+
+### chat_message_reactions
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, pk | |
+| message_id | uuid, fk → chat_messages | |
+| user_id | uuid, fk → users | |
+| emoji | text | UTF-8 emoji string |
+| created_at | timestamp | |
+| unique | (message_id, user_id, emoji) | prevents duplicate identical reactions per user |
+
 
 ### notifications
 | Column | Type | Notes |
