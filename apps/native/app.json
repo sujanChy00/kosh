@@ -24,6 +24,17 @@
     "plugins": [
       "expo-router",
       [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/inter-italic.ttf",
+            "./assets/fonts/inter.ttf",
+            "./assets/fonts/noto-sans-italic.ttf",
+            "./assets/fonts/noto-sans.ttf"
+          ]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

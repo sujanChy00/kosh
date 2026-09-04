@@ -15,9 +15,10 @@
   "dependencies": {
     "@better-auth/expo": "catalog:",
     "@expo/metro-runtime": "~57.0.12",
+    "@expo/ui": "~57.0.15",
     "@kosh-app/api": "workspace:*",
-    "@kosh-app/env": "workspace:*",
     "@kosh-app/constants": "workspace:*",
+    "@kosh-app/env": "workspace:*",
     "@legendapp/list": "^3.3.10",
     "@shopify/flash-list": "2.0.2",
     "@tanstack/react-form": "catalog:",

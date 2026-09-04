@@ -1,2 +1,9 @@
 @import "tailwindcss";
 @import "uniwind";
+
+@theme {
+  --font-inter: "inter";
+  --font-inter-italic: "inter-italic";
+  --font-noto-sans: "noto-sans";
+  --font-noto-sans-italic: "noto-sans-italic";
+}

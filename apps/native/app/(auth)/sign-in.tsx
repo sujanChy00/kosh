@@ -1,11 +1,16 @@
-import { Text, View } from "react-native";
+import { ScrollView, View } from "react-native";
+import { SignIn } from "@/components/sign-in";
 
-const LoginScreen = () => {
+const SignInScreen = () => {
   return (
-    <View>
-      <Text>LoginScreen</Text>
-    </View>
+    <ScrollView
+      contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+      className="bg-background p-4"
+    >
+      <SignIn />
+    </ScrollView>
   );
 };
 
-export default LoginScreen;
+export default SignInScreen;
+
