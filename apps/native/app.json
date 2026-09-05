@@ -27,10 +27,21 @@
         "expo-font",
         {
           "fonts": [
-            "./assets/fonts/inter-italic.ttf",
-            "./assets/fonts/inter.ttf",
-            "./assets/fonts/noto-sans-italic.ttf",
-            "./assets/fonts/noto-sans.ttf"
+            "./assets/fonts/mono-bold-italic.ttf",
+            "./assets/fonts/mono-bold.ttf",
+            "./assets/fonts/mono-medium-italic.ttf",
+            "./assets/fonts/mono-medium.ttf",
+            "./assets/fonts/mono-regular.ttf",
+            "./assets/fonts/mono-semibold-italic.ttf",
+            "./assets/fonts/mono-semibold.ttf",
+            "./assets/fonts/notosans-bold.ttf",
+            "./assets/fonts/notosans-italic.ttf",
+            "./assets/fonts/notosans-medium.ttf",
+            "./assets/fonts/notosans-regular.ttf",
+            "./assets/fonts/notosans-semibold.ttf",
+            "./assets/fonts/notosans-bold-italic.ttf",
+            "./assets/fonts/notosans-medium-italic.ttf",
+            "./assets/fonts/notosans-semibold-italic.ttf"
           ]
         }
       ],
@@ -46,7 +57,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image",
+        {
+          "disableLibdav1d": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

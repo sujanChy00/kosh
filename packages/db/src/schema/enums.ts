@@ -102,6 +102,7 @@ export const chatMessageTypeEnum = pgEnum("chat_message_type", [
   "system",
 ]);
 
+export const preferredLangEnum = pgEnum("preferred_lang", ["en", "ne"]);
 
 // ─── Push Tokens ────────────────────────────────────────────────────────────
 export const platformEnum = pgEnum("platform", ["ios", "android"]);
@@ -128,4 +129,3 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "member_removed",
   "security_alert",
 ]);
-

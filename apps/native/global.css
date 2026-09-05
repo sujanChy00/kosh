@@ -2,8 +2,181 @@
 @import "uniwind";
 
 @theme {
-  --font-inter: "inter";
-  --font-inter-italic: "inter-italic";
-  --font-noto-sans: "noto-sans";
-  --font-noto-sans-italic: "noto-sans-italic";
+  --font-mono-bold-italic: "mono-bold-italic";
+  --font-mono-bold: "mono-bold";
+  --font-mono-medium-italic: "mono-medium-italic";
+  --font-mono-medium: "mono-medium";
+  --font-mono-semibold-italic: "mono-semibold-italic";
+  --font-mono-semibold: "mono-semibold";
+  --font-mono-regular: "mono-regular";
+  --font-notosans-bold: "notosans-bold";
+  --font-notosans-italic: "notosans-italic";
+  --font-notosans-medium: "notosans-medium";
+  --font-notosans-regular: "notosans-regular";
+  --font-notosans-semibold: "notosans-semibold";
+  --font-notosans-bold-italic: "notosans-bold-italic";
+  --font-notosans-medium-italic: "notosans-medium-italic";
+  --font-notosans-semibold-italic: "notosans-semibold-italic";
+}
+
+@layer theme {
+  :root {
+    @variant light {
+      /* Base Colors */
+      --color-background: oklch(0.9702 0 0);
+      --color-foreground: oklch(0.2103 0.0059 285.89);
+
+      /* Surface */
+      --color-surface: oklch(100% 0 0);
+      --color-surface-foreground: oklch(0.2103 0.0059 285.89);
+
+      --color-surface-secondary: oklch(0.9524 0.0013 286.37);
+      --color-surface-secondary-foreground: oklch(0.2103 0.0059 285.89);
+
+      --color-surface-tertiary: oklch(0.9373 0.0013 286.37);
+      --color-surface-tertiary-foreground: oklch(0.2103 0.0059 285.89);
+
+      /* Overlay */
+      --color-overlay: oklch(100% 0 0);
+      --color-overlay-foreground: oklch(0.2103 0.0059 285.89);
+      --color-backdrop: oklch(0% 0 0 / 20%);
+
+      --color-muted: oklch(0.5517 0.0138 285.94);
+
+      --color-default: oklch(94% 0.001 286.375);
+      --color-default-foreground: oklch(0.2103 0.0059 285.89);
+
+      --color-primary: oklch(0.6204 0.195 253.83);
+      --color-primary-soft: color-mix(
+        in oklab,
+        oklch(0.6204 0.195 253.83) 15%,
+        transparent
+      );
+      --color-primary-foreground: oklch(0.9911 0 0);
+
+      /* Form Fields */
+      --color-field-background: oklch(100% 0 0);
+      --color-field-foreground: oklch(0.2103 0.0059 285.89);
+      --color-field-placeholder: oklch(0.5517 0.0138 285.94);
+      --color-field-border: transparent;
+
+      /* Status Colors */
+      --color-success: oklch(0.7329 0.1935 150.81);
+      --color-success-foreground: oklch(0.2103 0.0059 285.89);
+      --color-success-soft: color-mix(
+        in oklab,
+        oklch(0.7329 0.1935 150.81) 15%,
+        transparent
+      );
+
+      --color-warning: oklch(0.7819 0.1585 72.33);
+      --color-warning-foreground: oklch(0.2103 0.0059 285.89);
+
+      --color-danger: oklch(0.6532 0.2328 25.74);
+      --color-danger-foreground: oklch(0.9911 0 0);
+      --color-danger-soft: color-mix(
+        in oklab,
+        oklch(0.6532 0.2328 25.74) 15%,
+        transparent
+      );
+
+      /* Component Colors */
+      --color-segment: oklch(100% 0 0);
+      --color-segment-foreground: oklch(0.2103 0.0059 285.89);
+
+      /* Misc Colors */
+      --color-border: oklch(90% 0.004 286.32);
+      --color-separator: oklch(74% 0.004 286.32);
+      --color-focus: oklch(0.6204 0.195 253.83);
+      --color-link: oklch(0.2103 0.0059 285.89);
+    }
+    @variant dark {
+      /* Base Colors */
+      --color-background: oklch(12% 0.005 285.823);
+      --color-foreground: oklch(0.9911 0 0);
+
+      /* Surface */
+      --color-surface: oklch(0.2103 0.0059 285.89);
+      --color-surface-foreground: oklch(0.9911 0 0);
+
+      --color-surface-secondary: oklch(0.257 0.0037 286.14);
+      --color-surface-secondary-foreground: oklch(0.9911 0 0);
+
+      --color-surface-tertiary: oklch(0.2721 0.0024 247.91);
+      --color-surface-tertiary-foreground: oklch(0.9911 0 0);
+
+      /* Overlay */
+      --color-overlay: oklch(0.2103 0.0059 285.89);
+      --color-overlay-foreground: oklch(0.9911 0 0);
+      --color-backdrop: oklch(0% 0 0 / 20%);
+
+      --color-muted: oklch(70.5% 0.015 286.067);
+
+      --color-default: oklch(27.4% 0.006 286.033);
+      --color-default-foreground: oklch(0.9911 0 0);
+
+      --color-primary: oklch(0.6204 0.195 253.83);
+      --color-primary-soft: color-mix(
+        in oklab,
+        oklch(0.6204 0.195 253.83) 15%,
+        transparent
+      );
+      --color-primary-foreground: oklch(0.9911 0 0);
+
+      /* Form Fields */
+      --color-field-background: oklch(0.2103 0.0059 285.89);
+      --color-field-foreground: oklch(0.9911 0 0);
+      --color-field-placeholder: oklch(70.5% 0.015 286.067);
+      --color-field-border: transparent;
+
+      /* Status Colors */
+      --color-success: oklch(0.7329 0.1935 150.81);
+      --color-success-foreground: oklch(0.2103 0.0059 285.89);
+      --color-success-soft: color-mix(
+        in oklab,
+        oklch(0.7329 0.1935 150.81) 15%,
+        transparent
+      );
+
+      --color-warning: oklch(0.8203 0.1388 76.34);
+      --color-warning-foreground: oklch(0.2103 0.0059 285.89);
+
+      --color-danger: oklch(0.594 0.1967 24.63);
+      --color-danger-foreground: oklch(0.9911 0 0);
+      --color-danger-soft: color-mix(
+        in oklab,
+        oklch(0.594 0.1967 24.63) 15%,
+        transparent
+      );
+
+      /* Component Colors */
+      --color-segment: oklch(0.3964 0.01 285.93);
+      --color-segment-foreground: oklch(0.9911 0 0);
+
+      /* Misc Colors */
+      --color-border: oklch(28% 0.006 286.033);
+      --color-separator: oklch(40% 0.006 286.033);
+      --color-focus: oklch(0.6204 0.195 253.83);
+      --color-link: oklch(0.9911 0 0);
+    }
+  }
+}
+
+@utility h-hairline {
+  height: hairlineWidth();
+}
+
+@utility border-t-hairline {
+  border-top-width: hairlineWidth();
+  border-top-style: solid;
+}
+
+@utility border-b-hairline {
+  border-bottom-width: hairlineWidth();
+  border-bottom-style: solid;
+}
+
+@utility border-hairline {
+  border-width: hairlineWidth();
+  border-style: solid;
 }
