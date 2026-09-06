@@ -1,6 +1,6 @@
 import { NAV_THEME } from "@/constants/theme";
 import { storage } from "@/utils/storage";
-import { THEME_KEY } from "@kosh-app/utils";
+import { THEME_KEY } from "@kosh-app/utils/constants/data";
 import React, {
   createContext,
   useCallback,

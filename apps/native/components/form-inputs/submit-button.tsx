@@ -1,8 +1,12 @@
 import { useFormContext } from "@/contexts/form-context";
-import { PressableProps } from "react-native";
+import { TouchableOpacityProps } from "react-native";
 import { PrimaryButton } from "../ui/button";
 
-export const SubmitButton = ({ disabled = false, ...rest }: PressableProps) => {
+export const SubmitButton = ({
+  disabled = false,
+  onPress,
+  ...rest
+}: TouchableOpacityProps) => {
   const form = useFormContext();
 
   return (
@@ -11,8 +15,8 @@ export const SubmitButton = ({ disabled = false, ...rest }: PressableProps) => {
     >
       {([isSubmitting, isValidating]) => (
         <PrimaryButton
-          disabled={isSubmitting || isValidating || disabled}
-          onPress={() => {
+          disabled={isSubmitting ?? isValidating ?? disabled ?? false}
+          onPress={(event) => {
             form.handleSubmit();
           }}
           {...rest}

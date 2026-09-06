@@ -1,5 +1,5 @@
 import { storage } from "@/utils/storage";
-import { ONBOARDING_COMPLETED } from "@kosh-app/utils";
+import { ONBOARDING_COMPLETED } from "@kosh-app/utils/constants/data";
 import { useMMKVBoolean } from "react-native-mmkv";
 
 export const useOnboarding = () => {

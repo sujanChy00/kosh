@@ -2,20 +2,54 @@ import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { InputGroup } from "@/components/ui/input-group";
-import { Link, useLocalSearchParams } from "expo-router";
+import { useHaptics } from "@/hooks/use-haptics";
+import { authClient } from "@/lib/auth-client";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { toast } from "sonner-native";
 
 export const ForgotPasswordForm = () => {
   const { email: queryEmail } = useLocalSearchParams<{ email?: string }>();
+  const router = useRouter();
+  const haptics = useHaptics();
   const [email, setEmail] = useState(queryEmail ?? "");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { bottom } = useSafeAreaInsets();
+
+  const handleSubmit = async (email: string) => {
+    setIsSubmitting(true);
+    try {
+      await authClient.emailOtp.requestPasswordReset(
+        { email: email.trim() },
+        {
+          onError(error) {
+            haptics("error");
+            toast.error(error.error?.message || "Failed to send reset link");
+          },
+          onSuccess() {
+            haptics("success");
+            toast.success("Reset code sent! Check your email.");
+            router.push({
+              pathname: "/reset-password",
+              params: { email: email.trim() },
+            });
+          },
+        },
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <>
+      <FullScreenSpinner isVisible={isSubmitting} loadingText="Sending reset link..." />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
@@ -28,6 +62,9 @@ export const ForgotPasswordForm = () => {
             <ThemedText className="text-balance text-3xl font-notosans-semibold leading-[1.08] tracking-tight">
               Reset your password.
             </ThemedText>
+            <FieldDescription>
+              We'll send a verification code to your email to confirm it's you.
+            </FieldDescription>
           </View>
           <Field>
             <FieldLabel>Email Address</FieldLabel>
@@ -47,8 +84,10 @@ export const ForgotPasswordForm = () => {
                 onChangeText={setEmail}
                 keyboardType="email-address"
                 accessibilityLabel="Email Address"
-                autoFocus={!!queryEmail ? false : true}
+                autoFocus={!queryEmail}
                 placeholder="you@example.com"
+                onSubmitEditing={() => handleSubmit(email)}
+                returnKeyType="send"
               />
             </InputGroup>
           </Field>
@@ -76,7 +115,7 @@ export const ForgotPasswordForm = () => {
               </GhostButton.Label>
             </GhostButton>
           </Link>
-          <PrimaryButton>
+          <PrimaryButton onPress={() => handleSubmit(email)} disabled={!email.trim()}>
             <PrimaryButton.Label>Send reset link</PrimaryButton.Label>
           </PrimaryButton>
         </View>

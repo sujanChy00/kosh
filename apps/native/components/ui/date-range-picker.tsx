@@ -4,7 +4,7 @@ import {
   BottomSheetModal,
   BottomSheetView,
 } from "@expo/ui/community/bottom-sheet";
-import { dateFormatterWithSeparator } from "@kosh-app/utils";
+import { dateFormatterWithSeparator } from "@kosh-app/utils/date";
 import { RefObject, useState } from "react";
 import { View } from "react-native";
 import DateTimePicker, {

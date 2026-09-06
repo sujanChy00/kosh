@@ -4,7 +4,8 @@ import { OnboardingCard } from "@/components/onboarding/onboarding-card";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { useLanguage } from "@/hooks/use-language";
-import { cn, LANG_OPTIONS } from "@kosh-app/utils";
+import { cn } from "@kosh-app/utils";
+import { LANG_OPTIONS } from "@kosh-app/utils/constants/data";
 import { TouchableOpacity, View } from "react-native";
 import { FadeInDown, FadeOut, ZoomIn } from "react-native-reanimated";
 

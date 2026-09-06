@@ -11,7 +11,7 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
 import { storage } from "@/utils/storage";
 import { queryClient } from "@/utils/trpc";
-import { ONBOARDING_COMPLETED } from "@kosh-app/utils";
+import { ONBOARDING_COMPLETED } from "@kosh-app/utils/constants/data";
 import { useSelector } from "@tanstack/react-form";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, ScrollView, TouchableOpacity, View } from "react-native";
@@ -41,16 +41,27 @@ export const LoginForm = () => {
           password: value.password,
         },
         {
-          onError(error) {
+          async onError(error) {
             haptics("error");
             toast.error(error.error?.message || "Failed to sign in");
             if (error.error.code === "EMAIL_NOT_VERIFIED") {
-              router.push({
-                pathname: "/verify-email",
-                params: {
-                  email: value.email,
+              toast.info("Sending a verification code to your email...");
+              await authClient.emailOtp.sendVerificationOtp(
+                {
+                  email: value.email.trim(),
+                  type: "email-verification",
                 },
-              });
+                {
+                  onSuccess() {
+                    router.push({
+                      pathname: "/verify-email",
+                      params: {
+                        email: value.email,
+                      },
+                    });
+                  },
+                },
+              );
             }
           },
           onSuccess() {

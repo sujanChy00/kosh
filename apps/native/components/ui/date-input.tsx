@@ -1,5 +1,5 @@
 import DateTimePicker from "@expo/ui/community/datetime-picker";
-import { formatShortDate } from "@kosh-app/utils";
+import { formatShortDate } from "@kosh-app/utils/date";
 import { useState } from "react";
 import { SecondaryButton } from "./button";
 

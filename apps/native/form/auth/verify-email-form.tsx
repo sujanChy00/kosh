@@ -2,28 +2,94 @@ import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { InputOTP } from "@/components/ui/otp-input";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { isIOS } from "@/constants/platform";
 import { useHaptics } from "@/hooks/use-haptics";
+import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/utils/trpc";
+import { cn } from "@kosh-app/utils";
+import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
+import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { toast } from "sonner-native";
+
+const formatTime = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, "0")}:${seconds
+    .toString()
+    .padStart(2, "0")}`;
+};
 
 export const VerifyEmailForm = () => {
   const router = useRouter();
   const haptics = useHaptics();
   const { email } = useLocalSearchParams<{ email: string }>();
   const [token, setToken] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const { secondsLeft, isExpired, restart } = useCountdown(OTP_EXPIRY_SECONDS);
 
-  const onVerifyEmail = async () => {};
+  useEffect(() => {
+    if (isExpired) {
+      haptics("warning");
+      toast.warning("Verification code expired. Please request a new one.");
+    }
+  }, [isExpired]);
+
+  const onVerifyEmail = async () => {
+    if (!token.trim() || isExpired) return;
+    setIsSubmitting(true);
+    await authClient.emailOtp.verifyEmail(
+      { email: email.trim(), otp: token.trim() },
+      {
+        onError(error) {
+          haptics("error");
+          toast.error(error.error?.message || "Invalid verification code");
+        },
+        onSuccess() {
+          haptics("success");
+          toast.success("Email verified successfully");
+          queryClient.refetchQueries();
+          router.replace("/sign-in");
+        },
+      },
+    );
+    setIsSubmitting(false);
+  };
+
+  const onResend = async () => {
+    if (isResending) return;
+    setIsResending(true);
+    await authClient.emailOtp.sendVerificationOtp(
+      { email: email.trim(), type: "email-verification" },
+      {
+        onError(error) {
+          haptics("error");
+          toast.error(error.error?.message || "Failed to resend code");
+        },
+        onSuccess() {
+          haptics("success");
+          toast.success("Verification code resent");
+          restart();
+          setToken("");
+        },
+      },
+    );
+    setIsResending(false);
+  };
 
   return (
     <KeyboardAvoidingView
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
+      <FullScreenSpinner isVisible={isSubmitting} loadingText="Verifying..." />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
@@ -46,17 +112,37 @@ export const VerifyEmailForm = () => {
             </ThemedText>
           </View>
           <Field>
-            <FieldLabel>Verification Code</FieldLabel>
+            <View className="flex-row items-center justify-between gap-2">
+              <FieldLabel>Verification Code</FieldLabel>
+              <ThemedText
+                className={cn(
+                  "text-xs font-mono-semibold",
+                  isExpired ? "text-danger" : "text-muted-foreground",
+                )}
+              >
+                {isExpired
+                  ? "Code expired"
+                  : `Expires in: ${formatTime(secondsLeft)}`}
+              </ThemedText>
+            </View>
             <InputOTP autoFocus value={token} onChangeText={setToken} />
           </Field>
           <View className="gap-y-3">
-            <GhostButton className="relative">
-              <GhostButton.Label className="font-mono-medium uppercase">
-                RESEND
-              </GhostButton.Label>
-              {/* <ActivityIndicator colorClassName="accent-primary" size={"small"} /> */}
-            </GhostButton>
-            <PrimaryButton onPress={onVerifyEmail} disabled={!token.trim()}>
+            {isExpired ? (
+              <PrimaryButton onPress={onResend} disabled={isResending}>
+                <PrimaryButton.Label>Resend Code</PrimaryButton.Label>
+              </PrimaryButton>
+            ) : (
+              <GhostButton onPress={onResend} disabled={isResending}>
+                <GhostButton.Label className="font-mono-medium uppercase">
+                  RESEND
+                </GhostButton.Label>
+              </GhostButton>
+            )}
+            <PrimaryButton
+              onPress={onVerifyEmail}
+              disabled={!token.trim() || isExpired}
+            >
               <PrimaryButton.Label>Verify</PrimaryButton.Label>
             </PrimaryButton>
             <TextSeparator text="OR" />

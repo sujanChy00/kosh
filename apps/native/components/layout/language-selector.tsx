@@ -2,7 +2,7 @@ import { useAppTheme } from "@/contexts/app-theme-context";
 import { useLanguage } from "@/hooks/use-language";
 import { MenuView } from "@expo/ui/community/menu";
 import { LanguageKey } from "@kosh-app/language";
-import { LANG_OPTIONS } from "@kosh-app/utils";
+import { LANG_OPTIONS } from "@kosh-app/utils/constants/data";
 
 interface Props {
   children: (lan: string) => React.ReactNode;

@@ -21,3 +21,5 @@ export const LANG_OPTIONS: {
     flag: "🇳🇵",
   },
 ];
+
+export const OTP_EXPIRY_SECONDS = 600;
