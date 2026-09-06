@@ -3,8 +3,7 @@ import { SymbolView } from "expo-symbols";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 
 import { Container } from "@/components/container";
-import { SignIn } from "@/components/sign-in";
-import { SignUp } from "@/components/sign-up";
+
 import { authClient } from "@/lib/auth-client";
 import { queryClient, trpc } from "@/utils/trpc";
 
@@ -103,13 +102,13 @@ export default function Home() {
         <Text className="mb-3">Private Data</Text>
         {privateData && <Text>{privateData.data?.message}</Text>}
       </View>
-
+      {/* 
       {!session?.user && (
         <>
           <SignIn />
           <SignUp />
         </>
-      )}
+      )} */}
     </Container>
   );
 }

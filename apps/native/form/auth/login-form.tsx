@@ -3,19 +3,24 @@ import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { SecondaryButton } from "@/components/ui/button";
 import { Field, FieldDescription } from "@/components/ui/field";
+import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
+import { authClient } from "@/lib/auth-client";
 import { storage } from "@/utils/storage";
+import { queryClient } from "@/utils/trpc";
 import { ONBOARDING_COMPLETED } from "@kosh-app/utils";
 import { useSelector } from "@tanstack/react-form";
-import { Link, useLocalSearchParams } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { toast } from "sonner-native";
 import { LOGIN_FORM_VALUE, LOGIN_SCHEMA } from "./auth-schema";
 
 export const LoginForm = () => {
+  const router = useRouter();
   const { email: emailQuery } = useLocalSearchParams<{ email?: string }>();
   const haptics = useHaptics();
   const form = useForm({
@@ -29,18 +34,45 @@ export const LoginForm = () => {
     onSubmitInvalid: () => {
       haptics("error");
     },
-    onSubmit: ({ value }) => {
-      console.log(value);
+    onSubmit: async ({ value, formApi }) => {
+      await authClient.signIn.email(
+        {
+          email: value.email.trim(),
+          password: value.password,
+        },
+        {
+          onError(error) {
+            haptics("error");
+            toast.error(error.error?.message || "Failed to sign in");
+            if (error.error.code === "EMAIL_NOT_VERIFIED") {
+              router.push({
+                pathname: "/verify-email",
+                params: {
+                  email: value.email,
+                },
+              });
+            }
+          },
+          onSuccess() {
+            formApi.reset();
+            queryClient.refetchQueries();
+          },
+        },
+      );
     },
   });
 
-  const email = useSelector(form.store, (state) => state.values.email);
+  const { email, isSubmitting } = useSelector(form.store, (state) => ({
+    email: state.values.email,
+    isSubmitting: state.isSubmitting,
+  }));
 
   return (
     <KeyboardAvoidingView
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
+      <FullScreenSpinner isVisible={isSubmitting} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
@@ -103,6 +135,10 @@ export const LoginForm = () => {
               children={(field) => (
                 <Field className="items-center">
                   <field.PasswordField
+                    onSubmitEditing={() => {
+                      form.handleSubmit();
+                    }}
+                    returnKeyType="done"
                     label="Password"
                     placeholder="********"
                   />

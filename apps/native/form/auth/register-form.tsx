@@ -5,11 +5,14 @@ import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
+import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { toast } from "sonner-native";
 import { REGISTER_FORM_VALUE, REGISTER_SCHEMA } from "./auth-schema";
 
 export const RegisterForm = () => {
@@ -29,15 +32,34 @@ export const RegisterForm = () => {
     onSubmitInvalid: () => {
       haptics("error");
     },
-    onSubmit: ({ value }) => {
-      router.push({
-        pathname: "/verify-email",
-        params: {
-          email: value.email,
+    onSubmit: async ({ value, formApi }) => {
+      await authClient.signUp.email(
+        {
+          name: value.name.trim(),
+          email: value.email.trim(),
+          password: value.password,
         },
-      });
+        {
+          onError(error) {
+            haptics("error");
+            toast.error(error.error?.message || "Failed to sign up");
+          },
+          onSuccess() {
+            formApi.reset();
+            toast.success("Account created successfully");
+            queryClient.refetchQueries();
+            router.push({
+              pathname: "/verify-email",
+              params: {
+                email: value.email,
+              },
+            });
+          },
+        },
+      );
     },
   });
+
   return (
     <KeyboardAvoidingView
       behavior={isIOS ? "padding" : "height"}

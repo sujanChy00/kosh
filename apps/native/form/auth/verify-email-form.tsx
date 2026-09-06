@@ -5,14 +5,19 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { InputOTP } from "@/components/ui/otp-input";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { isIOS } from "@/constants/platform";
-import { Link, useLocalSearchParams } from "expo-router";
+import { useHaptics } from "@/hooks/use-haptics";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 export const VerifyEmailForm = () => {
+  const router = useRouter();
+  const haptics = useHaptics();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const [verificationCode, setVerificationCode] = useState("");
+  const [token, setToken] = useState("");
+
+  const onVerifyEmail = async () => {};
 
   return (
     <KeyboardAvoidingView
@@ -42,11 +47,7 @@ export const VerifyEmailForm = () => {
           </View>
           <Field>
             <FieldLabel>Verification Code</FieldLabel>
-            <InputOTP
-              autoFocus
-              value={verificationCode}
-              onChangeText={setVerificationCode}
-            />
+            <InputOTP autoFocus value={token} onChangeText={setToken} />
           </Field>
           <View className="gap-y-3">
             <GhostButton className="relative">
@@ -55,7 +56,7 @@ export const VerifyEmailForm = () => {
               </GhostButton.Label>
               {/* <ActivityIndicator colorClassName="accent-primary" size={"small"} /> */}
             </GhostButton>
-            <PrimaryButton>
+            <PrimaryButton onPress={onVerifyEmail} disabled={!token.trim()}>
               <PrimaryButton.Label>Verify</PrimaryButton.Label>
             </PrimaryButton>
             <TextSeparator text="OR" />
