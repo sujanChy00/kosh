@@ -1,7 +1,6 @@
 import { Host } from "@/components/layout/host";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -69,7 +68,7 @@ export const RegisterForm = () => {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
-        contentContainerClassName="pt-12 pb-4"
+        contentContainerClassName="pt-12"
       >
         <View className="mb-8 gap-y-3 px-4">
           <ThemedText className="text-xs font-mono-semibold uppercase tracking-[0.2em] text-primary">
@@ -176,7 +175,11 @@ export const RegisterForm = () => {
             </View>
           </View>
         </form.AppForm>
-        <AnimatedSpacer height={100} />
+        <View
+          style={{
+            height: 120,
+          }}
+        />
       </ScrollView>
     </KeyboardAvoidingView>
   );

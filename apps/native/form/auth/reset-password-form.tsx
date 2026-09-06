@@ -147,7 +147,11 @@ export const ResetPasswordForm = () => {
                         : `Expires in: ${formatTime(secondsLeft)}`}
                     </ThemedText>
                   </View>
-                  <field.TextField maxLength={6} keyboardType="number-pad" />
+                  <field.TextField
+                    maxLength={6}
+                    keyboardType="number-pad"
+                    inputClassName="px-3"
+                  />
                 </Field>
               )}
             />

@@ -172,7 +172,7 @@ export const LoginForm = () => {
                     asChild
                     className="ml-auto pt-1"
                     href={{
-                      pathname: "/reset-password",
+                      pathname: "/forgot-password",
                       params: {
                         email,
                       },
