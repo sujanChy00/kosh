@@ -42,14 +42,15 @@
       --color-backdrop: oklch(0% 0 0 / 20%);
 
       --color-muted: oklch(0.5517 0.0138 285.94);
+      --color-muted-foreground: oklch(0.556 0 0);
 
       --color-default: oklch(94% 0.001 286.375);
       --color-default-foreground: oklch(0.2103 0.0059 285.89);
 
-      --color-primary: oklch(0.6204 0.195 253.83);
+      --color-primary: oklch(0.3987 0.0634 191.87);
       --color-primary-soft: color-mix(
         in oklab,
-        oklch(0.6204 0.195 253.83) 15%,
+        oklch(0.3987 0.0634 191.87) 15%,
         transparent
       );
       --color-primary-foreground: oklch(0.9911 0 0);
@@ -87,7 +88,7 @@
       /* Misc Colors */
       --color-border: oklch(90% 0.004 286.32);
       --color-separator: oklch(74% 0.004 286.32);
-      --color-focus: oklch(0.6204 0.195 253.83);
+      --color-focus: oklch(0.3987 0.0634 191.87);
       --color-link: oklch(0.2103 0.0059 285.89);
     }
     @variant dark {
@@ -111,14 +112,16 @@
       --color-backdrop: oklch(0% 0 0 / 20%);
 
       --color-muted: oklch(70.5% 0.015 286.067);
+      --color-muted-foreground: oklch(0.708 0 0);
 
       --color-default: oklch(27.4% 0.006 286.033);
       --color-default-foreground: oklch(0.9911 0 0);
 
-      --color-primary: oklch(0.6204 0.195 253.83);
+      /* Primary Colors */
+      --color-primary: oklch(0.3987 0.0634 191.87);
       --color-primary-soft: color-mix(
         in oklab,
-        oklch(0.6204 0.195 253.83) 15%,
+        oklch(0.3987 0.0634 191.87) 15%,
         transparent
       );
       --color-primary-foreground: oklch(0.9911 0 0);
@@ -156,7 +159,7 @@
       /* Misc Colors */
       --color-border: oklch(28% 0.006 286.033);
       --color-separator: oklch(40% 0.006 286.033);
-      --color-focus: oklch(0.6204 0.195 253.83);
+      --color-focus: oklch(0.3987 0.0634 191.87);
       --color-link: oklch(0.9911 0 0);
     }
   }

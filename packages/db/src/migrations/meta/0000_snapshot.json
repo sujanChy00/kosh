@@ -1,5 +1,5 @@
 {
-  "id": "88feeed5-aa29-496a-9d9f-313632e940bc",
+  "id": "550b149f-b2ef-4fcc-b32c-898300e5316e",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -425,6 +425,14 @@
           "notNull": true,
           "default": false
         },
+        "preferred_lang": {
+          "name": "preferred_lang",
+          "type": "preferred_lang",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'en'"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -546,11 +554,31 @@
           "primaryKey": false,
           "notNull": true
         },
+        "reply_to_id": {
+          "name": "reply_to_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "type": {
+          "name": "type",
+          "type": "chat_message_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'text'"
+        },
         "content": {
           "name": "content",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "attachments": {
+          "name": "attachments",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -608,6 +636,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "chat_message_reply_to_id_idx": {
+          "name": "chat_message_reply_to_id_idx",
+          "columns": [
+            {
+              "expression": "reply_to_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -630,6 +673,121 @@
           "tableTo": "user",
           "columnsFrom": [
             "sender_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.chat_message_reaction": {
+      "name": "chat_message_reaction",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "message_id": {
+          "name": "message_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "emoji": {
+          "name": "emoji",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "chat_reaction_message_id_idx": {
+          "name": "chat_reaction_message_id_idx",
+          "columns": [
+            {
+              "expression": "message_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "chat_reaction_message_user_emoji_uidx": {
+          "name": "chat_reaction_message_user_emoji_uidx",
+          "columns": [
+            {
+              "expression": "message_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "emoji",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "chat_message_reaction_message_id_chat_message_id_fk": {
+          "name": "chat_message_reaction_message_id_chat_message_id_fk",
+          "tableFrom": "chat_message_reaction",
+          "tableTo": "chat_message",
+          "columnsFrom": [
+            "message_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "chat_message_reaction_user_id_user_id_fk": {
+          "name": "chat_message_reaction_user_id_user_id_fk",
+          "tableFrom": "chat_message_reaction",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -1339,24 +1497,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "type": {
-          "name": "type",
-          "type": "invite_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
         "token": {
           "name": "token",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "invited_email": {
-          "name": "invited_email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_by": {
           "name": "created_by",
@@ -1405,21 +1550,6 @@
           "columns": [
             {
               "expression": "kosh_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "invite_invited_email_idx": {
-          "name": "invite_invited_email_idx",
-          "columns": [
-            {
-              "expression": "invited_email",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1526,6 +1656,12 @@
         "reviewed_at": {
           "name": "reviewed_at",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }
@@ -1639,6 +1775,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "loan_request_id": {
+          "name": "loan_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "borrower_id": {
           "name": "borrower_id",
           "type": "text",
@@ -1747,6 +1889,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "loan_loan_request_id_loan_request_id_fk": {
+          "name": "loan_loan_request_id_loan_request_id_fk",
+          "tableFrom": "loan",
+          "tableTo": "loan_request",
+          "columnsFrom": [
+            "loan_request_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "loan_borrower_id_user_id_fk": {
@@ -1880,6 +2035,207 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.loan_request": {
+      "name": "loan_request",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kosh_id": {
+          "name": "kosh_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "loan_request_origin",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_by": {
+          "name": "requested_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_requested": {
+          "name": "amount_requested",
+          "type": "numeric(12, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "loan_request_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending_adhyaksha'"
+        },
+        "rejection_reason": {
+          "name": "rejection_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resulting_loan_id": {
+          "name": "resulting_loan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resulting_transaction_id": {
+          "name": "resulting_transaction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adhyaksha_decided_by": {
+          "name": "adhyaksha_decided_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adhyaksha_decided_at": {
+          "name": "adhyaksha_decided_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "loan_request_kosh_id_idx": {
+          "name": "loan_request_kosh_id_idx",
+          "columns": [
+            {
+              "expression": "kosh_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "loan_request_status_idx": {
+          "name": "loan_request_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "loan_request_requested_by_idx": {
+          "name": "loan_request_requested_by_idx",
+          "columns": [
+            {
+              "expression": "requested_by",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "loan_request_kosh_id_kosh_id_fk": {
+          "name": "loan_request_kosh_id_kosh_id_fk",
+          "tableFrom": "loan_request",
+          "tableTo": "kosh",
+          "columnsFrom": [
+            "kosh_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "loan_request_requested_by_user_id_fk": {
+          "name": "loan_request_requested_by_user_id_fk",
+          "tableFrom": "loan_request",
+          "tableTo": "user",
+          "columnsFrom": [
+            "requested_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "loan_request_created_by_user_id_fk": {
+          "name": "loan_request_created_by_user_id_fk",
+          "tableFrom": "loan_request",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "loan_request_adhyaksha_decided_by_user_id_fk": {
+          "name": "loan_request_adhyaksha_decided_by_user_id_fk",
+          "tableFrom": "loan_request",
+          "tableTo": "user",
+          "columnsFrom": [
+            "adhyaksha_decided_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -2361,12 +2717,25 @@
           "primaryKey": false,
           "notNull": true
         },
+        "kosh_id": {
+          "name": "kosh_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "type": {
           "name": "type",
           "type": "notification_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
+        },
+        "requires_action": {
+          "name": "requires_action",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "title": {
           "name": "title",
@@ -2416,6 +2785,21 @@
           "method": "btree",
           "with": {}
         },
+        "notification_kosh_id_idx": {
+          "name": "notification_kosh_id_idx",
+          "columns": [
+            {
+              "expression": "kosh_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "notification_read_at_idx": {
           "name": "notification_read_at_idx",
           "columns": [
@@ -2436,6 +2820,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "notification_type_idx": {
+          "name": "notification_type_idx",
+          "columns": [
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -2445,6 +2844,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "notification_kosh_id_kosh_id_fk": {
+          "name": "notification_kosh_id_kosh_id_fk",
+          "tableFrom": "notification",
+          "tableTo": "kosh",
+          "columnsFrom": [
+            "kosh_id"
           ],
           "columnsTo": [
             "id"
@@ -2566,6 +2978,16 @@
         "rejected"
       ]
     },
+    "public.chat_message_type": {
+      "name": "chat_message_type",
+      "schema": "public",
+      "values": [
+        "text",
+        "image",
+        "file",
+        "system"
+      ]
+    },
     "public.chat_thread_type": {
       "name": "chat_thread_type",
       "schema": "public",
@@ -2593,19 +3015,29 @@
         "expired"
       ]
     },
-    "public.invite_type": {
-      "name": "invite_type",
-      "schema": "public",
-      "values": [
-        "targeted_email",
-        "open_link"
-      ]
-    },
     "public.join_request_status": {
       "name": "join_request_status",
       "schema": "public",
       "values": [
         "pending",
+        "approved",
+        "rejected"
+      ]
+    },
+    "public.loan_request_origin": {
+      "name": "loan_request_origin",
+      "schema": "public",
+      "values": [
+        "member_requested",
+        "admin_initiated"
+      ]
+    },
+    "public.loan_request_status": {
+      "name": "loan_request_status",
+      "schema": "public",
+      "values": [
+        "pending_adhyaksha",
+        "pending_koshadhyaksha",
         "approved",
         "rejected"
       ]
@@ -2642,13 +3074,25 @@
       "name": "notification_type",
       "schema": "public",
       "values": [
-        "invite",
+        "join_request_submitted",
+        "join_request_approved",
+        "join_request_rejected",
+        "role_changed",
         "contribution_due",
-        "loan_due",
-        "approval_needed",
+        "contribution_late",
+        "loan_requested",
+        "loan_request_approved",
+        "loan_request_rejected",
+        "loan_repayment_due",
+        "loan_repayment_overdue",
+        "transaction_pending_approval",
         "transaction_approved",
         "transaction_rejected",
-        "chat_message"
+        "chat_message",
+        "kosh_ending_soon",
+        "kosh_end_payout_processed",
+        "member_removed",
+        "security_alert"
       ]
     },
     "public.payment_method_type": {
@@ -2675,6 +3119,14 @@
       "values": [
         "ios",
         "android"
+      ]
+    },
+    "public.preferred_lang": {
+      "name": "preferred_lang",
+      "schema": "public",
+      "values": [
+        "en",
+        "ne"
       ]
     },
     "public.transaction_status": {

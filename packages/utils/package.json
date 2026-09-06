@@ -13,10 +13,10 @@
   },
   "devDependencies": {
     "@kosh-app/config": "workspace:*",
+    "@kosh-app/language": "workspace:*",
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "class-variance-authority": "^0.7.1",
-    "cn": "^0.2.5"
+    "tailwind-variants": "^3.3.1"
   }
 }

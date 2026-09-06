@@ -1,11 +1,7 @@
-import { Text, View } from "react-native";
+import { RegisterForm } from "@/form/auth/register-form";
 
 const SignUpScreen = () => {
-  return (
-    <View>
-      <Text>SignUpScreen</Text>
-    </View>
-  );
+  return <RegisterForm />;
 };
 
 export default SignUpScreen;

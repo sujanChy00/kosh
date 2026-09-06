@@ -1,11 +1,5 @@
-import { Text, View } from "react-native";
+import { VerifyEmailForm } from "@/form/auth/verify-email-form";
 
-const VerifyEmailScreen = () => {
-  return (
-    <View>
-      <Text>VerifyEmailScreen</Text>
-    </View>
-  );
-};
+const VerifyEmailScreen = () => <VerifyEmailForm />;
 
 export default VerifyEmailScreen;

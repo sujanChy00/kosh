@@ -4,6 +4,7 @@ import { useRef } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Button,
   Pressable,
   Text,
   TextInput,
@@ -11,8 +12,12 @@ import {
 } from "react-native";
 import z from "zod";
 
+import { useLanguage } from "@/hooks/use-language";
 import { authClient } from "@/lib/auth-client";
+import { storage } from "@/utils/storage";
 import { queryClient } from "@/utils/trpc";
+import { ONBOARDING_COMPLETED } from "@kosh-app/utils";
+import { ThemedText } from "./themed-text";
 
 const signInSchema = z.object({
   email: z
@@ -54,6 +59,7 @@ function getErrorMessage(error: unknown): string | null {
 }
 
 function SignIn() {
+  const { t } = useLanguage();
   const passwordInputRef = useRef<TextInput>(null);
 
   const form = useForm({
@@ -87,6 +93,12 @@ function SignIn() {
   return (
     <View className="p-4 rounded-lg">
       <Text className="text-foreground font-medium mb-4">Sign In</Text>
+      <Button
+        title="onboarding screen"
+        onPress={() => {
+          storage.remove(ONBOARDING_COMPLETED);
+        }}
+      />
 
       <form.Subscribe
         selector={(state) => ({
@@ -142,12 +154,14 @@ function SignIn() {
                 <Pressable
                   onPress={form.handleSubmit}
                   disabled={isSubmitting}
-                  className="mt-1"
+                  className="mt-1 bg-primary w-full p-3"
                 >
                   {isSubmitting ? (
                     <ActivityIndicator size="small" />
                   ) : (
-                    <Text>Sign In</Text>
+                    <ThemedText className="text-primary-foreground">
+                      {t("continue")}
+                    </ThemedText>
                   )}
                 </Pressable>
               </View>

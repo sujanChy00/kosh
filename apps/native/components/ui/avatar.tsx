@@ -1,0 +1,57 @@
+import { cn } from "@kosh-app/utils";
+import { ImageProps } from "expo-image";
+import { View, ViewProps } from "react-native";
+import { AnimatedText } from "../animated-text";
+import { StyledImage } from "../styled-image";
+
+const Root = ({ className, ...rest }: ViewProps) => {
+  return (
+    <View
+      className={cn(
+        "rounded-full size-10 bg-muted/40 items-center justify-center flex-row overflow-hidden",
+        className,
+      )}
+      {...rest}
+    />
+  );
+};
+
+const AvatarImage = ({
+  className,
+  source,
+  children,
+  ...rest
+}: ImageProps & { children?: React.ReactNode }) => {
+  if (!!source)
+    return (
+      <StyledImage
+        className={cn("size-full object-cover", className)}
+        source={source}
+        contentFit="cover"
+        {...rest}
+      />
+    );
+  return null;
+};
+
+const AvatarFallback = ({
+  className,
+  source,
+  ...rest
+}: React.ComponentProps<typeof AnimatedText> & {
+  source: string | undefined;
+}) => {
+  if (!!source) return null;
+
+  return (
+    <AnimatedText
+      className={cn("text-foreground text-center", className)}
+      {...rest}
+    />
+  );
+};
+
+export const Avatar = Object.assign(Root, {
+  Image: AvatarImage,
+  Fallback: AvatarFallback,
+});

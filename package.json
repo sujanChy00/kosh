@@ -33,12 +33,15 @@
     "build": "turbo run build",
     "check-types": "turbo run check-types",
     "dev:native": "turbo run dev -F native --",
+    "android": "cd apps/native && expo run:android",
+    "fix:install": "cd apps/native && expo install --check",
     "dev:web": "turbo run dev -F web --",
     "dev:server": "turbo run dev -F server --",
     "db:push": "turbo run db:push -F @kosh-app/db --",
     "db:studio": "turbo run db:studio -F @kosh-app/db --",
     "db:generate": "turbo run db:generate -F @kosh-app/db --",
     "db:migrate": "turbo run db:migrate -F @kosh-app/db --",
+    "db:reset": "turbo run db:reset -F @kosh-app/db --",
     "clean": "bun run scripts/clean.js",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d --build",
@@ -55,18 +58,6 @@
     "@types/bun": "catalog:",
     "turbo": "^2.10.12",
     "typescript": "^6.0.3"
-  },
-  "overrides": {
-    "@expo/dom-webview": "57.0.1",
-    "@expo/log-box": "57.0.4",
-    "@expo/metro-runtime": "57.0.15",
-    "expo": "57.0.19",
-    "expo-constants": "57.0.17",
-    "expo-font": "57.0.3",
-    "expo-linking": "57.0.9",
-    "expo-symbols": "57.0.2",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
   },
   "packageManager": "bun@1.4.0"
 }

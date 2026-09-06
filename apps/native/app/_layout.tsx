@@ -1,17 +1,18 @@
-import "@/global.css";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { KeyboardProvider } from "react-native-keyboard-controller";
-
+import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { NAV_THEME } from "@/constants/theme";
 import { AppThemeProvider, useAppTheme } from "@/contexts/app-theme-context";
+import "@/global.css";
+import { useOnboarding } from "@/hooks/use-onboarding";
 import { authClient } from "@/lib/auth-client";
-import { storage } from "@/utils/storage";
 import { queryClient } from "@/utils/trpc";
-import { ONBOARDING_COMPLETED } from "@kosh-app/utils";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { Stack } from "expo-router";
 import { ThemeProvider } from "expo-router/react-navigation";
+import { StatusBar } from "expo-status-bar";
+import { ActivityIndicator } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
+import { Toaster } from "sonner-native";
 
 export const unstable_settings = {
   initialRouteName: "(main)",
@@ -20,49 +21,104 @@ export const unstable_settings = {
 function StackLayout() {
   const { isDark, currentTheme } = useAppTheme();
   const { data: session } = authClient.useSession();
-  const isOnboardingCompleted =
-    storage.getBoolean(ONBOARDING_COMPLETED) ?? false;
+  const { isOnboardingCompleted } = useOnboarding();
   const isAuthenticated = session?.user != null;
   return (
-    <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>
-      <StatusBar
-        style={isDark ? "light" : "dark"}
-        animated
-        key={`root-status-bar-${isDark ? "light" : "dark"}`}
-      />
-      <Stack
-        screenOptions={{
-          headerBackButtonDisplayMode: "minimal",
+    <>
+      <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>
+        <StatusBar
+          style={isDark ? "light" : "dark"}
+          animated
+          key={`root-status-bar-${isDark ? "light" : "dark"}`}
+        />
+        <Stack
+          screenOptions={{
+            headerBackButtonDisplayMode: "minimal",
+          }}
+        >
+          <Stack.Protected guard={!isOnboardingCompleted}>
+            <Stack.Screen
+              name="(onboarding)"
+              options={{
+                headerShown: false,
+              }}
+            />
+          </Stack.Protected>
+
+          <Stack.Protected guard={isOnboardingCompleted && !isAuthenticated}>
+            <Stack.Screen
+              name="(auth)"
+              options={{
+                headerShown: false,
+              }}
+            />
+          </Stack.Protected>
+
+          <Stack.Protected guard={isOnboardingCompleted && isAuthenticated}>
+            <Stack.Screen
+              name="(main)"
+              options={{
+                headerShown: false,
+              }}
+            />
+          </Stack.Protected>
+        </Stack>
+      </ThemeProvider>
+      <Toaster
+        enableStacking
+        position="top-center"
+        richColors
+        theme={currentTheme}
+
+        icons={{
+          loading: (
+            <ActivityIndicator
+              size={"small"}
+              colorClassName="accent-blue-400"
+            />
+          ),
+          error: (
+            <StyledSymbolView
+              tintColorClassName="accent-danger"
+              name={{
+                android: "cancel",
+                ios: "xmark.circle.fill",
+              }}
+            />
+          ),
+
+          info: (
+            <StyledSymbolView
+              tintColorClassName="accent-blue-400"
+              name={{
+                android: "info",
+                ios: "info.circle.fill",
+              }}
+            />
+          ),
+
+          success: (
+            <StyledSymbolView
+              tintColorClassName="accent-success"
+              name={{
+                android: "check_circle",
+                ios: "checkmark.circle.fill",
+              }}
+            />
+          ),
+
+          warning: (
+            <StyledSymbolView
+              tintColorClassName="accent-warning"
+              name={{
+                android: "warning",
+                ios: "exclamationmark.triangle.fill",
+              }}
+            />
+          ),
         }}
-      >
-        <Stack.Protected guard={!isOnboardingCompleted}>
-          <Stack.Screen
-            name="(onboarding)"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack.Protected>
-
-        <Stack.Protected guard={isOnboardingCompleted && !isAuthenticated}>
-          <Stack.Screen
-            name="(auth)"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack.Protected>
-
-        <Stack.Protected guard={isOnboardingCompleted && isAuthenticated}>
-          <Stack.Screen
-            name="(main)"
-            options={{
-              headerShown: false,
-            }}
-          />
-        </Stack.Protected>
-      </Stack>
-    </ThemeProvider>
+      />
+    </>
   );
 }
 

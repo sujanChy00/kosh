@@ -1,11 +1,5 @@
-import { Text, View } from "react-native";
+import { ForgotPasswordForm } from "@/form/auth/forgot-password-form";
 
-const ForgotPasswordScreen = () => {
-  return (
-    <View>
-      <Text>ForgotPasswordScreen</Text>
-    </View>
-  );
-};
+const ForgotPasswordScreen = () => <ForgotPasswordForm />;
 
 export default ForgotPasswordScreen;
