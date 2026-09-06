@@ -6,7 +6,6 @@ import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
@@ -47,7 +46,6 @@ export const RegisterForm = () => {
           onSuccess() {
             formApi.reset();
             toast.success("Account created successfully");
-            queryClient.refetchQueries();
             router.push({
               pathname: "/verify-email",
               params: {

@@ -8,7 +8,6 @@ import { TextSeparator } from "@/components/ui/text-separator";
 import { isIOS } from "@/constants/platform";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { queryClient } from "@/utils/trpc";
 import { cn } from "@kosh-app/utils";
 import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
 import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
@@ -55,7 +54,6 @@ export const VerifyEmailForm = () => {
         onSuccess() {
           haptics("success");
           toast.success("Email verified successfully");
-          queryClient.refetchQueries();
           router.replace("/sign-in");
         },
       },

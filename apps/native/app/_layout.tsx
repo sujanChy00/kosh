@@ -1,4 +1,5 @@
 import { StyledSymbolView } from "@/components/styled-symbol-view";
+import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { NAV_THEME } from "@/constants/theme";
 import { AppThemeProvider, useAppTheme } from "@/contexts/app-theme-context";
 import "@/global.css";
@@ -20,9 +21,13 @@ export const unstable_settings = {
 
 function StackLayout() {
   const { isDark, currentTheme } = useAppTheme();
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
   const { isOnboardingCompleted } = useOnboarding();
   const isAuthenticated = session?.user != null;
+
+  console.log(session);
+
+  if (isPending) return <FullScreenSpinner isVisible />;
   return (
     <>
       <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>
