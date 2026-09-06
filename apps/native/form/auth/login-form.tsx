@@ -92,7 +92,7 @@ export const LoginForm = () => {
           <ThemedText className="text-xs font-mono-semibold uppercase tracking-[0.2em] text-primary">
             Welcome back
           </ThemedText>
-          <ThemedText className="text-balance text-4xl font-notosans-semibold leading-[1.08] tracking-tight">
+          <ThemedText className="text-balance text-3xl font-notosans-semibold leading-[1.08] tracking-tight">
             Sign in to your kosh.
           </ThemedText>
         </View>

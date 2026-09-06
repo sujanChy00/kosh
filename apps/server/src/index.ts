@@ -17,6 +17,7 @@ app.use(
     allowMethods: ["GET", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
+    exposeHeaders: ["set-auth-token"],
   }),
 );
 

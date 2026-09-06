@@ -11,6 +11,7 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: Constants.expoConfig?.scheme as string,
       storagePrefix: Constants.expoConfig?.scheme as string,
+      cookiePrefix: "kosh",
       storage: SecureStore,
     }),
     emailOTPClient(),

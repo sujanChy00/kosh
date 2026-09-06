@@ -99,7 +99,7 @@ export const VerifyEmailForm = () => {
             <ThemedText className="text-xs font-mono-semibold uppercase tracking-[0.2em] text-primary">
               One last step
             </ThemedText>
-            <ThemedText className="text-balance text-4xl font-notosans-semibold leading-[1.08] tracking-tight">
+            <ThemedText className="text-balance text-3xl font-notosans-semibold leading-[1.08] tracking-tight">
               Verify your email.
             </ThemedText>
             <ThemedText className="text-pretty text-xs leading-6 text-muted-foreground">

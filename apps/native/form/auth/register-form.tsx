@@ -73,7 +73,7 @@ export const RegisterForm = () => {
           <ThemedText className="text-xs font-mono-semibold uppercase tracking-[0.2em] text-primary">
             Start together
           </ThemedText>
-          <ThemedText className="text-balance text-4xl font-notosans-semibold leading-[1.08] tracking-tight">
+          <ThemedText className="text-balance text-3xl font-notosans-semibold leading-[1.08] tracking-tight">
             Create your Kosh account.
           </ThemedText>
         </View>

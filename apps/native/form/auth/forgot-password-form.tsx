@@ -49,7 +49,10 @@ export const ForgotPasswordForm = () => {
 
   return (
     <>
-      <FullScreenSpinner isVisible={isSubmitting} loadingText="Sending reset link..." />
+      <FullScreenSpinner
+        isVisible={isSubmitting}
+        loadingText="Sending reset link..."
+      />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
@@ -60,7 +63,7 @@ export const ForgotPasswordForm = () => {
               Account recovery
             </ThemedText>
             <ThemedText className="text-balance text-3xl font-notosans-semibold leading-[1.08] tracking-tight">
-              Reset your password.
+              Forgot password?
             </ThemedText>
             <FieldDescription>
               We'll send a verification code to your email to confirm it's you.
@@ -92,7 +95,7 @@ export const ForgotPasswordForm = () => {
             </InputGroup>
           </Field>
         </View>
-        <AnimatedSpacer height={120} />
+        <AnimatedSpacer height={500} />
       </ScrollView>
       <KeyboardStickyView
         style={{
@@ -115,7 +118,10 @@ export const ForgotPasswordForm = () => {
               </GhostButton.Label>
             </GhostButton>
           </Link>
-          <PrimaryButton onPress={() => handleSubmit(email)} disabled={!email.trim()}>
+          <PrimaryButton
+            onPress={() => handleSubmit(email)}
+            disabled={!email.trim()}
+          >
             <PrimaryButton.Label>Send reset link</PrimaryButton.Label>
           </PrimaryButton>
         </View>
