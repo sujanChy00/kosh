@@ -6,6 +6,7 @@ import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
@@ -44,6 +45,7 @@ export const RegisterForm = () => {
             toast.error(error.error?.message || "Failed to sign up");
           },
           onSuccess() {
+            queryClient.refetchQueries();
             formApi.reset();
             toast.success("Account created successfully");
             router.push({
@@ -171,19 +173,6 @@ export const RegisterForm = () => {
                   onValueChange={setAccepted}
                 />
               </Host>
-            </View>
-
-            <View className="flex-row items-center justify-center gap-1 pt-6">
-              <StyledSymbolView
-                size={16}
-                tintColorClassName="accent-muted-foreground"
-                name={{
-                  android: "lock",
-                }}
-              />
-              <ThemedText className="text-muted-foreground text-xs text-center">
-                Your information is protected
-              </ThemedText>
             </View>
           </View>
         </form.AppForm>

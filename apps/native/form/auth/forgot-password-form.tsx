@@ -6,7 +6,9 @@ import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { InputGroup } from "@/components/ui/input-group";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useScrollToBottomOnKeyboardVisible } from "@/hooks/use-scroll-to-bottom-on-keyboard-visible";
 import { authClient } from "@/lib/auth-client";
+import { queryClient } from "@/utils/trpc";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -15,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { toast } from "sonner-native";
 
 export const ForgotPasswordForm = () => {
+  const { scrollViewRef } = useScrollToBottomOnKeyboardVisible();
   const { email: queryEmail } = useLocalSearchParams<{ email?: string }>();
   const router = useRouter();
   const haptics = useHaptics();
@@ -33,6 +36,7 @@ export const ForgotPasswordForm = () => {
             toast.error(error.error?.message || "Failed to send reset link");
           },
           onSuccess() {
+            queryClient.refetchQueries();
             haptics("success");
             toast.success("Reset code sent! Check your email.");
             router.push({
@@ -54,6 +58,7 @@ export const ForgotPasswordForm = () => {
         loadingText="Sending reset link..."
       />
       <ScrollView
+        ref={scrollViewRef}
         keyboardShouldPersistTaps="handled"
         contentInsetAdjustmentBehavior="automatic"
       >

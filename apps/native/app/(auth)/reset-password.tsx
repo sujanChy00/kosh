@@ -1,11 +1,4 @@
-import { Text, View } from "react-native";
+import { ResetPasswordForm } from "@/form/auth/reset-password-form";
 
-const ResetPasswordScreen = () => {
-  return (
-    <View>
-      <Text>ResetPasswordScreen</Text>
-    </View>
-  );
-};
-
+const ResetPasswordScreen = () => <ResetPasswordForm />;
 export default ResetPasswordScreen;

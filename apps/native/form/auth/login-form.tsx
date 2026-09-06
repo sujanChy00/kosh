@@ -9,12 +9,15 @@ import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
+import { signInWithPasskey } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
-import { ONBOARDING_COMPLETED } from "@kosh-app/utils/constants/data";
+import { queryClient } from "@/utils/trpc";
+import { BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import { useSelector } from "@tanstack/react-form";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useMMKVBoolean } from "react-native-mmkv";
 import { toast } from "sonner-native";
 import { LOGIN_FORM_VALUE, LOGIN_SCHEMA } from "./auth-schema";
 
@@ -22,6 +25,7 @@ export const LoginForm = () => {
   const router = useRouter();
   const { email: emailQuery } = useLocalSearchParams<{ email?: string }>();
   const haptics = useHaptics();
+  const [biometricEnabled] = useMMKVBoolean(BIOMETRIC_ENABLED, storage);
   const form = useForm({
     defaultValues: {
       email: emailQuery ?? "",
@@ -65,6 +69,7 @@ export const LoginForm = () => {
           },
           onSuccess() {
             formApi.reset();
+            queryClient.refetchQueries();
           },
         },
       );
@@ -75,6 +80,18 @@ export const LoginForm = () => {
     email: state.values.email,
     isSubmitting: state.isSubmitting,
   }));
+
+  const handleBiometricSignIn = async () => {
+    haptics("selection");
+    const result = await signInWithPasskey();
+    if (!result.ok) {
+      if (result.cancelled) return;
+      haptics("error");
+      toast.error(result.message || "Biometric sign-in failed");
+      return;
+    }
+    queryClient.refetchQueries();
+  };
 
   return (
     <KeyboardAvoidingView
@@ -155,7 +172,7 @@ export const LoginForm = () => {
                     asChild
                     className="ml-auto pt-1"
                     href={{
-                      pathname: "/forgot-password",
+                      pathname: "/reset-password",
                       params: {
                         email,
                       },
@@ -173,37 +190,23 @@ export const LoginForm = () => {
             <form.SubmitButton>
               <ThemedText className="text-primary-foreground">Login</ThemedText>
             </form.SubmitButton>
-            <View className="gap-y-3">
-              <TextSeparator text="or continue with" />
-              <SecondaryButton
-                onPress={() => {
-                  storage.remove(ONBOARDING_COMPLETED);
-                }}
-              >
-                <StyledSymbolView
-                  tintColorClassName={"accent-primary"}
-                  name={{
-                    ios: "faceid",
-                    android: "fingerprint",
-                  }}
-                />
-                <SecondaryButton.Label>
-                  {isIOS ? "Login with FaceID" : "Login with Fingerprint"}
-                </SecondaryButton.Label>
-              </SecondaryButton>
-            </View>
-            <View className="flex-row items-center justify-center gap-1 pt-6">
-              <StyledSymbolView
-                size={16}
-                tintColorClassName="accent-muted-foreground"
-                name={{
-                  android: "lock",
-                }}
-              />
-              <ThemedText className="text-muted-foreground text-xs text-center">
-                Your information is protected
-              </ThemedText>
-            </View>
+            {biometricEnabled ? (
+              <View className="gap-y-3">
+                <TextSeparator text="or continue with" />
+                <SecondaryButton onPress={handleBiometricSignIn}>
+                  <StyledSymbolView
+                    tintColorClassName={"accent-primary"}
+                    name={{
+                      ios: "faceid",
+                      android: "fingerprint",
+                    }}
+                  />
+                  <SecondaryButton.Label>
+                    {isIOS ? "Login with FaceID" : "Login with Fingerprint"}
+                  </SecondaryButton.Label>
+                </SecondaryButton>
+              </View>
+            ) : null}
           </View>
         </form.AppForm>
         <AnimatedSpacer height={100} />

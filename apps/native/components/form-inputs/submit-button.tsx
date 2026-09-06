@@ -15,7 +15,7 @@ export const SubmitButton = ({
     >
       {([isSubmitting, isValidating]) => (
         <PrimaryButton
-          disabled={isSubmitting ?? isValidating ?? disabled ?? false}
+          disabled={isSubmitting || isValidating || disabled}
           onPress={(event) => {
             form.handleSubmit();
           }}

@@ -25,9 +25,7 @@ function StackLayout() {
   const { isOnboardingCompleted } = useOnboarding();
   const isAuthenticated = session?.user != null;
 
-  console.log(session);
-
-  if (isPending) return <FullScreenSpinner isVisible />;
+  if (isPending && session == null) return <FullScreenSpinner isVisible />;
   return (
     <>
       <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>

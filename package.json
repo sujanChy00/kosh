@@ -23,6 +23,7 @@
       "@tanstack/react-form": "^1.33.2",
       "@types/react-dom": "^19.2.3",
       "@better-auth/expo": "1.7.1",
+      "@better-auth/passkey": "1.7.1",
       "react": "19.2.3",
       "react-dom": "19.2.3"
     }

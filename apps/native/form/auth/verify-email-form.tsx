@@ -3,27 +3,20 @@ import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
-import { InputOTP } from "@/components/ui/otp-input";
+import { TextInput } from "@/components/ui/text-input";
 import { TextSeparator } from "@/components/ui/text-separator";
 import { isIOS } from "@/constants/platform";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { cn } from "@kosh-app/utils";
+import { queryClient } from "@/utils/trpc";
+import { cn, formatTime } from "@kosh-app/utils";
 import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
 import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ScrollView, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { toast } from "sonner-native";
-
-const formatTime = (totalSeconds: number) => {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}`;
-};
 
 export const VerifyEmailForm = () => {
   const router = useRouter();
@@ -52,6 +45,7 @@ export const VerifyEmailForm = () => {
           toast.error(error.error?.message || "Invalid verification code");
         },
         onSuccess() {
+          queryClient.refetchQueries();
           haptics("success");
           toast.success("Email verified successfully");
           router.replace("/sign-in");
@@ -123,20 +117,23 @@ export const VerifyEmailForm = () => {
                   : `Expires in: ${formatTime(secondsLeft)}`}
               </ThemedText>
             </View>
-            <InputOTP autoFocus value={token} onChangeText={setToken} />
+            <TextInput
+              autoFocus
+              value={token}
+              onChangeText={setToken}
+              maxLength={6}
+              keyboardType="number-pad"
+            />
           </Field>
           <View className="gap-y-3">
-            {isExpired ? (
-              <PrimaryButton onPress={onResend} disabled={isResending}>
-                <PrimaryButton.Label>Resend Code</PrimaryButton.Label>
-              </PrimaryButton>
-            ) : (
-              <GhostButton onPress={onResend} disabled={isResending}>
-                <GhostButton.Label className="font-mono-medium uppercase">
-                  RESEND
-                </GhostButton.Label>
-              </GhostButton>
-            )}
+            <GhostButton onPress={onResend} disabled={isResending}>
+              <GhostButton.Label className="font-mono-medium uppercase">
+                RESEND
+              </GhostButton.Label>
+              {isResending && (
+                <ActivityIndicator colorClassName="accent-primary" />
+              )}
+            </GhostButton>
             <PrimaryButton
               onPress={onVerifyEmail}
               disabled={!token.trim() || isExpired}

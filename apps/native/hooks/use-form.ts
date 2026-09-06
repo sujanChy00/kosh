@@ -1,5 +1,4 @@
 import { DateField } from "@/components/form-inputs/date-field";
-import { OTPField } from "@/components/form-inputs/otp-field";
 import { PasswordField } from "@/components/form-inputs/password-field";
 
 import { SelectField } from "@/components/form-inputs/select-field";
@@ -14,7 +13,6 @@ const { useAppForm: useForm, withForm } = createFormHook({
   fieldComponents: {
     TextField,
     PasswordField,
-    OTPField,
     DateField,
     SwitchField,
     SelectField,
