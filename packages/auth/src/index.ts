@@ -149,22 +149,16 @@ export function createAuth() {
           env.BETTER_AUTH_URL,
           env.CORS_ORIGIN,
           "kosh-app://",
-          // EAS release keystore SHA-256 (from `eas credentials`), base64 —
-          // matches the `sha256_cert_fingerprints` entry in assetlinks.json.
-          "android:apk-key-hash:hNOX/ys9e8YrAKG9VPHCWKA4SKMB+WhYuc4ti0EPMtA",
-          // Android debug keystore (`~/.android/debug.keystore`), SHA-256
-          // FA:C6:17:45:... base64. Needed only while testing dev builds
-          // installed via `expo run:android`; remove before release.
-          "android:apk-key-hash:+sYXRdwJA3hvue3mKpYrOZ9zSPC7b4mbgzJmdZEDO5w=",
-          // Android APK-originated ceremonies must be trusted post-deploy by
-          // adding an entry per signing certificate:
-          //   `android:apk-key-hash:<BASE64_SHA256_OF_CERT>`
-          // (debug: `~/.android/debug.keystore`; production: Play App Signing).
+          // EAS release keystore SHA-256, base64url (no padding) — matches
+          // assetlinks.json's sha256_cert_fingerprints entry (that file uses
+          // hex-colon format; this is the same bytes, base64url-encoded).
+          "android:apk-key-hash:hNOX_ys9e8YrAKG9VPHCWKA4SKMB-WhYuc4ti0EPMtA",
+          // Android debug keystore (~/.android/debug.keystore), same encoding.
+          // Needed only while testing dev builds via `expo run:android`; remove
+          // before release.
+          "android:apk-key-hash:-sYXRdwJA3hvue3mKpYrOZ9zSPC7b4mbgzJmdZEDO5w",
         ],
         advanced: {
-          // Must start with the server cookie prefix ("kosh") so
-          // @better-auth/expo's `cookiePrefix: "kosh"` persists and resends the
-          // WebAuthn challenge cookie from SecureStore during native ceremonies.
           webAuthnChallengeCookie: "kosh-passkey",
         },
       }),
