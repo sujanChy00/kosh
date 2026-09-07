@@ -161,9 +161,6 @@ export const LoginForm = () => {
               children={(field) => (
                 <Field className="items-center">
                   <field.PasswordField
-                    onSubmitEditing={() => {
-                      form.handleSubmit();
-                    }}
                     returnKeyType="done"
                     label="Password"
                     placeholder="********"

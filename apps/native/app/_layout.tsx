@@ -10,6 +10,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { ThemeProvider } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -23,9 +24,20 @@ function StackLayout() {
   const { isDark, currentTheme } = useAppTheme();
   const { data: session, isPending } = authClient.useSession();
   const { isOnboardingCompleted } = useOnboarding();
+  const [hasCheckedSession, setHasCheckedSession] = useState(false);
   const isAuthenticated = session?.user != null;
 
-  if (isPending && session == null) return <FullScreenSpinner isVisible />;
+  useEffect(() => {
+    if (!isPending) setHasCheckedSession(true);
+  }, [isPending]);
+
+  // Only block the app on the very first session resolution (cold start).
+  // Background refetches (e.g. better-auth refetching on app focus after an
+  // iOS autofill/strong-password overlay) must not unmount the tree, which
+  // would reset an in-progress auth form.
+  if (!hasCheckedSession && isPending && session == null) {
+    return <FullScreenSpinner isVisible />;
+  }
   return (
     <>
       <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>
