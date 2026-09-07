@@ -152,6 +152,10 @@ export function createAuth() {
           // EAS release keystore SHA-256 (from `eas credentials`), base64 —
           // matches the `sha256_cert_fingerprints` entry in assetlinks.json.
           "android:apk-key-hash:hNOX/ys9e8YrAKG9VPHCWKA4SKMB+WhYuc4ti0EPMtA",
+          // Android debug keystore (`~/.android/debug.keystore`), SHA-256
+          // FA:C6:17:45:... base64. Needed only while testing dev builds
+          // installed via `expo run:android`; remove before release.
+          "android:apk-key-hash:+sYXRdwJA3hvue3mKpYrOZ9zSPC7b4mbgzJmdZEDO5w=",
           // Android APK-originated ceremonies must be trusted post-deploy by
           // adding an entry per signing certificate:
           //   `android:apk-key-hash:<BASE64_SHA256_OF_CERT>`
