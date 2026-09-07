@@ -37,6 +37,12 @@ app.get("/", (c) => {
   return c.text("OK");
 });
 
+// Apple Team ID + bundle identifier, listed in the AASA under `webcredentials`.
+// Required for iOS passkeys so the platform can validate the Relying Party ID
+// against this app. Replace with the real Team ID (Settings > Account in
+// developer.apple.com) before deploying.
+const APPLE_WEB_CREDENTIAL_APP_ID = "<TEAM_ID>.com.koshapp.app";
+
 app.get("/.well-known/assetlinks.json", (c) => {
   return c.json([
     {
@@ -50,6 +56,15 @@ app.get("/.well-known/assetlinks.json", (c) => {
       },
     },
   ]);
+});
+
+app.get("/.well-known/apple-app-site-association", (c) => {
+  return c.json({
+    applinks: {},
+    webcredentials: {
+      apps: [APPLE_WEB_CREDENTIAL_APP_ID],
+    },
+  });
 });
 
 export default app;

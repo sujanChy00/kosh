@@ -149,6 +149,9 @@ export function createAuth() {
           env.BETTER_AUTH_URL,
           env.CORS_ORIGIN,
           "kosh-app://",
+          // EAS release keystore SHA-256 (from `eas credentials`), base64 —
+          // matches the `sha256_cert_fingerprints` entry in assetlinks.json.
+          "android:apk-key-hash:hNOX/ys9e8YrAKG9VPHCWKA4SKMB+WhYuc4ti0EPMtA",
           // Android APK-originated ceremonies must be trusted post-deploy by
           // adding an entry per signing certificate:
           //   `android:apk-key-hash:<BASE64_SHA256_OF_CERT>`
