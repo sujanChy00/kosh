@@ -1,18 +1,57 @@
 import { env } from "@kosh-app/env/server";
 import nodemailer from "nodemailer";
 
-export const transporter = nodemailer.createTransport({
-  host: env.SMTP_HOST,
-  port: env.SMTP_PORT,
-  secure: env.SMTP_SECURE,
-  auth:
-    env.SMTP_USER && env.SMTP_PASS
-      ? {
-          user: env.SMTP_USER,
-          pass: env.SMTP_PASS,
-        }
-      : undefined,
-});
+const RESEND_URL = "https://api.resend.com/emails";
+const SEND_TIMEOUT_MS = 15_000;
+
+async function sendMail({
+  to,
+  subject,
+  html,
+}: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  const from = `Kosh App <${env.EMAIL_FROM}>`;
+
+  if (env.RESEND_API_KEY) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), SEND_TIMEOUT_MS);
+    try {
+      const res = await fetch(RESEND_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ from, to, subject, html }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => res.statusText);
+        throw new Error(`Resend API ${res.status}: ${detail}`);
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: env.SMTP_HOST,
+    port: env.SMTP_PORT,
+    secure: env.SMTP_SECURE,
+    auth:
+      env.SMTP_USER && env.SMTP_PASS
+        ? {
+            user: env.SMTP_USER,
+            pass: env.SMTP_PASS,
+          }
+        : undefined,
+  });
+  await transporter.sendMail({ from, to, subject, html });
+}
 
 export async function sendVerificationEmail({
   to,
@@ -84,8 +123,7 @@ export async function sendVerificationEmail({
 </html>
   `;
 
-  return transporter.sendMail({
-    from: `Kosh App <${env.EMAIL_FROM}>`,
+  return sendMail({
     to,
     subject: `Verify your Kosh App Account ${otp ? `(Code: ${otp})` : ""}`,
     html,
@@ -162,8 +200,7 @@ export async function sendResetPasswordEmail({
 </html>
   `;
 
-  return transporter.sendMail({
-    from: `Kosh App <${env.EMAIL_FROM}>`,
+  return sendMail({
     to,
     subject: `Reset your Kosh App Password ${otp ? `(Code: ${otp})` : ""}`,
     html,

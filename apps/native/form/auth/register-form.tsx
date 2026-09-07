@@ -1,12 +1,14 @@
 import { Host } from "@/components/layout/host";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
+import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
+import { useSelector } from "@tanstack/react-form";
 import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
@@ -59,11 +61,16 @@ export const RegisterForm = () => {
     },
   });
 
+  const { isSubmitting } = useSelector(form.store, (state) => ({
+    isSubmitting: state.isSubmitting,
+  }));
+
   return (
     <KeyboardAvoidingView
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
+      <FullScreenSpinner isVisible={isSubmitting} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
