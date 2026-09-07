@@ -1,0 +1,28 @@
+{
+  "name": "@kosh-app/utils",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./hooks/*": {
+      "default": "./src/hooks/*.ts"
+    },
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./date": {
+      "default": "./src/date.ts"
+    },
+    "./constants/*": {
+      "default": "./src/constants/*.ts"
+    }
+  },
+  "devDependencies": {
+    "@kosh-app/config": "workspace:*",
+    "@kosh-app/language": "workspace:*",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "tailwind-variants": "^3.3.1"
+  }
+}

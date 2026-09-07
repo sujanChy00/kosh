@@ -14,7 +14,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:deploy": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "db:reset": "bun run src/reset.ts && bun run db:generate && bun run db:migrate"
   },
   "dependencies": {
     "@kosh-app/env": "workspace:*",

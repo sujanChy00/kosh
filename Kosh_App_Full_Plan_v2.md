@@ -27,19 +27,20 @@ Each user holds exactly **one role per kosh** — no combined roles. Adhyaksha p
 
 ## 2. Invites & Join Verification
 
-Two invite modes, since a plain shareable link/QR can't verify identity on its own:
+One invite mechanism, shareable three ways — a plain **code**, a **link**, or a **QR code** (all three are just different presentations of the same underlying token). No email-targeted invites for now.
 
-**Targeted invite (by email)** — Adhyaksha enters a specific person's email. A unique token is generated and tied to that email.
-- If the invited person already has the app installed and is logged in with that same email, tapping the link opens the app directly to a **bottom sheet** ("Join [Kosh Name]?") via a deep link: `kosh-app://invite/{token}`, which Expo Router resolves through `app/invite/[token].tsx`.
-- If they don't have the app yet (or haven't registered with that email), the invite is simply stored server-side against their email. Once they install the app and log in/register with that same email, the pending invite automatically surfaces in their **Notifications/Invitations inbox** — no working deep link needed for this path.
-- Joining this way grants **Sadasya** access immediately — no separate approval step, since the email match already verifies intent.
+**Flow:**
+1. Adhyaksha generates an invite for the kosh.
+2. An in-app **QR scanner** lets a user scan the code directly (`expo-camera`'s built-in barcode scanning); tapping a link works the same way via the `kosh-app://invite/{token}` deep link; a plain code can be typed in manually.
+3. Scanning/tapping/entering opens a screen showing the **kosh's details** (name, description, icon) and a "Request to Join" action.
+4. On submission, the user is placed in a **Pending** state (`kosh_memberships.status = pending`), and Adhyaksha receives a notification that a join request is waiting.
+5. Adhyaksha reviews a **Join Requests** list (per kosh) and approves or rejects each one. Approval flips status to `active` with role `Sadasya`.
 
-**Open invite (link/QR)** — a general join link/code, meant for handing out at an in-person meeting rather than targeting one person.
-- Has an **expiration** (e.g. 7 days) and a **usage cap**; Adhyaksha can revoke/regenerate it anytime.
-- Since it isn't tied to a specific identity, anyone who uses it lands in a **Pending Approval** state, not immediate Sadasya access.
-- Adhyaksha reviews a list of join requests and approves/rejects each individually before the person becomes a real member — this is the actual gate, since the link itself can't be locked down from being shared further.
+**Invite hygiene:** invites have an **expiration date** and a **usage cap**; Adhyaksha can revoke/regenerate anytime. Anyone who scans/taps an expired invite sees a clear "Invite expired" state rather than a generic error.
 
-**Phone-based invites are removed** — with auth being email-only, there's no account to match a phone number against, and SMS costs money to send. Everything routes through email + the open-link/QR flow instead.
+**Phone-based invites remain removed** — auth is email-only, and SMS costs money to send.
+
+**Kosh history screen:** a user can view their full history of kosh involvement in one place — active memberships, pending join requests, rejected join requests, and kosh they've been removed from. Gives transparency into "what happened" rather than a request or removal silently disappearing.
 
 ---
 
@@ -72,7 +73,28 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 4. Kosh Entity — Fields
+## 4. Biometric Login
+
+Biometrics are a **local, device-level gate** — the server never verifies a fingerprint or face directly. The actual security check happens on-device via the phone's secure enclave; the backend's role is limited to issuing and validating the same session token it always would.
+
+**Why the existing stack already does most of the work:**
+- `bearer()` — issues a session token used as `Authorization: Bearer <token>` instead of relying on cookies (which don't work well in React Native)
+- `expoClient()` (client-side counterpart to the `expo()` server plugin) — automatically stores that bearer token in `expo-secure-store` (iOS Keychain / Android Keystore) after login, with no extra work required
+
+**Flow:**
+1. Normal login happens once (email + password, verified). The Expo client plugin silently stores the bearer token securely.
+2. User enables "Biometric Login" in Settings — only shown/allowed if the device actually supports it (`LocalAuthentication.hasHardwareAsync()` + `isEnrolledAsync()`). Updates `biometricEnabled` on the user record (already in the schema).
+3. On next app open/resume: if a stored session token exists and `biometricEnabled` is true, skip the login form and prompt `LocalAuthentication.authenticateAsync()`.
+4. On success, the app just uses the already-stored bearer token — no new call to `/sign-in/email` happens; biometric success unlocks access to what's already there.
+5. On failure/cancel, fall back to the standard email/password login screen.
+
+**Edge case to handle:** sessions expire after 7 days (per current config). If someone hasn't opened the app in that long, biometric unlock can succeed locally while the stored token is already invalid server-side — the first authenticated request will 401, and the app needs to catch that and redirect to full login rather than getting stuck.
+
+**Why `biometricEnabled` lives server-side too:** mainly to keep the setting in sync across a person's devices (e.g. a second phone knows whether to offer the toggle). Enforcement itself is always local.
+
+---
+
+## 5. Kosh Entity — Fields
 
 **Basic Info**
 - Name, description (optional), icon/photo (optional)
@@ -101,7 +123,7 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 5. Member/User — Fields
+## 6. Member/User — Fields
 
 **User Account (global, one-time)**
 - Full name, email (verified), password (hashed), profile photo (optional)
@@ -114,13 +136,28 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 6. Loan Management
+## 7. Loan Management
 
 **Applies to any participant regardless of role** — Adhyaksha and Koshadhyaksha can borrow too, at the same member interest rate as a Sadasya, since they're kosh participants like anyone else. (Worth deciding later whether a Koshadhyaksha approving their *own* loan request creates a conflict of interest — see Open Decisions.)
 
-- Interest rates and loan cap set per kosh (see §4)
+**Two ways a loan gets started, converging on the same approval steps:**
+
+**A. Member-requested** — any participant submits a loan request (amount, optional note) directly in the app.
+1. **Every kosh member gets a notification** naming who requested a loan and how much — informational, for group transparency.
+2. The request appears in a **Loan Requests** section on the kosh's details screen — visible to everyone, but only Adhyaksha and Koshadhyaksha see approve/reject actions; a Sadasya can only view it and its status.
+3. **Adhyaksha approves or rejects it.** Approving here is what moves it forward — it doesn't disburse yet, it converts the request into an actual loan pending sign-off.
+4. **Koshadhyaksha approval is still required** before disbursement (all Koshadhyaksha, per the standard rule).
+
+**B. Adhyaksha-initiated** — for a loan someone requested in person or over a messaging app, outside the kosh app entirely. Adhyaksha manually enters the borrower and amount.
+1. This also **broadcasts a notification to every kosh member** — same transparency, even though the request itself didn't originate in-app.
+2. **Koshadhyaksha approval is still required** before disbursement, same as path A.
+
+**Either way:** only Adhyaksha and Koshadhyaksha can ever approve/reject a loan — a Sadasya (including the requester themselves) can only view status. Once resolved — disbursed or rejected — **every kosh member gets a notification of the outcome**, not just the borrower.
+
+Beyond the request/approval flow:
+- Interest rates and loan cap set per kosh (see §5)
 - Loan cap is a **per-member cap**, same value for every participant
-- Adhyaksha selects the borrowing participant; if they have multiple payout methods on file, Adhyaksha picks which one to disburse to
+- Adhyaksha picks which of the borrower's payout methods to disburse to, if they have more than one on file
 - Participants see "amount taken / amount remaining" against the kosh's loan cap at all times
 - Repayments: Adhyaksha can **Mark as Paid (full installment)** or **Enter Amount** (partial/lump-sum)
   - Underpay → shortfall carries forward, interest continues accruing on outstanding principal
@@ -129,7 +166,7 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 7. Contribution Tracking
+## 8. Contribution Tracking
 
 **Applies to every participant regardless of role** — Adhyaksha and Koshadhyaksha contribute monthly the same as any Sadasya. The Adhyaksha still records/confirms payments for everyone (including their own), since that's a management action, not a participation restriction.
 
@@ -143,7 +180,7 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 8. Kosh-End Payout
+## 9. Kosh-End Payout
 
 - On kosh term completion, remaining fund is split **equally per participant — every kosh member regardless of role (Adhyaksha, Koshadhyaksha, and Sadasya all included)**
 - Any participant with an **outstanding loan has it deducted from their payout first**
@@ -151,14 +188,48 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 9. Chat System
+## 10. Chat System
 
 - **Group chat**: one per kosh, auto-created on kosh creation, permanent — a member of 3 kosh sees 3 persistent group chats regardless of which kosh is currently active
 - **Direct messages**: scoped to the currently active kosh — two people who share multiple kosh get a **separate DM thread per kosh** (Slack-style), keeping kosh-specific discussions (e.g. loan disputes) tied to the right context
 
 ---
 
-## 10. Additional Features
+## 11. Notifications
+
+**Kosh-scoped types** (filterable by kosh):
+- Join request submitted (to Adhyaksha)
+- Join request approved / rejected (to requester)
+- Role changed (to affected person)
+- Contribution due (reminder)
+- Contribution late (penalty applied)
+- **Loan requested (broadcast to all kosh members)**
+- **Loan request approved & disbursed (broadcast to all kosh members)**
+- **Loan request rejected (broadcast to all kosh members)**
+- Loan repayment due / overdue (to borrower)
+- Transaction pending approval (to Koshadhyaksha)
+- Transaction approved / rejected (to initiating Adhyaksha)
+- Chat message
+- Kosh ending soon (term completion approaching)
+- Kosh-end payout processed
+- Member removed / left kosh
+
+**Account-scoped types** (not tied to any kosh — shown under a "General" bucket separate from the per-kosh filter):
+- Security alert (password changed, email changed, new device login)
+
+**Filters (MVP):**
+- By kosh (or "General" for account-scoped notifications)
+- By invitation (join-request-related notifications specifically)
+- Read / unread
+- By date range
+
+*(Broader category filtering and a "Needs Action" quick filter are worth adding later — see Phase 6 — but kept out of MVP scope for now.)*
+
+**Push token registration:** happens as its own step, not bundled into the sign-in payload — since fetching an Expo push token requires a permissions prompt and a separate async call, and needs to happen on every app launch/foreground (not just at login) to stay current and to cover biometric-unlocked sessions that never call `/sign-in/email` at all. See the Backend Plan for the `push_tokens` table and registration flow.
+
+---
+
+## 12. Additional Features
 
 - Export monthly/annual reports as PDF/CSV (totals, interest earned, defaulters list)
 - Individual member statement (PDF) — useful if a member leaves early or disputes something
@@ -170,7 +241,25 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 11. Data Model (draft)
+## 13. Onboarding, Ads & Subscriptions
+
+**Status: Ads ship in MVP; subscriptions are deferred.** Everyone sees ads for now — there's no ad-free tier yet. The subscription design below is kept documented for when it's actually built, not for near-term implementation. See § Development Phases for where this now sits.
+
+**Onboarding:** shown on first app open, before authentication — a short intro to what the app does, then into the Welcome/Register screen.
+
+**Ads (MVP):** shown to everyone by default, no exceptions yet. Implemented via AdMob (`react-native-google-mobile-ads`), which requires a **development build (EAS Build)**, not Expo Go, since it needs native modules.
+- Recommend non-intrusive placement (e.g. banner ads on dashboard/list screens) and **no ads on transaction, approval, or payment-related screens** — mixing ads into money-movement flows undermines trust in a financial app.
+
+**Subscription (ad removal) — deferred, design kept for later:** Adhyaksha would subscribe to a **monthly plan, per kosh**, to remove ads for that kosh. When active, **all members of that kosh** see no ads.
+- **Assumption to confirm whenever this gets built:** ad-free status is scoped to that specific kosh's screens — a person in 2 kosh (one subscribed, one not) still sees ads while viewing the unsubscribed one. Flag if account-wide is actually preferred instead.
+- **Known blockers to resolve before building this** (see Open Decisions):
+  - Nepal isn't currently a supported country for Google Play merchant/payments profile registration — Play Billing can't be set up under a Nepal-registered account as-is.
+  - Google's Payments Policy explicitly names "an ad-free version of an app" as a feature that must go through Play Billing if the app is distributed via Play Store — so a wallet-based (eSewa/Khalti) workaround isn't compliant once publicly listed there, though it's fine to use during a pre-Play-Store pilot phase.
+  - Realistic paths once this is prioritized: register the merchant account under a supported-country entity (e.g. a US LLC) and use Play Billing properly (recommend **RevenueCat** at that point, since it wraps both Play/App Store billing, handles receipt validation, and can webhook subscription changes to the backend) — or keep using a non-Play-Store distribution channel for as long as that remains the case.
+
+---
+
+## 14. Data Model (draft)
 
 - **Kosh**: id, name, description, icon, monthly_amount, due_date, currency, member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date, duration, end_date, min_treasurers, max_members
 - **User**: id, name, email, email_verified, password_hash, photo, biometric_enabled
@@ -186,7 +275,7 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 12. Tech Stack
+## 15. Tech Stack
 
 - **Monorepo scaffold**: Better-T-Stack CLI
   ```
@@ -213,7 +302,7 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ---
 
-## 13. Development Phases
+## 16. Development Phases
 
 ### Phase 0 — Setup (Week 1)
 - Scaffold monorepo with Better-T-Stack (flags above)
@@ -225,7 +314,7 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 
 ### Phase 1 — Auth & Core Kosh/Membership (Weeks 2–4)
 - Build all auth screens (§2): Register, Email Verification, Login, Forgot/Reset Password, Biometric Prompt
-- Kosh creation flow with all fields from §3
+- Kosh creation flow with all fields from §5
 - Invite flow: QR code, shareable link
 - Member joins → defaults to Sadasya role
 - Adhyaksha member-management screen: view members, change roles, remove members
@@ -249,12 +338,17 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 - DM chat, scoped per kosh (separate thread per kosh even for the same two people)
 - Kosh-end payout logic: equal split, loan deduction, payout record generation
 
-### Phase 5 — Pilot (Weeks 14–16)
+### Phase 5 — Ads Integration (Week 14)
+- Set up AdMob (`react-native-google-mobile-ads`) and switch to an EAS development build (required for native ad modules — no longer usable in Expo Go from this point on)
+- Non-intrusive banner placement on dashboard/list screens; no ads on transaction/approval/payment screens
+- **No ad-free tier yet** — everyone sees ads; subscription work is deferred (Phase 9)
+
+### Phase 6 — Pilot (Weeks 15–17)
 - Deploy to Render, run with one real kosh group
 - Collect feedback on real usage patterns (rounding habits, edge cases in late/partial payments, UI friction)
 - Fix issues surfaced by real data before opening to other groups
 
-### Phase 6 — Post-Pilot Enhancements (Ongoing)
+### Phase 7 — Post-Pilot Enhancements (Ongoing)
 - SMS notifications for members without smartphones (e.g. via Sparrow SMS)
 - Dashboard analytics, meeting/AGM report generator
 - Nepali + English UI
@@ -262,15 +356,20 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 - Revisit backdating for contributions if late-entry issues appear in practice
 - Revisit phone-based login/social login if a clear need emerges
 
-### Phase 7 — Payment Integration (Later)
+### Phase 8 — Payment Integration (Later)
 - Wallet integration (eSewa/Khalti) as the realistic middle step before direct bank integration
 - Bank account linking per kosh
 - Direct in-app transfers for deposits, loan disbursement, kosh-end payout
 - Regulatory note: moving actual money will likely require a licensed payment partner (NRB governs payment service providers in Nepal) rather than building a payment rail from scratch
 
+### Phase 9 — Subscription / Ad Removal (Deferred — not scheduled yet)
+- Design already documented in §13; intentionally held until the blockers below are worth resolving
+- Resolve merchant eligibility (register Play Console payments profile under a supported-country entity, e.g. a US LLC) or continue distributing outside the Play Store where the merchant/policy constraints don't apply
+- Once resolved: integrate RevenueCat, build the per-kosh subscription flow, wire `kosh_subscriptions` status into ad-suppression logic
+
 ---
 
-## 14. Open Decisions to Revisit
+## 17. Open Decisions to Revisit
 
 1. Should a kosh be required to have at least 1 Koshadhyaksha, or can it run Adhyaksha-only?
 2. Loan cap: stay fully manual, or add a system-suggested safe cap based on kosh balance?
@@ -279,3 +378,6 @@ Two invite modes, since a plain shareable link/QR can't verify identity on its o
 5. Should backdating for contribution payments be added later if Late-flag inaccuracies become a real problem?
 6. Should users be encouraged to add a backup verified contact method beyond email, for account recovery?
 7. Conflict of interest: if a Koshadhyaksha requests a loan for themselves, should a *different* Koshadhyaksha be required to approve it (rather than potentially self-approving), or does the all-Koshadhyaksha-must-approve rule already cover this adequately once there's more than one Koshadhyaksha?
+8. Ad-free scoping: does an Adhyaksha's subscription remove ads only within that specific kosh's screens, or account-wide for everyone in it across all their kosh? *(revisit when Phase 9 is actually scheduled)*
+9. Should a rejected loan request show Adhyaksha's reason to the whole kosh (full transparency) or just to the requester (less exposure for the person who was declined)?
+10. Subscription path: register a Play Console merchant account under a supported-country entity (e.g. a US LLC), or keep distributing outside the Play Store to sidestep both the Nepal merchant-eligibility gap and the Play Billing policy requirement for ad-free features? Needs deciding before Phase 9 starts, not before.

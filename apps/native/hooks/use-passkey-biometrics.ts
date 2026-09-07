@@ -1,0 +1,118 @@
+import { BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
+import * as LocalAuthentication from "expo-local-authentication";
+import { useCallback, useEffect, useState } from "react";
+import { useMMKVBoolean } from "react-native-mmkv";
+import { toast } from "sonner-native";
+
+import { authClient } from "@/lib/auth-client";
+import {
+  registerPasskey,
+  removeAllPasskeys,
+} from "@/lib/passkey";
+import { storage } from "@/utils/storage";
+import { useHaptics } from "./use-haptics";
+
+type BiometricAvailability = "checking" | "available" | "unavailable";
+
+const ENABLED_MESSAGE = "Biometric login enabled for this device.";
+const DISABLED_MESSAGE = "Biometric login disabled.";
+const FAILED_ENABLE_MESSAGE = "Could not enable biometric login.";
+const FAILED_DISABLE_MESSAGE = "Could not disable biometric login.";
+
+/**
+ * Owns the state and mutations behind the Settings → Biometric Login switch:
+ * platform biometric availability, the user's registered passkeys (the server
+ * source of truth), and the local device flag that gates the login screen.
+ */
+export const usePasskeyBiometrics = () => {
+  const haptics = useHaptics();
+  const [availability, setAvailability] =
+    useState<BiometricAvailability>("checking");
+  const [isPending, setIsPending] = useState(false);
+  const [pendingValue, setPendingValue] = useState<boolean | null>(null);
+  const [localEnabled] = useMMKVBoolean(BIOMETRIC_ENABLED, storage);
+
+  const passkeyQuery = authClient.useListPasskeys();
+  const serverEnabled = (passkeyQuery.data?.length ?? 0) > 0;
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const [hasHardware, isEnrolled] = await Promise.all([
+          LocalAuthentication.hasHardwareAsync(),
+          LocalAuthentication.isEnrolledAsync(),
+        ]);
+        if (isMounted) {
+          setAvailability(
+            hasHardware && isEnrolled ? "available" : "unavailable",
+          );
+        }
+      } catch {
+        if (isMounted) setAvailability("unavailable");
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Once the server truth catches up with the optimistic value, adopt it —
+  // avoids the switch snapping back while the passkey list refetches.
+  useEffect(() => {
+    if (pendingValue != null && serverEnabled === pendingValue) {
+      setPendingValue(null);
+    }
+  }, [serverEnabled, pendingValue]);
+
+  const isAvailable = availability === "available";
+  const isEnabled =
+    pendingValue ??
+    (passkeyQuery.isPending || availability === "checking"
+      ? !!localEnabled
+      : serverEnabled);
+
+  const toggle = useCallback(
+    async (enabled: boolean) => {
+      if (isPending) return false;
+      setIsPending(true);
+      setPendingValue(enabled);
+      let succeeded = false;
+      try {
+        const result = enabled
+          ? await registerPasskey()
+          : await removeAllPasskeys();
+        if (!result.ok) {
+          if (!result.cancelled) {
+            haptics("error");
+            toast.error(
+              result.message ?? (enabled ? FAILED_ENABLE_MESSAGE : FAILED_DISABLE_MESSAGE),
+            );
+          }
+          return false;
+        }
+        haptics("success");
+        toast.success(enabled ? ENABLED_MESSAGE : DISABLED_MESSAGE);
+        succeeded = true;
+        return true;
+      } catch (error) {
+        haptics("error");
+        toast.error(
+          error instanceof Error ? error.message : "Something went wrong.",
+        );
+        return false;
+      } finally {
+        if (!succeeded) setPendingValue(null);
+        setIsPending(false);
+      }
+    },
+    [haptics, isPending],
+  );
+
+  return {
+    isAvailable,
+    isEnabled,
+    isPending,
+    toggle,
+  };
+};

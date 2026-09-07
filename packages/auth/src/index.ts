@@ -1,4 +1,5 @@
 import { expo } from "@better-auth/expo";
+import { passkey } from "@better-auth/passkey";
 import { createDb } from "@kosh-app/db";
 import * as schema from "@kosh-app/db/schema/auth";
 import { env } from "@kosh-app/env/server";
@@ -50,6 +51,10 @@ export function createAuth() {
     baseURL: env.BETTER_AUTH_URL,
     user: {
       additionalFields: {
+        // Repurposed: now means "this device has passkey biometric login
+        // enabled", not a plain app-level toggle. It is a convenience mirror of
+        // a registered passkey — the source of truth for whether biometric
+        // login works is the passkey row in the `passkey` table.
         biometricEnabled: {
           type: "boolean",
           defaultValue: false,
@@ -137,6 +142,32 @@ export function createAuth() {
         otpLength: 6,
         expiresIn: 600, // 10 minutes
       }),
+      passkey({
+        rpName: "Kosh App",
+        rpID: new URL(env.BETTER_AUTH_URL).hostname,
+        origin: [
+          env.BETTER_AUTH_URL,
+          env.CORS_ORIGIN,
+          "kosh-app://",
+          // Android APK-originated ceremonies must be trusted post-deploy by
+          // adding an entry per signing certificate:
+          //   `android:apk-key-hash:<BASE64_SHA256_OF_CERT>`
+          // (debug: `~/.android/debug.keystore`; production: Play App Signing).
+        ],
+        advanced: {
+          // Must start with the server cookie prefix ("kosh") so
+          // @better-auth/expo's `cookiePrefix: "kosh"` persists and resends the
+          // WebAuthn challenge cookie from SecureStore during native ceremonies.
+          webAuthnChallengeCookie: "kosh-passkey",
+        },
+      }),
+      // KNOWN LIMITATION: Passkeys (WebAuthn) require a verifiable HTTPS domain.
+      // The Relying Party ID above is derived from BETTER_AUTH_URL, so full
+      // end-to-end testing is impossible until the server is deployed to a real,
+      // publicly reachable domain that hosts `/.well-known/apple-app-site-association`
+      // (iOS) and `/.well-known/assetlinks.json` (Android). Local development can
+      // implement and partially test the flow, but final verification happens
+      // only post-deploy.
     ],
   });
 }
