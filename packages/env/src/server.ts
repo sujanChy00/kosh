@@ -12,7 +12,10 @@ export const env = createEnv({
       .enum(["development", "production", "test"])
       .default("development"),
 
-    // Email (SMTP) — Mailpit in local dev, Resend/SendGrid in production
+    // Email — Resend REST API over HTTPS in production (works on Render's
+    // free plan, which blocks outbound SMTP 25/465/587). When RESEND_API_KEY
+    // is unset we fall back to SMTP (Mailpit in local dev).
+    RESEND_API_KEY: z.string().min(1).optional(),
     SMTP_HOST: z.string().min(1).default("localhost"),
     SMTP_PORT: z.coerce.number().default(1026),
     SMTP_SECURE: z
