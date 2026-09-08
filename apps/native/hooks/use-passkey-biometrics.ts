@@ -1,15 +1,12 @@
-import { BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useState } from "react";
 import { useMMKVBoolean } from "react-native-mmkv";
 import { toast } from "sonner-native";
 
 import { authClient } from "@/lib/auth-client";
-import {
-  registerPasskey,
-  removeAllPasskeys,
-} from "@/lib/passkey";
+import { registerPasskey, removeAllPasskeys } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
+import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import { useHaptics } from "./use-haptics";
 
 type BiometricAvailability = "checking" | "available" | "unavailable";
@@ -30,7 +27,7 @@ export const usePasskeyBiometrics = () => {
     useState<BiometricAvailability>("checking");
   const [isPending, setIsPending] = useState(false);
   const [pendingValue, setPendingValue] = useState<boolean | null>(null);
-  const [localEnabled] = useMMKVBoolean(BIOMETRIC_ENABLED, storage);
+  const [localEnabled] = useMMKVBoolean(LOGIN_BIOMETRIC_ENABLED, storage);
 
   const passkeyQuery = authClient.useListPasskeys();
   const serverEnabled = (passkeyQuery.data?.length ?? 0) > 0;
@@ -86,7 +83,8 @@ export const usePasskeyBiometrics = () => {
           if (!result.cancelled) {
             haptics("error");
             toast.error(
-              result.message ?? (enabled ? FAILED_ENABLE_MESSAGE : FAILED_DISABLE_MESSAGE),
+              result.message ??
+                (enabled ? FAILED_ENABLE_MESSAGE : FAILED_DISABLE_MESSAGE),
             );
           }
           return false;
