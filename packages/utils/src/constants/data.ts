@@ -1,7 +1,7 @@
 import type { LanguageKey } from "@kosh-app/language";
 
 export const ONBOARDING_COMPLETED = "KOSH_ONBOARDING_COMPLETED";
-export const BIOMETRIC_ENABLED = "KOSH_BIOMETRIC_ENABLED";
+export const LOGIN_BIOMETRIC_ENABLED = "KOSH_LOGIN_BIOMETRIC_ENABLED";
 export const LANGUAGE_KEY = "KOSH_LANGUAGE";
 export const THEME_KEY = "KOSH_THEME";
 

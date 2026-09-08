@@ -12,7 +12,7 @@ import { authClient } from "@/lib/auth-client";
 import { signInWithPasskey } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
 import { queryClient } from "@/utils/trpc";
-import { BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
+import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import { useSelector } from "@tanstack/react-form";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, ScrollView, TouchableOpacity, View } from "react-native";
@@ -25,7 +25,7 @@ export const LoginForm = () => {
   const router = useRouter();
   const { email: emailQuery } = useLocalSearchParams<{ email?: string }>();
   const haptics = useHaptics();
-  const [biometricEnabled] = useMMKVBoolean(BIOMETRIC_ENABLED, storage);
+  const [biometricEnabled] = useMMKVBoolean(LOGIN_BIOMETRIC_ENABLED, storage);
   const form = useForm({
     defaultValues: {
       email: emailQuery ?? "",
