@@ -7,7 +7,6 @@ interface SelectFieldProps {
   options: { label: string; value: string }[];
   className?: string;
   onValueChange?: (value: string) => void;
-  snapPoints?: string[];
 }
 
 export const SelectField = ({
@@ -18,7 +17,6 @@ export const SelectField = ({
   onValueChange,
   inputClassName,
   isDisabled,
-  snapPoints,
 }: FormInputBaseProps<SelectFieldProps>) => {
   const field = useFieldContext<string | undefined>();
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
@@ -34,7 +32,6 @@ export const SelectField = ({
       <SelectInput
         className={inputClassName}
         disabled={isDisabled}
-        snapPoints={snapPoints}
         onValueChange={(v) => {
           field.handleChange(v.toString());
           onValueChange?.(v.toString());

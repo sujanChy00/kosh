@@ -2,9 +2,11 @@ import { Host } from "@/components/layout/host";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
+import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useLanguage } from "@/hooks/use-language";
 import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
@@ -13,11 +15,11 @@ import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { toast } from "sonner-native";
 import { REGISTER_FORM_VALUE, REGISTER_SCHEMA } from "./auth-schema";
 
 export const RegisterForm = () => {
   const router = useRouter();
+  const { t } = useLanguage();
   const [accepted, setAccepted] = useState(false);
   const haptics = useHaptics();
   const form = useForm({
@@ -89,7 +91,7 @@ export const RegisterForm = () => {
           <Link href={"/sign-in"} asChild>
             <TouchableOpacity className={"px-3 py-1.5 "}>
               <ThemedText className="font-notosans-medium text-muted">
-                Sign in
+                {t("sign_in")}
               </ThemedText>
             </TouchableOpacity>
           </Link>
@@ -100,7 +102,7 @@ export const RegisterForm = () => {
               }
             >
               <ThemedText className="font-notosans-bold text-primary">
-                Register
+                {t("register")}
               </ThemedText>
             </TouchableOpacity>
           </Link>

@@ -1,11 +1,15 @@
 import { useLanguage } from "@/hooks/use-language";
+import { useCallback, useState } from "react";
 import {
-  BottomSheetModal,
-  BottomSheetScrollView,
-} from "@expo/ui/community/bottom-sheet";
-import { useCallback, useRef } from "react";
-import { TouchableOpacity, View } from "react-native";
+  Modal,
+  Pressable,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { FadeInDown, FadeOutDown } from "react-native-reanimated";
 import { twMerge } from "tailwind-merge";
+import { AnimatedView } from "../animated-view";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { SecondaryButton } from "./button";
@@ -17,7 +21,6 @@ interface SelectInputProps {
   disabled?: boolean;
   className?: string;
   placeholder?: string;
-  snapPoints?: string[];
 }
 
 export const SelectInput = ({
@@ -27,34 +30,32 @@ export const SelectInput = ({
   disabled = false,
   className,
   placeholder,
-  snapPoints,
 }: SelectInputProps) => {
   const { t } = useLanguage();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
+  const [opened, setOpened] = useState(false);
   const selectedLabel = value
     ? options.find((o) => o.value === value)?.label
     : placeholder;
 
-  const closeSheet = useCallback(() => {
-    bottomSheetRef.current?.dismiss();
-  }, [bottomSheetRef]);
+  const onOpen = useCallback(() => {
+    setOpened(true);
+  }, []);
+  const onClose = useCallback(() => {
+    setOpened(false);
+  }, []);
 
   const handleOptionPress = useCallback(
     (item: { value: string }) => {
       onValueChange?.(item.value);
-      closeSheet();
+      onClose();
     },
-    [onValueChange, closeSheet],
+    [onValueChange, onClose],
   );
-
-  const openSheet = useCallback(() => {
-    bottomSheetRef.current?.present();
-  }, [bottomSheetRef]);
 
   return (
     <>
       <SecondaryButton
-        onPress={openSheet}
+        onPress={onOpen}
         disabled={disabled}
         className={className}
       >
@@ -69,56 +70,75 @@ export const SelectInput = ({
           tintColorClassName="accent-muted"
         />
       </SecondaryButton>
-      <BottomSheetModal
-        snapPoints={snapPoints}
-        enablePanDownToClose
-        ref={bottomSheetRef}
+      <Modal
+        animationType="fade"
+        backdropColorClassName="accent-backdrop"
+        visible={opened}
+        onRequestClose={() => setOpened(false)}
       >
-        <BottomSheetScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerClassName="pb-safe-offset-12"
+        <Pressable
+          className="flex-1 items-center justify-end px-3 pb-safe-offset-6"
+          onPress={() => setOpened(false)}
         >
-          <View className="px-4">
-            {options.map((item) => {
-              const isSelected = item.value === value;
-              return (
-                <TouchableOpacity
-                  onPress={() => {
-                    handleOptionPress(item);
-                  }}
-                  key={item.value}
-                  disabled={item.disabled}
-                  className={twMerge("py-4", item.disabled ? "opacity-50" : "")}
-                >
-                  <View className="flex-row items-center gap-1">
-                    {isSelected && (
-                      <StyledSymbolView
-                        name={{
-                          ios: "checkmark",
-                          android: "check",
-                        }}
-                        size={20}
-                        tintColorClassName={"accent-success"}
-                      />
-                    )}
-                    <ThemedText
+          <Pressable onPress={(e) => e.stopPropagation()} className="w-full">
+            <AnimatedView
+              entering={FadeInDown.springify()
+                .damping(22)
+                .stiffness(260)
+                .mass(0.9)
+                .withInitialValues({ transform: [{ translateY: 60 }] })}
+              exiting={FadeOutDown}
+              className="bg-surface py-3 px-3 rounded-3xl w-full"
+            >
+              <View className="flex-row justify-center">
+                <View className="bg-surface-secondary h-2 w-14 rounded-full" />
+              </View>
+              <ScrollView>
+                {options.map((item) => {
+                  const isSelected = item.value === value;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => {
+                        handleOptionPress(item);
+                      }}
+                      key={item.value}
+                      disabled={item.disabled}
                       className={twMerge(
-                        "text-base flex-1",
-                        !item.disabled && isSelected
-                          ? "font-medium text-success"
-                          : "font-normal",
-                        item.disabled ? "text-muted" : "",
+                        "py-4",
+                        item.disabled ? "opacity-50" : "",
                       )}
                     >
-                      {item.label}
-                    </ThemedText>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </BottomSheetScrollView>
-      </BottomSheetModal>
+                      <View className="flex-row items-center gap-1">
+                        {isSelected && (
+                          <StyledSymbolView
+                            name={{
+                              ios: "checkmark",
+                              android: "check",
+                            }}
+                            size={20}
+                            tintColorClassName={"accent-success"}
+                          />
+                        )}
+                        <ThemedText
+                          className={twMerge(
+                            "text-base flex-1",
+                            !item.disabled && isSelected
+                              ? "font-medium text-success"
+                              : "font-normal",
+                            item.disabled ? "text-muted" : "",
+                          )}
+                        >
+                          {item.label}
+                        </ThemedText>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </AnimatedView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 };

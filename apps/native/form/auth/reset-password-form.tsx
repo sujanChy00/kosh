@@ -3,6 +3,7 @@ import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
+import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -16,7 +17,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { toast } from "sonner-native";
 import {
   RESET_PASSWORD_FORM_VALUE,
   RESET_PASSWORD_SCHEMA,

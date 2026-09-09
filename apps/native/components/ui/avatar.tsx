@@ -1,4 +1,4 @@
-import { cn } from "@kosh-app/utils";
+import { cn, getAvatarName } from "@kosh-app/utils";
 import { ImageProps } from "expo-image";
 import { View, ViewProps } from "react-native";
 import { AnimatedText } from "../animated-text";
@@ -37,9 +37,11 @@ const AvatarImage = ({
 const AvatarFallback = ({
   className,
   source,
+  fallback,
   ...rest
 }: React.ComponentProps<typeof AnimatedText> & {
-  source: string | undefined;
+  source: string | null | undefined;
+  fallback: string;
 }) => {
   if (!!source) return null;
 
@@ -47,7 +49,9 @@ const AvatarFallback = ({
     <AnimatedText
       className={cn("text-foreground text-center", className)}
       {...rest}
-    />
+    >
+      {getAvatarName(fallback)}
+    </AnimatedText>
   );
 };
 

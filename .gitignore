@@ -57,5 +57,6 @@ coverage
 tmp
 temp
 
+*.apk
 *.apl
 *.aab

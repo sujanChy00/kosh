@@ -1,4 +1,6 @@
 export * from "tailwind-variants";
+export * from "./avatar-name";
+
 export const formatTime = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

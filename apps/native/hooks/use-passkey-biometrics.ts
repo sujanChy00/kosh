@@ -1,7 +1,7 @@
+import { toast } from "@/components/ui/Toast/toast.store";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useState } from "react";
 import { useMMKVBoolean } from "react-native-mmkv";
-import { toast } from "sonner-native";
 
 import { authClient } from "@/lib/auth-client";
 import { registerPasskey, removeAllPasskeys } from "@/lib/passkey";

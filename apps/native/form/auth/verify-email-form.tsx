@@ -5,6 +5,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { TextInput } from "@/components/ui/text-input";
 import { TextSeparator } from "@/components/ui/text-separator";
+import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
@@ -16,7 +17,6 @@ import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
-import { toast } from "sonner-native";
 
 export const VerifyEmailForm = () => {
   const router = useRouter();

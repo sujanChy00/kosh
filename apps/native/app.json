@@ -10,7 +10,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.koshapp.app",
-      "associatedDomains": ["webcredentials:kosh-fd5d.onrender.com"]
+      "associatedDomains": [
+        "webcredentials:kosh-fd5d.onrender.com",
+        "webcredentials:kosh-fd5d.onrender.com"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -22,6 +25,14 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.koshapp.app",
       "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.DOWNLOAD_WITHOUT_NOTIFICATION",
@@ -108,6 +119,12 @@
       "eas": {
         "projectId": "526e73b9-d895-41a2-9b8e-b665d1e47e31"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/526e73b9-d895-41a2-9b8e-b665d1e47e31"
     }
   }
 }

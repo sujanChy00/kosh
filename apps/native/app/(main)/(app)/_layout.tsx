@@ -1,10 +1,14 @@
-import { Text, View } from "react-native";
+import { Stack } from "expo-router";
 
 const AppLayout = () => {
   return (
-    <View>
-      <Text>AppLayout</Text>
-    </View>
+    <Stack
+      screenOptions={{
+        headerBackButtonDisplayMode: "minimal",
+      }}
+    >
+      <Stack.Screen name="notification" />
+    </Stack>
   );
 };
 

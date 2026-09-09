@@ -5,6 +5,7 @@ import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { InputGroup } from "@/components/ui/input-group";
+import { toast } from "@/components/ui/Toast/toast.store";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useScrollToBottomOnKeyboardVisible } from "@/hooks/use-scroll-to-bottom-on-keyboard-visible";
 import { authClient } from "@/lib/auth-client";
@@ -14,7 +15,6 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { toast } from "sonner-native";
 
 export const ForgotPasswordForm = () => {
   const { scrollViewRef } = useScrollToBottomOnKeyboardVisible();

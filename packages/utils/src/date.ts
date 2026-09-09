@@ -15,3 +15,17 @@ export const formatShortDate = (date: Date, locale = "en-US") => {
     year: "numeric",
   }).format(date);
 };
+
+export const formatLongDate = (date: Date) => {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+  }).format(date);
+
+  const formattedDate = new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+
+  return `${weekday}, ${formattedDate.replace(",", "")}`;
+};

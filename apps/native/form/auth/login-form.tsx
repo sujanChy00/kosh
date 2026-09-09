@@ -5,9 +5,11 @@ import { SecondaryButton } from "@/components/ui/button";
 import { Field, FieldDescription } from "@/components/ui/field";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { TextSeparator } from "@/components/ui/text-separator";
+import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useLanguage } from "@/hooks/use-language";
 import { authClient } from "@/lib/auth-client";
 import { signInWithPasskey } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
@@ -18,11 +20,11 @@ import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { Pressable, ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useMMKVBoolean } from "react-native-mmkv";
-import { toast } from "sonner-native";
 import { LOGIN_FORM_VALUE, LOGIN_SCHEMA } from "./auth-schema";
 
 export const LoginForm = () => {
   const router = useRouter();
+  const { t } = useLanguage();
   const { email: emailQuery } = useLocalSearchParams<{ email?: string }>();
   const haptics = useHaptics();
   const [biometricEnabled] = useMMKVBoolean(LOGIN_BIOMETRIC_ENABLED, storage);
@@ -121,14 +123,14 @@ export const LoginForm = () => {
               }
             >
               <ThemedText className="font-notosans-bold text-primary">
-                Sign in
+                {t("sign_in")}
               </ThemedText>
             </TouchableOpacity>
           </Link>
           <Link href={"/sign-up"} asChild>
             <TouchableOpacity className="px-3 py-1.5">
               <ThemedText className="font-notosans-medium text-muted">
-                Register
+                {t("register")}
               </ThemedText>
             </TouchableOpacity>
           </Link>
@@ -177,33 +179,38 @@ export const LoginForm = () => {
                   >
                     <Pressable hitSlop={10}>
                       <FieldDescription className="text-right">
-                        Forgot Password?
+                        {t("forgot_password")}?
                       </FieldDescription>
                     </Pressable>
                   </Link>
                 </Field>
               )}
             />
-            <form.SubmitButton>
-              <ThemedText className="text-primary-foreground">Login</ThemedText>
-            </form.SubmitButton>
-            {biometricEnabled ? (
-              <View className="gap-y-3">
-                <TextSeparator text="or continue with" />
-                <SecondaryButton onPress={handleBiometricSignIn}>
-                  <StyledSymbolView
-                    tintColorClassName={"accent-primary"}
-                    name={{
-                      ios: "faceid",
-                      android: "fingerprint",
-                    }}
-                  />
-                  <SecondaryButton.Label>
-                    {isIOS ? "Login with FaceID" : "Login with Fingerprint"}
-                  </SecondaryButton.Label>
-                </SecondaryButton>
-              </View>
-            ) : null}
+            <View className="gap-y-3">
+              <form.SubmitButton>
+                <ThemedText className="text-primary-foreground">
+                  {t("login")}
+                </ThemedText>
+              </form.SubmitButton>
+
+              {biometricEnabled ? (
+                <View className="gap-y-3">
+                  <TextSeparator text="or continue with" />
+                  <SecondaryButton onPress={handleBiometricSignIn}>
+                    <StyledSymbolView
+                      tintColorClassName={"accent-primary"}
+                      name={{
+                        ios: "faceid",
+                        android: "fingerprint",
+                      }}
+                    />
+                    <SecondaryButton.Label>
+                      {isIOS ? "Login with FaceID" : "Login with Fingerprint"}
+                    </SecondaryButton.Label>
+                  </SecondaryButton>
+                </View>
+              ) : null}
+            </View>
           </View>
         </form.AppForm>
         <AnimatedSpacer height={100} />

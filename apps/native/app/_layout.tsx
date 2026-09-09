@@ -1,5 +1,7 @@
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
+import type { IToastSwipeAction } from "@/components/ui/Toast";
+import { Toaster } from "@/components/ui/Toast";
 import { NAV_THEME } from "@/constants/theme";
 import { AppThemeProvider, useAppTheme } from "@/contexts/app-theme-context";
 import "@/global.css";
@@ -10,11 +12,26 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { ThemeProvider } from "expo-router/react-navigation";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import { ActivityIndicator } from "react-native";
+import { Fragment, useEffect, useState } from "react";
+import { Dimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
-import { Toaster } from "sonner-native";
+
+const _width = Dimensions.get("window").width;
+const SWIPE_ACTION: IToastSwipeAction = {
+  label: "Delete",
+  color: "#FF3B30",
+  direction: "left" as const,
+  icon: () => (
+    <StyledSymbolView
+      name="trash.fill"
+      size={18}
+      tintColorClassName={"accent-foreground"}
+    />
+  ),
+  commitOffset: _width * 0.8,
+  onCommit: () => {},
+};
 
 export const unstable_settings = {
   initialRouteName: "(main)",
@@ -39,7 +56,7 @@ function StackLayout() {
     return <FullScreenSpinner isVisible />;
   }
   return (
-    <>
+    <Fragment>
       <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>
         <StatusBar
           style={isDark ? "light" : "dark"}
@@ -80,60 +97,13 @@ function StackLayout() {
         </Stack>
       </ThemeProvider>
       <Toaster
-        enableStacking
-        position="top-center"
-        richColors
+        swipeDirection="horizontal"
         theme={currentTheme}
-
-        icons={{
-          loading: (
-            <ActivityIndicator
-              size={"small"}
-              colorClassName="accent-blue-400"
-            />
-          ),
-          error: (
-            <StyledSymbolView
-              tintColorClassName="accent-danger"
-              name={{
-                android: "cancel",
-                ios: "xmark.circle.fill",
-              }}
-            />
-          ),
-
-          info: (
-            <StyledSymbolView
-              tintColorClassName="accent-blue-400"
-              name={{
-                android: "info",
-                ios: "info.circle.fill",
-              }}
-            />
-          ),
-
-          success: (
-            <StyledSymbolView
-              tintColorClassName="accent-success"
-              name={{
-                android: "check_circle",
-                ios: "checkmark.circle.fill",
-              }}
-            />
-          ),
-
-          warning: (
-            <StyledSymbolView
-              tintColorClassName="accent-warning"
-              name={{
-                android: "warning",
-                ios: "exclamationmark.triangle.fill",
-              }}
-            />
-          ),
-        }}
+        position={"top"}
+        offset={30}
+        swipeAction={SWIPE_ACTION}
       />
-    </>
+    </Fragment>
   );
 }
 
@@ -145,7 +115,7 @@ export default function Layout() {
   // const { data: session } = authClient.useSession();
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1 }} pointerEvents="box-none">
         <KeyboardProvider>
           <AppThemeProvider>
             <StackLayout />
