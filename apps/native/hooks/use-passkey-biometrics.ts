@@ -3,7 +3,6 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useState } from "react";
 import { useMMKVBoolean } from "react-native-mmkv";
 
-import { authClient } from "@/lib/auth-client";
 import { registerPasskey, removeAllPasskeys } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
 import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
@@ -17,9 +16,11 @@ const FAILED_ENABLE_MESSAGE = "Could not enable biometric login.";
 const FAILED_DISABLE_MESSAGE = "Could not disable biometric login.";
 
 /**
- * Owns the state and mutations behind the Settings → Biometric Login switch:
- * platform biometric availability, the user's registered passkeys (the server
- * source of truth), and the local device flag that gates the login screen.
+ * Owns the state and mutations behind the Settings → Biometric Login switch.
+ * The switch reflects the LOCAL device flag (MMKV) — the same source of truth
+ * used by the login form to decide whether to show the biometric button.
+ * Passkeys are device-specific; a new device must register its own passkey
+ * before biometric login works there.
  */
 export const usePasskeyBiometrics = () => {
   const haptics = useHaptics();
@@ -28,9 +29,6 @@ export const usePasskeyBiometrics = () => {
   const [isPending, setIsPending] = useState(false);
   const [pendingValue, setPendingValue] = useState<boolean | null>(null);
   const [localEnabled] = useMMKVBoolean(LOGIN_BIOMETRIC_ENABLED, storage);
-
-  const passkeyQuery = authClient.useListPasskeys();
-  const serverEnabled = (passkeyQuery.data?.length ?? 0) > 0;
 
   useEffect(() => {
     let isMounted = true;
@@ -54,20 +52,8 @@ export const usePasskeyBiometrics = () => {
     };
   }, []);
 
-  // Once the server truth catches up with the optimistic value, adopt it —
-  // avoids the switch snapping back while the passkey list refetches.
-  useEffect(() => {
-    if (pendingValue != null && serverEnabled === pendingValue) {
-      setPendingValue(null);
-    }
-  }, [serverEnabled, pendingValue]);
-
   const isAvailable = availability === "available";
-  const isEnabled =
-    pendingValue ??
-    (passkeyQuery.isPending || availability === "checking"
-      ? !!localEnabled
-      : serverEnabled);
+  const isEnabled = pendingValue ?? !!localEnabled;
 
   const toggle = useCallback(
     async (enabled: boolean) => {

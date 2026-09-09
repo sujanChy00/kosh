@@ -195,7 +195,7 @@ export const LoginForm = () => {
 
               {biometricEnabled ? (
                 <View className="gap-y-3">
-                  <TextSeparator text="or continue with" />
+                  <TextSeparator text="OR" />
                   <SecondaryButton onPress={handleBiometricSignIn}>
                     <StyledSymbolView
                       tintColorClassName={"accent-primary"}
