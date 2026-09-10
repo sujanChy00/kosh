@@ -127,7 +127,15 @@ export const LoginForm = () => {
               </ThemedText>
             </TouchableOpacity>
           </Link>
-          <Link href={"/sign-up"} asChild>
+          <Link
+            href={{
+              pathname: "/sign-up",
+              params: {
+                email,
+              },
+            }}
+            asChild
+          >
             <TouchableOpacity className="px-3 py-1.5">
               <ThemedText className="font-notosans-medium text-muted">
                 {t("register")}

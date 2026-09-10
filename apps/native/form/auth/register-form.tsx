@@ -11,20 +11,21 @@ import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
 import { useSelector } from "@tanstack/react-form";
-import { Link, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { REGISTER_FORM_VALUE, REGISTER_SCHEMA } from "./auth-schema";
 
 export const RegisterForm = () => {
+  const { email } = useLocalSearchParams<{ email?: string }>();
   const router = useRouter();
   const { t } = useLanguage();
   const [accepted, setAccepted] = useState(false);
   const haptics = useHaptics();
   const form = useForm({
     defaultValues: {
-      email: "",
+      email: email ?? "",
       password: "",
       confirm_password: "",
       name: "",
