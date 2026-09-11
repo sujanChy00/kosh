@@ -1,7 +1,7 @@
 import { authClient } from "@/lib/auth-client";
 import { queryClient } from "@/utils/trpc";
 import { Icon, ListItem, Text } from "@expo/ui";
-import { AlertDialog, Button, TextButton } from "@expo/ui/jetpack-compose";
+import { AlertDialog, TextButton } from "@expo/ui/jetpack-compose";
 import { useCallback, useState } from "react";
 import { useCSSVariable } from "uniwind";
 
@@ -43,7 +43,13 @@ export const LogoutAlert = () => {
       {isVisible && (
         <AlertDialog onDismissRequest={() => setIsVisible(false)}>
           <AlertDialog.Title>
-            <Text>Log out?</Text>
+            <Text
+              textStyle={{
+                fontSize: 20,
+              }}
+            >
+              Log out?
+            </Text>
           </AlertDialog.Title>
 
           <AlertDialog.Text>
@@ -55,24 +61,15 @@ export const LogoutAlert = () => {
             </TextButton>
           </AlertDialog.DismissButton>
           <AlertDialog.ConfirmButton>
-            <Button
-              contentPadding={{
-                start: 30,
-                end: 30,
-              }}
-              colors={{
-                containerColor: dangerColor,
-              }}
-              onClick={onLogout}
-            >
+            <TextButton onClick={onLogout}>
               <Text
                 textStyle={{
-                  color: "#fff",
+                  color: dangerColor,
                 }}
               >
                 OK
               </Text>
-            </Button>
+            </TextButton>
           </AlertDialog.ConfirmButton>
         </AlertDialog>
       )}

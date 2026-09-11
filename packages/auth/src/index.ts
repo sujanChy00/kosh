@@ -61,6 +61,9 @@ export function createAuth() {
           input: true,
         },
       },
+      deleteUser: {
+        enabled: true,
+      },
     },
     emailAndPassword: {
       enabled: true,

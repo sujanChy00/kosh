@@ -1,22 +1,31 @@
+import { toast } from "@/components/ui/Toast/toast.store";
+import { authClient } from "@/lib/auth-client";
+import { storage } from "@/utils/storage";
+import { queryClient } from "@/utils/trpc";
 import { Icon, ListItem, Text } from "@expo/ui";
 import {
   BasicAlertDialog,
   Column,
+  IconToggleButton,
   Row,
   Spacer,
   Surface,
   TextButton,
+  TextField,
+  useNativeState,
 } from "@expo/ui/jetpack-compose";
 import {
   align,
   clip,
+  fillMaxWidth,
   height,
   padding,
   Shapes,
   wrapContentHeight,
   wrapContentWidth,
 } from "@expo/ui/jetpack-compose/modifiers";
-import { useState } from "react";
+import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
+import { useCallback, useState } from "react";
 import { useCSSVariable } from "uniwind";
 
 const LOGOUT_ICON = Icon.select({
@@ -24,14 +33,62 @@ const LOGOUT_ICON = Icon.select({
   android: require("@expo/material-symbols/delete.xml"),
 });
 
+const VISIBLITY_ON = Icon.select({
+  ios: "eye",
+  android: require("@expo/material-symbols/visibility.xml"),
+});
+const VISIBLITY_OFF = Icon.select({
+  ios: "eye.slash",
+  android: require("@expo/material-symbols/visibility_off.xml"),
+});
+
 export const DeleteAccount = () => {
-  const [dangerColor] = useCSSVariable(["--color-danger"]) as [string];
+  const [showPassword, setShowPassword] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const password = useNativeState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [dangerColor] = useCSSVariable(["--color-danger"]) as [string];
+
+  const handleValueChange = useCallback(
+    (value: string) => {
+      "worklet";
+      password.value = value;
+    },
+    [password],
+  );
+
+  const onDelete = async () => {
+    if (!password.value) {
+      toast.error("Please enter your password");
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      await authClient.deleteUser(
+        { password: password.value },
+        {
+          onError(error) {
+            toast.error(error.error?.message || "Failed to delete account");
+          },
+          onSuccess() {
+            storage.remove(LOGIN_BIOMETRIC_ENABLED);
+            queryClient.invalidateQueries();
+            setIsVisible(false);
+            password.value = "";
+            toast.success("Account deleted successfully");
+          },
+        },
+      );
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <>
       <ListItem
         onPress={() => {
+          password.value = "";
           setIsVisible(true);
         }}
       >
@@ -49,7 +106,9 @@ export const DeleteAccount = () => {
         </ListItem.Trailing>
       </ListItem>
       {isVisible && (
-        <BasicAlertDialog onDismissRequest={() => setIsVisible(false)}>
+        <BasicAlertDialog
+          onDismissRequest={() => !isDeleting && setIsVisible(false)}
+        >
           <Surface
             tonalElevation={6}
             modifiers={[
@@ -58,31 +117,54 @@ export const DeleteAccount = () => {
               clip(Shapes.RoundedCorner(28)),
             ]}
           >
-            <Column modifiers={[padding(16, 16, 16, 16)]}>
+            <Column modifiers={[padding(25, 25, 25, 25)]}>
               <Text textStyle={{ fontSize: 20, fontWeight: "600" }}>
                 Delete Account?
               </Text>
-              <Spacer modifiers={[height(5)]} />
+              <Spacer modifiers={[height(10)]} />
               <Text
                 textStyle={{
                   fontSize: 14,
                 }}
               >
-                Are you sure you want to delete your account? This action cannot
-                be undone and your account data will be permanently deleted.
+                This action is irreversible. Your account and all associated
+                data will be permanently deleted.
               </Text>
+              <Spacer modifiers={[height(16)]} />
+              <TextField
+                value={password}
+                onValueChange={handleValueChange}
+                visualTransformation={showPassword ? "none" : "password"}
+                modifiers={[fillMaxWidth()]}
+              >
+                <TextField.Label>
+                  <Text>Your Password</Text>
+                </TextField.Label>
+                <TextField.TrailingIcon>
+                  <IconToggleButton
+                    checked={showPassword}
+                    onCheckedChange={setShowPassword}
+                  >
+                    <Icon
+                      name={showPassword ? VISIBLITY_ON : VISIBLITY_OFF}
+                      size={24}
+                    />
+                  </IconToggleButton>
+                </TextField.TrailingIcon>
+              </TextField>
+
               <Spacer modifiers={[height(24)]} />
               <Row modifiers={[align("end")]}>
                 <TextButton onClick={() => setIsVisible(false)}>
                   <Text>Cancel</Text>
                 </TextButton>
-                <TextButton>
+                <TextButton onClick={onDelete}>
                   <Text
                     textStyle={{
-                      color: dangerColor,
+                      color: isDeleting ? "#999" : dangerColor,
                     }}
                   >
-                    Confirm
+                    {isDeleting ? "Deleting..." : "Confirm"}
                   </Text>
                 </TextButton>
               </Row>
