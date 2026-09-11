@@ -7,7 +7,18 @@ const AppLayout = () => {
         headerBackButtonDisplayMode: "minimal",
       }}
     >
-      <Stack.Screen name="notification" />
+      <Stack.Screen
+        name="notification"
+        options={{
+          headerTitle: "Notifications",
+        }}
+      />
+      <Stack.Screen
+        name="about"
+        options={{
+          headerTitle: "About",
+        }}
+      />
     </Stack>
   );
 };

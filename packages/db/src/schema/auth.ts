@@ -1,4 +1,5 @@
 import { relations } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import {
   boolean,
   index,
@@ -7,30 +8,41 @@ import {
   text,
   timestamp,
   uniqueIndex,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 // Forward-declared imports for user relations (avoids circular — these
 // files import `user` from here, but we only need their table references
 // inside the relations() callback which runs lazily).
 import { preferredLangEnum } from "./enums";
-import { koshMembership } from "./kosh";
+import { kosh, koshMembership } from "./kosh";
 import { notification, pushToken } from "./notifications";
 import { paymentMethod } from "./payment-methods";
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  biometricEnabled: boolean("biometric_enabled").default(false).notNull(),
-  preferredLang: preferredLangEnum("preferred_lang").default("en").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
+    biometricEnabled: boolean("biometric_enabled").default(false).notNull(),
+    preferredLang: preferredLangEnum("preferred_lang").default("en").notNull(),
+    selectedKoshId: uuid("selected_kosh_id").references(
+      (): AnyPgColumn => kosh.id,
+      {
+        onDelete: "set null",
+      },
+    ), // the kosh currently active in the multi-kosh switcher
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [index("user_selected_kosh_id_idx").on(table.selectedKoshId)],
+);
 
 export const session = pgTable(
   "session",
@@ -121,11 +133,15 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const userRelations = relations(user, ({ many }) => ({
+export const userRelations = relations(user, ({ one, many }) => ({
   sessions: many(session),
   accounts: many(account),
   passkeys: many(passkey),
   koshMemberships: many(koshMembership),
+  selectedKosh: one(kosh, {
+    fields: [user.selectedKoshId],
+    references: [kosh.id],
+  }),
   paymentMethods: many(paymentMethod),
   pushTokens: many(pushToken),
   notifications: many(notification),

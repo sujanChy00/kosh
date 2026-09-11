@@ -15,6 +15,7 @@ import { memberRoleEnum, memberStatusEnum } from "./enums";
 // ─── Kosh ───────────────────────────────────────────────────────────────────
 export const kosh = pgTable("kosh", {
   id: uuid("id").primaryKey().defaultRandom(),
+  transactionPin: text("transaction_pin").notNull(), // 6-digit PIN, set/changed only by the kosh's admin (creator)
   name: text("name").notNull(),
   description: text("description"),
   iconUrl: text("icon_url"),

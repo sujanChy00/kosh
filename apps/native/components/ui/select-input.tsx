@@ -59,7 +59,7 @@ export const SelectInput = ({
         disabled={disabled}
         className={className}
       >
-        <SecondaryButton.Label>
+        <SecondaryButton.Label className="text-foreground capitalize">
           {selectedLabel || "Select"}
         </SecondaryButton.Label>
         <StyledSymbolView
@@ -67,7 +67,7 @@ export const SelectInput = ({
             android: "unfold_more",
             ios: "arrow.up.and.down",
           }}
-          tintColorClassName="accent-muted"
+          tintColorClassName="accent-primary"
         />
       </SecondaryButton>
       <Modal

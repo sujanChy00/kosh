@@ -48,7 +48,6 @@ export const VerifyEmailForm = () => {
           queryClient.refetchQueries();
           haptics("success");
           toast.success("Email verified successfully");
-          router.replace("/sign-in");
         },
       },
     );

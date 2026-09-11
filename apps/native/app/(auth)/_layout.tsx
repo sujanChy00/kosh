@@ -1,3 +1,4 @@
+import { Host } from "@/components/layout/host";
 import { LanguageSelector } from "@/components/layout/language-selector";
 import { StyledImage } from "@/components/styled-image";
 import { ThemedText } from "@/components/themed-text";
@@ -15,9 +16,13 @@ const AuthLayout = () => {
           />
           <ThemedText className="font-mono-semibold text-base">KOSH</ThemedText>
         </View>
-        <LanguageSelector>
-          {(lan) => <ThemedText className="font-mono-medium">{lan}</ThemedText>}
-        </LanguageSelector>
+        <Host matchContents>
+          <LanguageSelector
+            textStyle={{
+              fontFamily: "mono-medium",
+            }}
+          />
+        </Host>
       </View>
       <Stack
         screenOptions={{

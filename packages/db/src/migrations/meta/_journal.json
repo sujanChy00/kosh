@@ -15,6 +15,20 @@
       "when": 1788692875267,
       "tag": "0001_cooing_swordsman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789016140747,
+      "tag": "0002_nosy_prism",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789016697021,
+      "tag": "0003_medical_spacker_dave",
+      "breakpoints": true
     }
   ]
 }

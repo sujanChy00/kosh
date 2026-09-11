@@ -5,7 +5,7 @@ import { TouchableOpacity, View } from "react-native";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
-import { SecondaryButton } from "../ui/button";
+import { PrimaryButton } from "../ui/button";
 
 export const HomeHeader = () => {
   const { data: session } = authClient.useSession();
@@ -30,7 +30,7 @@ export const HomeHeader = () => {
 
       <View className="flex-row items-center gap-2 shrink-0">
         <Link href="/notification" asChild>
-          <SecondaryButton className="p-0 size-10 relative">
+          <PrimaryButton className="p-0 size-10 relative bg-primary-soft">
             <View className="size-5 bg-danger items-center justify-center rounded-full absolute -top-1 right-1">
               <ThemedText className="text-danger-foreground text-xs font-mono">
                 1
@@ -45,10 +45,10 @@ export const HomeHeader = () => {
                 ios: "bell",
               }}
             />
-          </SecondaryButton>
+          </PrimaryButton>
         </Link>
 
-        <Link href="/profile" asChild>
+        <Link href="/setting" asChild>
           <TouchableOpacity>
             <Avatar>
               <Avatar.Image alt={user?.name} source={user?.image} />

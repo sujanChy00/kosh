@@ -98,6 +98,7 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 
 **Basic Info**
 - Name, description (optional), icon/photo (optional)
+- **Kosh code** — short, unique, human-readable code (e.g. `SAGA-7XPK`, auto-generated from a name prefix at creation), stable for the kosh's lifetime. This is the reference code shown on transactions/reports and used for invites/sharing — it never changes even if the name does.
 
 **Financial Settings**
 - Monthly contribution amount
@@ -127,6 +128,7 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 
 **User Account (global, one-time)**
 - Full name, email (verified), password (hashed), profile photo (optional)
+- **Selected/active kosh** (`selected_kosh_id`) — the kosh the user is currently viewing in the multi-kosh switcher; all transactions, chat, and other data are scoped to it. Stored on the user record so it persists across devices.
 - Biometric login enabled (yes/no)
 - Payment details (optional, multiple allowed): bank account, wallet (eSewa/Khalti), QR code — one marked **primary**
 
@@ -261,8 +263,8 @@ Beyond the request/approval flow:
 
 ## 14. Data Model (draft)
 
-- **Kosh**: id, name, description, icon, monthly_amount, due_date, currency, member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date, duration, end_date, min_treasurers, max_members
-- **User**: id, name, email, email_verified, password_hash, photo, biometric_enabled
+- **Kosh**: id, code (e.g. `SAGA-7XPK`), name, description, icon, monthly_amount, due_date, currency, member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date, duration, end_date, min_treasurers, max_members
+- **User**: id, name, email, email_verified, password_hash, photo, biometric_enabled, selected_kosh_id
 - **PaymentMethod**: id, user_id, type (bank/wallet/qr), details, is_primary
 - **KoshMembership**: id, kosh_id, user_id, role, join_date, status
 - **Contribution**: id, kosh_id, member_id, month, expected_amount, paid_amount, status (Pending/Paid/Partial/Late), penalty_applied, date_paid

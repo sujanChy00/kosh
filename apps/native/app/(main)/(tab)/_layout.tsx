@@ -2,7 +2,11 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 
 const TabLayout = () => {
   return (
-    <NativeTabs labelVisibilityMode="labeled">
+    <NativeTabs
+      labelVisibilityMode="labeled"
+      tintColor={"#0e5250"}
+      indicatorColor={"#0e52504d"}
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
