@@ -20,6 +20,23 @@ export function createAuth() {
     }),
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
+        if (
+          ctx.path === "/sign-in/email" ||
+          ctx.path === "/email-otp/request-password-reset"
+        ) {
+          const body = ctx.body as { email?: string } | undefined;
+          if (body?.email) {
+            const user = await db.query.user.findFirst({
+              where: (users, { eq }) =>
+                eq(users.email, body.email!.trim().toLowerCase()),
+            });
+            if (!user) {
+              throw new APIError("NOT_FOUND", {
+                message: "User with this email doesn't exist",
+              });
+            }
+          }
+        }
         if (ctx.path === "/sign-up/email") {
           const body = ctx.body as { email?: string } | undefined;
           if (body?.email) {
