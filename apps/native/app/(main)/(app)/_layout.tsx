@@ -19,6 +19,24 @@ const AppLayout = () => {
           headerTitle: "About",
         }}
       />
+      <Stack.Screen
+        name="setting/update-password"
+        options={{
+          headerTitle: "Update Password",
+        }}
+      />
+      <Stack.Screen
+        name="setting/update-profile"
+        options={{
+          headerTitle: "Update profile",
+        }}
+      />
+      <Stack.Screen
+        name="image/[image]"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 };

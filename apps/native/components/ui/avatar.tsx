@@ -8,7 +8,7 @@ const Root = ({ className, ...rest }: ViewProps) => {
   return (
     <View
       className={cn(
-        "rounded-full size-10 bg-muted/40 items-center justify-center flex-row overflow-hidden",
+        "rounded-full size-10 bg-surface-secondary items-center justify-center flex-row overflow-hidden",
         className,
       )}
       {...rest}
@@ -25,7 +25,7 @@ const AvatarImage = ({
   if (!!source)
     return (
       <StyledImage
-        className={cn("size-full object-cover", className)}
+        className={cn("size-full object-cover rounded-full", className)}
         source={source}
         contentFit="cover"
         {...rest}

@@ -69,6 +69,39 @@ export const RESET_PASSWORD_SCHEMA = v.pipe(
   ),
 );
 
+export const UPDATE_PASSWORD_SCHEMA = v.pipe(
+  v.object({
+    current_password: v.pipe(
+      v.string("Current password is required"),
+      v.minLength(1, "Current password is required"),
+    ),
+    new_password: PASSWORD_SCHEMA,
+    confirm_password: v.pipe(
+      v.string("Please confirm your password"),
+      v.minLength(1, "Please confirm your password"),
+    ),
+  }),
+  v.forward(
+    v.check(
+      (input) => input.new_password === input.confirm_password,
+      "Passwords don't match",
+    ),
+    ["confirm_password"],
+  ),
+);
+
+export const UPDATE_PROFILE_SCHEMA = v.object({
+  name: v.pipe(
+    v.string("Name is required"),
+    v.minLength(1, "Name is required"),
+    v.minLength(2, "Name must be at least 2 characters"),
+  ),
+  email: v.string(),
+  image: v.string(),
+});
+
 export type LOGIN_FORM_VALUE = v.InferOutput<typeof LOGIN_SCHEMA>;
 export type REGISTER_FORM_VALUE = v.InferOutput<typeof REGISTER_SCHEMA>;
 export type RESET_PASSWORD_FORM_VALUE = v.InferOutput<typeof RESET_PASSWORD_SCHEMA>;
+export type UPDATE_PASSWORD_FORM_VALUE = v.InferOutput<typeof UPDATE_PASSWORD_SCHEMA>;
+export type UPDATE_PROFILE_FORM_VALUE = v.InferOutput<typeof UPDATE_PROFILE_SCHEMA>;

@@ -6,6 +6,7 @@ import { ThemeToggler } from "@/components/setting/theme-toggler";
 import { Column, ListItem, Spacer, Text } from "@expo/ui";
 import { HorizontalDivider } from "@expo/ui/jetpack-compose";
 import { useCSSVariable } from "uniwind";
+import { LogoutAlert } from "./logout-alert";
 
 export const Preference = () => {
   const [mutedColor] = useCSSVariable(["--color-muted"]) as [string];
@@ -47,7 +48,7 @@ export const Preference = () => {
       </ListItem>
       <ThemeToggler />
       <LoginBiometricEnabler />
-      {/*<LogoutAlert />*/}
+      <LogoutAlert />
     </Column>
   );
 };
