@@ -20,35 +20,31 @@ export function createAuth() {
     }),
     hooks: {
       before: createAuthMiddleware(async (ctx) => {
-        if (
+        const body = ctx.body as { email?: string; type?: string } | undefined;
+        const email = body?.email?.trim().toLowerCase();
+        const needsExistingUser =
           ctx.path === "/sign-in/email" ||
-          ctx.path === "/email-otp/request-password-reset"
-        ) {
-          const body = ctx.body as { email?: string } | undefined;
-          if (body?.email) {
-            const user = await db.query.user.findFirst({
-              where: (users, { eq }) =>
-                eq(users.email, body.email!.trim().toLowerCase()),
+          ctx.path === "/email-otp/request-password-reset" ||
+          (ctx.path === "/email-otp/send-verification-otp" &&
+            body?.type === "email-verification");
+        if (email && needsExistingUser) {
+          const user = await db.query.user.findFirst({
+            where: (users, { eq }) => eq(users.email, email),
+          });
+          if (!user) {
+            throw new APIError("NOT_FOUND", {
+              message: "User with this email doesn't exist",
             });
-            if (!user) {
-              throw new APIError("NOT_FOUND", {
-                message: "User with this email doesn't exist",
-              });
-            }
           }
         }
-        if (ctx.path === "/sign-up/email") {
-          const body = ctx.body as { email?: string } | undefined;
-          if (body?.email) {
-            const existing = await db.query.user.findFirst({
-              where: (users, { eq }) =>
-                eq(users.email, body.email!.trim().toLowerCase()),
+        if (ctx.path === "/sign-up/email" && email) {
+          const existing = await db.query.user.findFirst({
+            where: (users, { eq }) => eq(users.email, email),
+          });
+          if (existing) {
+            throw new APIError("BAD_REQUEST", {
+              message: "User with this email already exists",
             });
-            if (existing) {
-              throw new APIError("BAD_REQUEST", {
-                message: "User with this email already exists",
-              });
-            }
           }
         }
       }),

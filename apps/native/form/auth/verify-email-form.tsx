@@ -13,15 +13,14 @@ import { queryClient } from "@/utils/trpc";
 import { cn, formatTime } from "@kosh-app/utils";
 import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
 import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 export const VerifyEmailForm = () => {
-  const router = useRouter();
   const haptics = useHaptics();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email = "" } = useLocalSearchParams<{ email?: string }>();
   const [token, setToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -56,6 +55,10 @@ export const VerifyEmailForm = () => {
 
   const onResend = async () => {
     if (isResending) return;
+    if (!email.trim()) {
+      toast.error("Email address is required");
+      return;
+    }
     setIsResending(true);
     await authClient.emailOtp.sendVerificationOtp(
       { email: email.trim(), type: "email-verification" },
