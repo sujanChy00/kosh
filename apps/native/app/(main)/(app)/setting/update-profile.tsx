@@ -13,15 +13,17 @@ import {
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { queryClient } from "@/utils/trpc";
+import { isRemoteImage, uploadToCloudinary } from "@/lib/cloudinary";
 import { useSelector } from "@tanstack/react-form";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
 const UpdateProfileScreen = () => {
   const router = useRouter();
   const haptics = useHaptics();
+  const [isUploading, setIsUploading] = useState(false);
   const { data: session, isPending } = authClient.useSession();
   const user = session?.user;
 
@@ -38,10 +40,25 @@ const UpdateProfileScreen = () => {
       haptics("error");
     },
     onSubmit: async ({ value, formApi }) => {
+      let image = value.image.trim() || undefined;
+      if (image && !isRemoteImage(image)) {
+        setIsUploading(true);
+        try {
+          image = await uploadToCloudinary(image);
+        } catch (error) {
+          haptics("error");
+          toast.error(
+            error instanceof Error ? error.message : "Failed to upload image",
+          );
+          return;
+        } finally {
+          setIsUploading(false);
+        }
+      }
       await authClient.updateUser(
         {
           name: value.name.trim(),
-          image: value.image.trim() || undefined,
+          image,
         },
         {
           onError(error) {
@@ -51,9 +68,10 @@ const UpdateProfileScreen = () => {
           onSuccess() {
             haptics("success");
             formApi.reset();
-            queryClient.refetchQueries();
             toast.success("Profile updated successfully");
-            router.back();
+            setTimeout(() => {
+              router.back();
+            }, 400);
           },
         },
       );
@@ -71,7 +89,10 @@ const UpdateProfileScreen = () => {
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <FullScreenSpinner isVisible={isSubmitting} />
+      <FullScreenSpinner
+        isVisible={isSubmitting || isUploading}
+        loadingText={isUploading ? "Uploading image..." : undefined}
+      />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}

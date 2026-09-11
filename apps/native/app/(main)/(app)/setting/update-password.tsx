@@ -11,7 +11,6 @@ import {
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { queryClient } from "@/utils/trpc";
 import { useSelector } from "@tanstack/react-form";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
@@ -44,10 +43,12 @@ const UpdatePasswordScreen = () => {
             toast.error(error.error?.message || "Failed to update password");
           },
           onSuccess() {
+            form.reset();
             haptics("success");
             toast.success("Password updated successfully");
-            queryClient.refetchQueries();
-            router.back();
+            setTimeout(() => {
+              router.back();
+            }, 400);
           },
         },
       );
