@@ -4,6 +4,7 @@ import CHEVRON_UP_DOWN from "@expo/material-symbols/unfold_more.xml";
 import { Icon, Text, UniversalTextStyle } from "@expo/ui";
 import { DropdownMenu, DropdownMenuItem, Row } from "@expo/ui/jetpack-compose";
 import { clickable } from "@expo/ui/jetpack-compose/modifiers";
+import { LanguageKey } from "@kosh-app/language";
 import { LANG_OPTIONS } from "@kosh-app/utils/constants/data";
 import { useState } from "react";
 
@@ -11,12 +12,14 @@ interface Props {
   withIcon?: boolean;
   textStyle?: UniversalTextStyle;
   toLowerCase?: boolean;
+  onLanguageChange?: (v: LanguageKey) => Promise<void>;
 }
 
 export const LanguageSelector = ({
   withIcon = false,
   textStyle,
   toLowerCase = false,
+  onLanguageChange,
 }: Props) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const { language, setLanguage } = useLanguage();
@@ -51,6 +54,7 @@ export const LanguageSelector = ({
             key={lang.value}
             onClick={() => {
               setLanguage(lang.value);
+              onLanguageChange?.(lang.value);
               setIsExpanded(false);
             }}
           >

@@ -16,7 +16,13 @@ export const authClient = createAuthClient({
       storage: SecureStore,
     }),
     emailOTPClient(),
-    inferAdditionalFields({ user: { biometricEnabled: { type: "boolean", required: false } } }),
+    inferAdditionalFields({
+      user: {
+        biometricEnabled: { type: "boolean", required: false },
+        preferredLang: { type: "string", required: false },
+        selectedKoshId: { type: "string", required: false },
+      },
+    }),
     expoPasskeyClient(),
   ],
 });

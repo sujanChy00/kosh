@@ -73,6 +73,15 @@ export function createAuth() {
           defaultValue: false,
           input: true,
         },
+        preferredLang: {
+          type: "string",
+          defaultValue: "en",
+          input: true,
+        },
+        selectedKoshId: {
+          type: "string",
+          input: false, // read-only via the auth API; managed internally
+        },
       },
       deleteUser: {
         enabled: true,

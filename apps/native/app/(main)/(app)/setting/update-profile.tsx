@@ -77,7 +77,6 @@ const UpdateProfileScreen = () => {
       );
     },
   });
-
   const { isSubmitting } = useSelector(form.store, (state) => ({
     isSubmitting: state.isSubmitting,
   }));
