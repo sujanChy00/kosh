@@ -25,7 +25,6 @@ export default function Home() {
   return (
     <ScrollView contentContainerClassName="px-4 pt-safe-offset-14">
       <HomeHeader />
-
       <SelectInput
         options={LANGUAGES}
         value={language}

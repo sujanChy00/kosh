@@ -87,12 +87,9 @@ export const SelectInput = ({
                 .stiffness(260)
                 .mass(0.9)
                 .withInitialValues({ transform: [{ translateY: 60 }] })}
-              exiting={FadeOutDown}
+              exiting={FadeOutDown.duration(100)}
               className="bg-surface py-3 px-3 rounded-3xl w-full"
             >
-              <View className="flex-row justify-center">
-                <View className="bg-surface-secondary h-2 w-14 rounded-full" />
-              </View>
               <ScrollView>
                 {options.map((item) => {
                   const isSelected = item.value === value;
@@ -108,28 +105,29 @@ export const SelectInput = ({
                         item.disabled ? "opacity-50" : "",
                       )}
                     >
-                      <View className="flex-row items-center gap-1">
-                        {isSelected && (
-                          <StyledSymbolView
-                            name={{
-                              ios: "checkmark",
-                              android: "check",
-                            }}
-                            size={20}
-                            tintColorClassName={"accent-success"}
-                          />
-                        )}
+                      <View className="flex-row items-center gap-3 justify-between">
                         <ThemedText
+                          numberOfLines={1}
                           className={twMerge(
-                            "text-base flex-1",
+                            "flex-1",
                             !item.disabled && isSelected
-                              ? "font-medium text-success"
-                              : "font-normal",
+                              ? "font-notosans-semibold text-base"
+                              : "font-notosans-regular text-muted-foreground",
                             item.disabled ? "text-muted" : "",
                           )}
                         >
                           {item.label}
                         </ThemedText>
+                        {isSelected && (
+                          <StyledSymbolView
+                            name={{
+                              ios: "checkmark.circle",
+                              android: "check_circle",
+                            }}
+                            size={20}
+                            tintColorClassName={"accent-foreground"}
+                          />
+                        )}
                       </View>
                     </TouchableOpacity>
                   );

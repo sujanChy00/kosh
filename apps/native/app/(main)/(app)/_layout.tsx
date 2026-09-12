@@ -37,6 +37,12 @@ const AppLayout = () => {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="kosh/add"
+        options={{
+          headerTitle: "Add a new kosh",
+        }}
+      />
     </Stack>
   );
 };
