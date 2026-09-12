@@ -3,9 +3,7 @@ import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { SecondaryButton } from "@/components/ui/button";
 import { Field, FieldDescription } from "@/components/ui/field";
-import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { TextSeparator } from "@/components/ui/text-separator";
-import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
@@ -13,6 +11,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { authClient } from "@/lib/auth-client";
 import { signInWithPasskey } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
+import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
 import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import { useSelector } from "@tanstack/react-form";
@@ -48,9 +47,11 @@ export const LoginForm = () => {
         {
           async onError(error) {
             haptics("error");
-            toast.error(error.error?.message || "Failed to sign in");
+            errorToast({ title: error.error?.message || "Failed to sign in" });
             if (error.error.code === "EMAIL_NOT_VERIFIED") {
-              toast.info("Sending a verification code to your email...");
+              successToast({
+                title: "Sending a verification code to your email...",
+              });
               await authClient.emailOtp.sendVerificationOtp(
                 {
                   email: value.email.trim(),
@@ -78,9 +79,8 @@ export const LoginForm = () => {
     },
   });
 
-  const { email, isSubmitting } = useSelector(form.store, (state) => ({
+  const { email } = useSelector(form.store, (state) => ({
     email: state.values.email,
-    isSubmitting: state.isSubmitting,
   }));
 
   const handleBiometricSignIn = async () => {
@@ -89,7 +89,7 @@ export const LoginForm = () => {
     if (!result.ok) {
       if (result.cancelled) return;
       haptics("error");
-      toast.error(result.message || "Biometric sign-in failed");
+      errorToast({ title: result.message || "Biometric sign-in failed" });
       return;
     }
     queryClient.refetchQueries();
@@ -100,7 +100,6 @@ export const LoginForm = () => {
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <FullScreenSpinner isVisible={isSubmitting} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}

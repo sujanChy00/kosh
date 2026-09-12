@@ -1,8 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { PrimaryButton } from "@/components/ui/button";
-import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
-import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import {
   UPDATE_PASSWORD_FORM_VALUE,
@@ -11,7 +9,7 @@ import {
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { useSelector } from "@tanstack/react-form";
+import { errorToast, successToast } from "@/utils/toast";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -40,34 +38,26 @@ const UpdatePasswordScreen = () => {
         {
           onError(error) {
             haptics("error");
-            toast.error(error.error?.message || "Failed to update password");
+            errorToast({
+              title: error.error?.message || "Failed to update password",
+            });
           },
           onSuccess() {
             form.reset();
             haptics("success");
-            toast.success("Password updated successfully");
-            setTimeout(() => {
-              router.back();
-            }, 400);
+            successToast({ title: "Password updated successfully" });
+            router.back();
           },
         },
       );
     },
   });
 
-  const { isSubmitting } = useSelector(form.store, (state) => ({
-    isSubmitting: state.isSubmitting,
-  }));
-
   return (
     <KeyboardAvoidingView
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <FullScreenSpinner
-        isVisible={isSubmitting}
-        loadingText="Updating password..."
-      />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}

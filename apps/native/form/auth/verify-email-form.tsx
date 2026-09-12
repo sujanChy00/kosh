@@ -2,19 +2,18 @@ import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { TextInput } from "@/components/ui/text-input";
 import { TextSeparator } from "@/components/ui/text-separator";
-import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
+import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
 import { cn, formatTime } from "@kosh-app/utils";
 import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
 import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
 import { Link, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 
@@ -24,14 +23,14 @@ export const VerifyEmailForm = () => {
   const [token, setToken] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const { secondsLeft, isExpired, restart } = useCountdown(OTP_EXPIRY_SECONDS);
-
-  useEffect(() => {
-    if (isExpired) {
+  const { secondsLeft, isExpired, restart } = useCountdown(OTP_EXPIRY_SECONDS, {
+    onExpire: () => {
       haptics("warning");
-      toast.warning("Verification code expired. Please request a new one.");
-    }
-  }, [isExpired]);
+      errorToast({
+        title: "Verification code expired. Please request a new one.",
+      });
+    },
+  });
 
   const onVerifyEmail = async () => {
     if (!token.trim() || isExpired) return;
@@ -41,12 +40,14 @@ export const VerifyEmailForm = () => {
       {
         onError(error) {
           haptics("error");
-          toast.error(error.error?.message || "Invalid verification code");
+          errorToast({
+            title: error.error?.message || "Invalid verification code",
+          });
         },
         onSuccess() {
           queryClient.refetchQueries();
           haptics("success");
-          toast.success("Email verified successfully");
+          successToast({ title: "Email verified successfully" });
         },
       },
     );
@@ -56,7 +57,7 @@ export const VerifyEmailForm = () => {
   const onResend = async () => {
     if (isResending) return;
     if (!email.trim()) {
-      toast.error("Email address is required");
+      errorToast({ title: "Email address is required" });
       return;
     }
     setIsResending(true);
@@ -65,11 +66,13 @@ export const VerifyEmailForm = () => {
       {
         onError(error) {
           haptics("error");
-          toast.error(error.error?.message || "Failed to resend code");
+          errorToast({
+            title: error.error?.message || "Failed to resend code",
+          });
         },
         onSuccess() {
           haptics("success");
-          toast.success("Verification code resent");
+          successToast({ title: "Verification code resent" });
           restart();
           setToken("");
         },
@@ -83,7 +86,6 @@ export const VerifyEmailForm = () => {
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <FullScreenSpinner isVisible={isSubmitting} loadingText="Verifying..." />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}

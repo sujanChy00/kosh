@@ -2,19 +2,17 @@ import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
-import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
+import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
 import { cn, formatTime } from "@kosh-app/utils";
 import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
 import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
-import { useSelector } from "@tanstack/react-form";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import {
@@ -27,14 +25,12 @@ export const ResetPasswordForm = () => {
   const haptics = useHaptics();
   const { email = "" } = useLocalSearchParams<{ email?: string }>();
   const [isResending, setIsResending] = useState(false);
-  const { secondsLeft, isExpired, restart } = useCountdown(OTP_EXPIRY_SECONDS);
-
-  useEffect(() => {
-    if (isExpired) {
+  const { secondsLeft, isExpired, restart } = useCountdown(OTP_EXPIRY_SECONDS, {
+    onExpire: () => {
       haptics("warning");
-      toast.warning("Reset code expired. Please request a new one.");
-    }
-  }, [isExpired]);
+      errorToast({ title: "Reset code expired. Please request a new one." });
+    },
+  });
 
   const onResend = async () => {
     if (isResending || !email.trim()) return;
@@ -45,11 +41,13 @@ export const ResetPasswordForm = () => {
         {
           onError(error) {
             haptics("error");
-            toast.error(error.error?.message || "Failed to resend code");
+            errorToast({
+              title: error.error?.message || "Failed to resend code",
+            });
           },
           onSuccess() {
             haptics("success");
-            toast.success("Reset code resent");
+            successToast({ title: "Reset code resent" });
             restart();
           },
         },
@@ -81,11 +79,13 @@ export const ResetPasswordForm = () => {
         {
           onError(error) {
             haptics("error");
-            toast.error(error.error?.message || "Failed to reset password");
+            errorToast({
+              title: error.error?.message || "Failed to reset password",
+            });
           },
           onSuccess() {
             queryClient.refetchQueries();
-            toast.success("Password reset successfully");
+            successToast({ title: "Password reset successfully" });
             router.replace({ pathname: "/sign-in", params: { email } });
           },
         },
@@ -93,20 +93,12 @@ export const ResetPasswordForm = () => {
     },
   });
 
-  const { isSubmitting } = useSelector(form.store, (state) => ({
-    isSubmitting: state.isSubmitting,
-  }));
-
   return (
     <form.AppForm>
       <KeyboardAvoidingView
         behavior={isIOS ? "padding" : "height"}
         style={{ flex: 1 }}
       >
-        <FullScreenSpinner
-          isVisible={isSubmitting}
-          loadingText="Resetting password..."
-        />
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           showsVerticalScrollIndicator={false}

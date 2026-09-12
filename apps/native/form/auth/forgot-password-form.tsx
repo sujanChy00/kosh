@@ -3,12 +3,11 @@ import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { GhostButton, PrimaryButton } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
 import { InputGroup } from "@/components/ui/input-group";
-import { toast } from "@/components/ui/Toast/toast.store";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useScrollToBottomOnKeyboardVisible } from "@/hooks/use-scroll-to-bottom-on-keyboard-visible";
 import { authClient } from "@/lib/auth-client";
+import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -22,41 +21,33 @@ export const ForgotPasswordForm = () => {
   const router = useRouter();
   const haptics = useHaptics();
   const [email, setEmail] = useState(queryEmail ?? "");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { bottom } = useSafeAreaInsets();
 
   const handleSubmit = async (email: string) => {
-    setIsSubmitting(true);
-    try {
-      await authClient.emailOtp.requestPasswordReset(
-        { email: email.trim() },
-        {
-          onError(error) {
-            haptics("error");
-            toast.error(error.error?.message || "Failed to send reset link");
-          },
-          onSuccess() {
-            queryClient.refetchQueries();
-            haptics("success");
-            toast.success("Reset code sent! Check your email.");
-            router.push({
-              pathname: "/reset-password",
-              params: { email: email.trim() },
-            });
-          },
+    await authClient.emailOtp.requestPasswordReset(
+      { email: email.trim() },
+      {
+        onError(error) {
+          haptics("error");
+          errorToast({
+            title: error.error?.message || "Failed to send reset link",
+          });
         },
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+        onSuccess() {
+          queryClient.refetchQueries();
+          haptics("success");
+          successToast({ title: "Reset code sent! Check your email." });
+          router.push({
+            pathname: "/reset-password",
+            params: { email: email.trim() },
+          });
+        },
+      },
+    );
   };
 
   return (
     <>
-      <FullScreenSpinner
-        isVisible={isSubmitting}
-        loadingText="Sending reset link..."
-      />
       <ScrollView
         ref={scrollViewRef}
         keyboardShouldPersistTaps="handled"

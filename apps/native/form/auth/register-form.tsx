@@ -1,16 +1,14 @@
 import { Host } from "@/components/layout/host";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { FullScreenSpinner } from "@/components/ui/full-screen-spinner";
-import { toast } from "@/components/ui/Toast/toast.store";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useLanguage } from "@/hooks/use-language";
 import { authClient } from "@/lib/auth-client";
+import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
 import { Checkbox } from "@expo/ui";
-import { useSelector } from "@tanstack/react-form";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
@@ -46,12 +44,12 @@ export const RegisterForm = () => {
         {
           onError(error) {
             haptics("error");
-            toast.error(error.error?.message || "Failed to sign up");
+            errorToast({ title: error.error?.message || "Failed to sign up" });
           },
           onSuccess() {
             queryClient.refetchQueries();
             formApi.reset();
-            toast.success("Account created successfully");
+            successToast({ title: "Account created successfully" });
             router.push({
               pathname: "/verify-email",
               params: {
@@ -64,16 +62,11 @@ export const RegisterForm = () => {
     },
   });
 
-  const { isSubmitting } = useSelector(form.store, (state) => ({
-    isSubmitting: state.isSubmitting,
-  }));
-
   return (
     <KeyboardAvoidingView
       behavior={isIOS ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <FullScreenSpinner isVisible={isSubmitting} />
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}

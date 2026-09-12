@@ -1,6 +1,6 @@
-import { toast } from "@/components/ui/Toast/toast.store";
 import { authClient } from "@/lib/auth-client";
 import { storage } from "@/utils/storage";
+import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
 import { Icon, ListItem, Text } from "@expo/ui";
 import {
@@ -42,7 +42,7 @@ const VISIBLITY_OFF = Icon.select({
   android: require("@expo/material-symbols/visibility_off.xml"),
 });
 
-export const DeleteAccount = () => {
+export const DeleteAccountAlert = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const password = useNativeState("");
@@ -59,7 +59,7 @@ export const DeleteAccount = () => {
 
   const onDelete = async () => {
     if (!password.value) {
-      toast.error("Please enter your password");
+      errorToast({ title: "Please enter your password" });
       return;
     }
     setIsDeleting(true);
@@ -68,14 +68,16 @@ export const DeleteAccount = () => {
         { password: password.value },
         {
           onError(error) {
-            toast.error(error.error?.message || "Failed to delete account");
+            errorToast({
+              title: error.error?.message || "Failed to delete account",
+            });
           },
           onSuccess() {
             storage.remove(LOGIN_BIOMETRIC_ENABLED);
             queryClient.invalidateQueries();
             setIsVisible(false);
             password.value = "";
-            toast.success("Account deleted successfully");
+            successToast({ title: "Account deleted successfully" });
           },
         },
       );
@@ -132,6 +134,7 @@ export const DeleteAccount = () => {
               </Text>
               <Spacer modifiers={[height(16)]} />
               <TextField
+                autoFocus
                 value={password}
                 onValueChange={handleValueChange}
                 visualTransformation={showPassword ? "none" : "password"}
@@ -146,6 +149,7 @@ export const DeleteAccount = () => {
                     onCheckedChange={setShowPassword}
                   >
                     <Icon
+                    
                       name={showPassword ? VISIBLITY_ON : VISIBLITY_OFF}
                       size={24}
                     />

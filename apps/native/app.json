@@ -10,10 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.koshapp.app",
-      "associatedDomains": [
-        "webcredentials:kosh-fd5d.onrender.com",
-        "webcredentials:kosh-fd5d.onrender.com"
-      ]
+      "associatedDomains": ["webcredentials:kosh-fd5d.onrender.com"]
     },
     "android": {
       "adaptiveIcon": {
@@ -108,7 +105,8 @@
         {
           "disableLibdav1d": true
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,

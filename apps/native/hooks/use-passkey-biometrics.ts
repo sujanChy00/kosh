@@ -1,10 +1,10 @@
-import { toast } from "@/components/ui/Toast/toast.store";
 import * as LocalAuthentication from "expo-local-authentication";
 import { useCallback, useEffect, useState } from "react";
 import { useMMKVBoolean } from "react-native-mmkv";
 
 import { registerPasskey, removeAllPasskeys } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
+import { errorToast, successToast } from "@/utils/toast";
 import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import { useHaptics } from "./use-haptics";
 
@@ -68,22 +68,24 @@ export const usePasskeyBiometrics = () => {
         if (!result.ok) {
           if (!result.cancelled) {
             haptics("error");
-            toast.error(
-              result.message ??
+            errorToast({
+              title:
+                result.message ??
                 (enabled ? FAILED_ENABLE_MESSAGE : FAILED_DISABLE_MESSAGE),
-            );
+            });
           }
           return false;
         }
         haptics("success");
-        toast.success(enabled ? ENABLED_MESSAGE : DISABLED_MESSAGE);
+        successToast({ title: enabled ? ENABLED_MESSAGE : DISABLED_MESSAGE });
         succeeded = true;
         return true;
       } catch (error) {
         haptics("error");
-        toast.error(
-          error instanceof Error ? error.message : "Something went wrong.",
-        );
+        errorToast({
+          title:
+            error instanceof Error ? error.message : "Something went wrong.",
+        });
         return false;
       } finally {
         if (!succeeded) setPendingValue(null);

@@ -4,7 +4,7 @@ import { Column, Spacer, Text } from "@expo/ui";
 import { HorizontalDivider } from "@expo/ui/jetpack-compose";
 import { useRouter } from "expo-router";
 import { useCSSVariable } from "uniwind";
-import { DeleteAccount } from "./delete-account";
+import { DeleteAccountAlert } from "./delete-account-alert";
 import { LogoutAlert } from "./logout-alert";
 
 export const Security = () => {
@@ -27,7 +27,7 @@ export const Security = () => {
       <Spacer size={20} />
       <HorizontalDivider thickness={StyleSheet.hairlineWidth} />
       <LogoutAlert />
-      <DeleteAccount />
+      <DeleteAccountAlert />
     </Column>
   );
 };
