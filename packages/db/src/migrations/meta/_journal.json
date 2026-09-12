@@ -36,6 +36,13 @@
       "when": 1789210643662,
       "tag": "0004_nostalgic_argent",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789213137619,
+      "tag": "0005_mute_major_mapleleaf",
+      "breakpoints": true
     }
   ]
 }

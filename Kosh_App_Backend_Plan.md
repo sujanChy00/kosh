@@ -38,7 +38,6 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid, pk | |
-| code | text, unique | short human-readable code, e.g. `SAGA-7XPK`; auto-generated from the kosh name prefix at creation and stable for the kosh's lifetime. Reference code shown on transactions/reports and used for invites/sharing |
 | name | text | |
 | description | text, nullable | |
 | icon_url | text, nullable | |
@@ -110,7 +109,7 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 |---|---|---|
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
-| token | text, unique | format: `PREFIX-XXXX` (e.g. `SAGA-7XPK`); prefix derives from the kosh's stable `code`, plus a unique per-invite suffix so each invite token is distinct from the kosh code and regenerable |
+| token | text, unique | format: `PREFIX-XXXX` (e.g. `SAGA-7XPK`); prefix derives from the kosh's name, plus a unique per-invite suffix so each invite token is regenerable |
 | created_by | uuid, fk → users | |
 | max_uses | int, nullable | nullable = unlimited (default 50 or custom override) |
 | use_count | int, default 0 | incremented on each redeem attempt |

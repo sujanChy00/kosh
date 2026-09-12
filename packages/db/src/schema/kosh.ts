@@ -20,7 +20,6 @@ import {
 // ─── Kosh ───────────────────────────────────────────────────────────────────
 export const kosh = pgTable("kosh", {
   id: uuid("id").primaryKey().defaultRandom(),
-  code: text("code").notNull().unique(), // stable invitation/reference code, e.g. `SAGA-7XPK`
   transactionPin: text("transaction_pin").notNull(), // 6-digit PIN, set/changed only by the kosh's admin (creator)
   name: text("name").notNull(),
   description: text("description"),

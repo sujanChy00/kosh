@@ -29,7 +29,7 @@ Each user holds exactly **one role per kosh** — no combined roles. Adhyaksh pr
 
 One invite mechanism, shareable three ways — a plain **code**, a **link**, or a **QR code** (all three are just different presentations of the same underlying token). No email-targeted invites for now.
 
-Distinct from the kosh's stable **kosh code** (e.g. `SAGA-7XPK`, shown on reports and never changes), each **invite token** is a regenerable `PREFIX-XXXX` value tied to a specific invite record — so a revoked or expired invite doesn't affect the kosh code at all.
+Each **invite token** is a regenerable `PREFIX-XXXX` value tied to a specific invite record — so a revoked or expired invite simply stops working, with no impact on anything else.
 
 **Flow:**
 1. Adhyaksh generates an invite for the kosh.
@@ -100,7 +100,6 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 
 **Basic Info**
 - Name, description (optional), icon/photo (optional)
-- **Kosh code** — short, unique, human-readable code (e.g. `SAGA-7XPK`, auto-generated from a name prefix at creation), stable for the kosh's lifetime. This is the reference code shown on transactions/reports and used for invites/sharing — it never changes even if the name does.
 
 **Financial Settings**
 - Monthly contribution amount
@@ -119,7 +118,6 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 **Membership**
 - Max members (optional)
 - Treasurers (Koshadhyaksh) are **not set at creation** — the Adhyaksh invites members to become treasurers afterward via the request/accept flow below
-- Kosh code (`SAGA-7XPK`-style) auto-generated at creation, stable for the kosh's lifetime
 
 **Treasurer (Koshadhyaksh) invitation flow**
 - The Adhyaksh picks a member from the kosh's member list and sends a **treasurer invitation** — a request, not an instant promotion.
@@ -273,7 +271,7 @@ Beyond the request/approval flow:
 
 ## 14. Data Model (draft)
 
-- **Kosh**: id, code (e.g. `SAGA-7XPK`), name, description, icon, monthly_amount, due_date, currency (NPR only), member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date (optional — defaults to today), duration, end_date, max_members
+- **Kosh**: id, name, description, icon, monthly_amount, due_date, currency (NPR only), member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date (optional — defaults to today), duration, end_date, max_members
 - **User**: id, name, email, email_verified, password_hash, photo, biometric_enabled, selected_kosh_id
 - **PaymentMethod**: id, user_id, type (bank/wallet/qr), details, is_primary
 - **KoshMembership**: id, kosh_id, user_id, role, join_date, status

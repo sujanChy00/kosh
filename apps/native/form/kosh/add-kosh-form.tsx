@@ -35,7 +35,9 @@ export const AddKoshForm = () => {
       onSuccess: () => {
         haptics("success");
         successToast({ title: "Kosh created successfully" });
-        queryClient.refetchQueries();
+        queryClient.invalidateQueries({
+          queryKey: trpc.kosh.list.queryKey(),
+        });
         router.back();
       },
       onError: (error) => {

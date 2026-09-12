@@ -2,12 +2,29 @@ import { db } from "@kosh-app/db";
 import { user } from "@kosh-app/db/schema/auth";
 import { kosh, koshMembership } from "@kosh-app/db/schema/kosh";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
 
-const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no confusing 0/O, 1/I
+const listKoshSchema = z.object({
+  limit: z.number().int().min(1).max(50).default(20),
+  cursor: z.string().nullable().optional(),
+});
+
+export type KoshListItem = {
+  id: string;
+  name: string;
+  description: string | null;
+  iconUrl: string | null;
+  monthlyAmount: string;
+  currency: string;
+  dueDay: number;
+  startDate: string;
+  endDate: string;
+  role: "adhyaksh" | "koshadhyaksh" | "sadasya";
+  joinedAt: string | null;
+};
 
 const createKoshSchema = z
   .object({
@@ -63,37 +80,88 @@ function addMonths(date: Date, months: number) {
   return result;
 }
 
-function randomChars(length: number) {
-  return Array.from(
-    { length },
-    () => CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)],
-  ).join("");
-}
-
-/** `SAGA-7XPK` style: first 4 alphanumeric chars of the name + a random suffix. */
-function generateKoshCode(name: string) {
-  const prefix =
-    name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4) ||
-    randomChars(4);
-  return `${prefix}-${randomChars(4)}`;
-}
-
-async function getUniqueKoshCode(name: string) {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const code = generateKoshCode(name);
-    const existing = await db.query.kosh.findFirst({
-      where: (k, { eq: q }) => q(k.code, code),
-      columns: { id: true },
-    });
-    if (!existing) return code;
-  }
-  throw new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message: "Could not generate a unique kosh code",
-  });
-}
-
 export const koshRouter = router({
+  /** The kosh the current user is an active member of, newest first. */
+  list: protectedProcedure
+    .input(listKoshSchema)
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const limit = input.limit ?? 20;
+
+      const baseFilter = and(
+        eq(koshMembership.userId, userId),
+        eq(koshMembership.status, "active"),
+      );
+
+      // Keyset pagination, ordered by kosh.createdAt DESC, kosh.id DESC.
+      // Cursor shape: `${createdAt.getTime()}|${koshId}`.
+      const cursorFilter = input.cursor
+        ? (() => {
+            const [timestamp, id] = input.cursor.split("|");
+            const cursorTime = new Date(Number(timestamp));
+            if (!id || Number.isNaN(cursorTime.getTime())) {
+              throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Invalid pagination cursor",
+              });
+            }
+            return or(
+              lt(kosh.createdAt, cursorTime),
+              and(eq(kosh.createdAt, cursorTime), lt(kosh.id, id)),
+            );
+          })()
+        : undefined;
+
+      const rows = await db
+        .select({
+          membership: {
+            role: koshMembership.role,
+            joinedAt: koshMembership.joinedAt,
+          },
+          kosh: {
+            id: kosh.id,
+            name: kosh.name,
+            description: kosh.description,
+            iconUrl: kosh.iconUrl,
+            monthlyAmount: kosh.monthlyAmount,
+            currency: kosh.currency,
+            dueDay: kosh.dueDay,
+            startDate: kosh.startDate,
+            endDate: kosh.endDate,
+            createdAt: kosh.createdAt,
+          },
+        })
+        .from(koshMembership)
+        .innerJoin(kosh, eq(koshMembership.koshId, kosh.id))
+        .where(and(baseFilter, cursorFilter))
+        .orderBy(desc(kosh.createdAt), desc(kosh.id))
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const page = rows.slice(0, limit);
+      const last = page[page.length - 1];
+
+      return {
+        items: page.map((row) => ({
+          id: row.kosh.id,
+          name: row.kosh.name,
+          description: row.kosh.description,
+          iconUrl: row.kosh.iconUrl,
+          monthlyAmount: row.kosh.monthlyAmount,
+          currency: row.kosh.currency,
+          dueDay: row.kosh.dueDay,
+          startDate: row.kosh.startDate,
+          endDate: row.kosh.endDate,
+          role: row.membership.role,
+          joinedAt: row.membership.joinedAt,
+        })),
+        nextCursor:
+          hasMore && last
+            ? `${last.kosh.createdAt.getTime()}|${last.kosh.id}`
+            : null,
+      };
+    }),
+
   create: protectedProcedure
     .input(createKoshSchema)
     .mutation(async ({ ctx, input }) => {
@@ -107,12 +175,9 @@ export const koshRouter = router({
 
       try {
         const created = await db.transaction(async (tx) => {
-          const code = await getUniqueKoshCode(input.name);
-
           const [row] = await tx
             .insert(kosh)
             .values({
-              code,
               name: input.name,
               description: input.description || null,
               iconUrl: input.iconUrl || null,
