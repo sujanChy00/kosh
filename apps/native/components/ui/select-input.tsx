@@ -77,7 +77,7 @@ export const SelectInput = ({
         onRequestClose={() => setOpened(false)}
       >
         <Pressable
-          className="flex-1 items-center justify-end px-3 pb-safe-offset-6"
+          className="flex-1 items-center justify-end px-3 pb-safe-offset-6 pt-safe-offset-10"
           onPress={() => setOpened(false)}
         >
           <Pressable onPress={(e) => e.stopPropagation()} className="w-full">

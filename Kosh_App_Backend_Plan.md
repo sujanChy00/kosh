@@ -44,15 +44,14 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | icon_url | text, nullable | |
 | monthly_amount | decimal | |
 | due_day | int | day of month, editable |
-| currency | text, default 'NPR' | |
+| currency | text, default 'NPR' | **fixed to NPR (Nepali Rupees)** — not configurable at creation or later |
 | member_interest_rate | decimal | |
 | non_member_interest_rate | decimal | |
 | loan_cap | decimal | same value applies to all members |
 | late_penalty_amount | decimal, nullable | |
-| start_date | date | |
+| start_date | date | **optional at creation, defaults to today if not set; future dates rejected** |
 | duration_months | int | |
 | end_date | date | computed from start_date + duration_months |
-| min_treasurers | int, default 0 | |
 | max_members | int, nullable | |
 | created_by | uuid, fk → users | |
 | created_at | timestamp | |
@@ -64,11 +63,35 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
 | user_id | uuid, fk → users | |
-| role | enum(adhyaksha, koshadhyaksha, sadasya) | |
+| role | enum(adhyaksh, koshadhyaksh, sadasya) | Nepali role codes — Adhyaksh (Admin), Koshadhyaksh (Treasurer), Sadasya (Member) |
 | status | enum(active, pending, left, removed) | pending = awaiting approval from open-link join |
 | joined_at | timestamp, nullable | |
 | left_at | timestamp, nullable | |
 | unique | (kosh_id, user_id) | |
+
+### kosh_role_requests
+*(treasurer appointments — the only path to becoming a Koshadhyaksh; no min_treasurers field at kosh creation)*
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid, pk | |
+| kosh_id | uuid, fk → kosh | |
+| invited_by | uuid, fk → users | the Adhyaksh who sent the invitation |
+| invitee_id | uuid, fk → users | the member who was invited |
+| target_role | enum, default koshadhyaksh | role being offered |
+| status | enum(pending, accepted, rejected) | |
+| reason | text, nullable | **optional** rejection reason supplied by the member |
+| decided_at | timestamp, nullable | when the invitee accepted/rejected |
+| created_at | timestamp | |
+| updated_at | timestamp | |
+| index | (kosh_id), (invitee_id) | |
+
+**Flow — invite → accept / reject:**
+1. Adhyaksh calls `membership.inviteTreasurer` with an active member's user id → inserts a `pending` `kosh_role_request` and notifies the member (`type = treasurer_invite`, `requires_action = true`).
+2. The member calls `membership.respondTreasurerInvite`:
+   - **accept** → the member's `kosh_memberships.role` flips to `koshadhyaksh` in the same transaction, request becomes `accepted`.
+   - **reject** → request becomes `rejected` with an **optional** `reason`; if the member leaves the reason blank, the admin just sees the rejection without one.
+3. Either way the Adhyaksh is notified (`type = role_changed`): *"[Member] accepted/rejected your request to be a Koshadhyaksh (Treasurer)"*, appending the reason when provided.
+4. The Adhyaksh can list all invitations for a kosh (`membership.treasurerRequests`) including status and any rejection reason.
 
 ### payment_methods
 | Column | Type | Notes |
@@ -91,7 +114,7 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | created_by | uuid, fk → users | |
 | max_uses | int, nullable | nullable = unlimited (default 50 or custom override) |
 | use_count | int, default 0 | incremented on each redeem attempt |
-| expires_at | timestamp | default 7 days from creation |
+| expires_at | timestamp, **not null**, default 7 days | **mandatory expiry** — an invite can never be created without one; code/link/QR all resolve to this same expiring token |
 | status | enum(active, revoked, expired) | |
 | created_at | timestamp | |
 
@@ -126,22 +149,22 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | created_at | timestamp | |
 
 ### loan_requests
-*(covers both origin paths — member-requested in-app, or Adhyaksha entering a loan requested outside the app; both converge on the same approval flow and broadcast notifications)*
+*(covers both origin paths — member-requested in-app, or Adhyaksh entering a loan requested outside the app; both converge on the same approval flow and broadcast notifications)*
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
 | origin | enum(member_requested, admin_initiated) | which path created this |
-| requested_by | uuid, fk → users | the borrower — themselves if member-requested, or selected by Adhyaksha if admin-initiated |
-| created_by | uuid, fk → users | who actually submitted the record (equals `requested_by` for member_requested; the Adhyaksha for admin_initiated) |
+| requested_by | uuid, fk → users | the borrower — themselves if member-requested, or selected by Adhyaksh if admin-initiated |
+| created_by | uuid, fk → users | who actually submitted the record (equals `requested_by` for member_requested; the Adhyaksh for admin_initiated) |
 | amount_requested | decimal | |
 | note | text, nullable | |
-| status | enum(pending_adhyaksha, pending_koshadhyaksha, approved, rejected) | `pending_adhyaksha` only applies to member_requested; admin_initiated skips straight to `pending_koshadhyaksha` since Adhyaksha creating it counts as their approval |
+| status | enum(pending_adhyaksh, pending_koshadhyaksh, approved, rejected) | `pending_adhyaksh` only applies to member_requested; admin_initiated skips straight to `pending_koshadhyaksh` since Adhyaksh creating it counts as their approval |
 | rejection_reason | text, nullable | |
-| resulting_loan_id | uuid, fk → loans, nullable | set once it clears Adhyaksha approval and becomes an actual loan pending disbursement |
-| resulting_transaction_id | uuid, fk → transactions, nullable | the Koshadhyaksha-approval wrapper |
-| adhyaksha_decided_by | uuid, fk → users, nullable | |
-| adhyaksha_decided_at | timestamp, nullable | |
+| resulting_loan_id | uuid, fk → loans, nullable | set once it clears Adhyaksh approval and becomes an actual loan pending disbursement |
+| resulting_transaction_id | uuid, fk → transactions, nullable | the Koshadhyaksh-approval wrapper |
+| adhyaksh_decided_by | uuid, fk → users, nullable | |
+| adhyaksh_decided_at | timestamp, nullable | |
 | created_at | timestamp | |
 
 ### loans
@@ -149,7 +172,7 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 |---|---|---|
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
-| loan_request_id | uuid, fk → loan_requests, nullable | null if Adhyaksha issued directly without a prior request |
+| loan_request_id | uuid, fk → loan_requests, nullable | null if Adhyaksh issued directly without a prior request |
 | borrower_id | uuid, fk → users, nullable | null if non-member borrower |
 | non_member_borrower_id | uuid, fk → non_member_borrowers, nullable | |
 | principal | decimal | |
@@ -181,7 +204,7 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | recorded_by | uuid, fk → users | |
 
 ### transactions
-*(the approval wrapper — anything needing Koshadhyaksha sign-off goes through this)*
+*(the approval wrapper — anything needing Koshadhyaksh sign-off goes through this)*
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid, pk | |
@@ -189,7 +212,7 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | type | enum(contribution, loan_disbursement, loan_repayment, payout) | |
 | reference_id | uuid | points to the related record (contribution/loan/repayment/payout) |
 | amount | decimal | |
-| initiated_by | uuid, fk → users | always an Adhyaksha |
+| initiated_by | uuid, fk → users | always an Adhyaksh |
 | status | enum(pending_approval, approved, rejected, executed) | |
 | created_at | timestamp | |
 | executed_at | timestamp, nullable | |
@@ -219,12 +242,12 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 
 ### kosh_subscriptions
 *(DEFERRED — not built until Phase 9. Kept here so the schema is ready whenever subscriptions get prioritized; do not migrate this table in early phases.)*
-*(ad-removal subscription — scoped per kosh, paid by the Adhyaksha)*
+*(ad-removal subscription — scoped per kosh, paid by the Adhyaksh)*
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
-| subscribed_by | uuid, fk → users | the Adhyaksha who purchased it |
+| subscribed_by | uuid, fk → users | the Adhyaksh who purchased it |
 | provider | enum(ios, android) | which store's billing was used |
 | revenuecat_customer_id | text | for reconciling with RevenueCat's records |
 | status | enum(active, expired, cancelled, grace_period) | kept in sync via RevenueCat webhooks |
@@ -300,7 +323,7 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | created_at | timestamp | |
 
 **Type categories:**
-- Kosh-scoped: `join_request_submitted`, `join_request_approved`, `join_request_rejected`, `role_changed`, `contribution_due`, `contribution_late`, `loan_requested`, `loan_request_approved`, `loan_request_rejected`, `loan_repayment_due`, `loan_repayment_overdue`, `transaction_pending_approval`, `transaction_approved`, `transaction_rejected`, `chat_message`, `kosh_ending_soon`, `kosh_end_payout_processed`, `member_removed`
+- Kosh-scoped: `join_request_submitted`, `join_request_approved`, `join_request_rejected`, `role_changed`, `treasurer_invite`, `contribution_due`, `contribution_late`, `loan_requested`, `loan_request_approved`, `loan_request_rejected`, `loan_repayment_due`, `loan_repayment_overdue`, `transaction_pending_approval`, `transaction_approved`, `transaction_rejected`, `chat_message`, `kosh_ending_soon`, `kosh_end_payout_processed`, `member_removed`
 - Account-scoped (`kosh_id` null): `security_alert`
 
 **Broadcast notifications:** `loan_requested`, `loan_request_approved`, and `loan_request_rejected` are sent to **every member of the kosh**, not just the requester or approvers — one `notifications` row gets inserted per recipient. Worth batching these inserts (all recipients in one query) rather than looping one-by-one, since kosh size could be dozens of members.
@@ -355,7 +378,7 @@ So there's no biometric data, hashes, or challenge sent to your server at all �
 
 - `auth` — handled mostly by Better-Auth directly, plus custom procedures for biometric-related settings
 - `kosh` — create, update settings, list user's kosh, switch context
-- `membership` — invite (targeted/open), join requests, role changes, remove member
+- `membership` — invite (targeted/open), join requests, role changes (**treasurer invite → member accept/reject with optional reason**), remove member
 - `contribution` — generate monthly records, mark paid/partial, list per member
 - `loan` — issue, repay, list per member, per kosh
 - `transaction` — create (wraps contribution/loan/payout actions requiring approval), approve, reject, list pending
@@ -363,4 +386,4 @@ So there's no biometric data, hashes, or challenge sent to your server at all �
 - `paymentMethod` — add/remove/set primary bank/wallet/QR
 - `chat` — threads, messages, send, mark read
 - `notification` — list, mark read, registerPushToken
-- `audit` — list logs per kosh (Adhyaksha/Koshadhyaksha visibility)
+- `audit` — list logs per kosh (Adhyaksh/Koshadhyaksh visibility)

@@ -3,7 +3,9 @@ import { Linking, ScrollView, TouchableOpacity, View } from "react-native";
 
 import { StyledSafeAreaView } from "@/components/layout/styled-safearea-view";
 import { StyledImage } from "@/components/styled-image";
+import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
+import { SymbolViewProps } from "expo-symbols";
 
 const AboutScreen = () => {
   const version = Constants.expoConfig?.version ?? "1.0.0";
@@ -39,10 +41,18 @@ const AboutScreen = () => {
 
         <View className="mt-10 w-full gap-y-3">
           <AboutRow
+            icon={{
+              android: "call",
+              ios: "phone",
+            }}
             label="Contact Support"
             onPress={() => Linking.openURL("mailto:support@koshapp.com")}
           />
           <AboutRow
+            icon={{
+              android: "open_in_new",
+              ios: "arrow.up.right.square",
+            }}
             label="Visit Website"
             onPress={() => Linking.openURL("https://koshapp.com")}
           />
@@ -62,17 +72,22 @@ const AboutScreen = () => {
 const AboutRow = ({
   label,
   onPress,
+  icon,
 }: {
   label: string;
   onPress: () => void;
+  icon: SymbolViewProps["name"];
 }) => (
   <TouchableOpacity
     className="w-full rounded-xl bg-surface-secondary px-4 py-3.5 active:opacity-70"
     onPress={onPress}
   >
-    <ThemedText className="text-sm font-notosans-medium text-foreground">
-      {label}
-    </ThemedText>
+    <View className="flex-row justify-between gap-3">
+      <ThemedText className="text-sm font-notosans-medium text-foreground">
+        {label}
+      </ThemedText>
+      <StyledSymbolView size={20} name={icon} />
+    </View>
   </TouchableOpacity>
 );
 

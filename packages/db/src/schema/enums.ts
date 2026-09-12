@@ -1,9 +1,10 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
 // ─── Membership & Roles ─────────────────────────────────────────────────────
+// Nepali role names. Display: Adhyaksh (Admin), Koshadhyaksh (Treasurer), Sadasya (Member).
 export const memberRoleEnum = pgEnum("member_role", [
-  "adhyaksha",
-  "koshadhyaksha",
+  "adhyaksh",
+  "koshadhyaksh",
   "sadasya",
 ]);
 
@@ -12,6 +13,13 @@ export const memberStatusEnum = pgEnum("member_status", [
   "pending",
   "left",
   "removed",
+]);
+
+// ─── Treasurer (Koshadhyaksh) Invitations ───────────────────────────────────
+export const treasurerInviteStatusEnum = pgEnum("treasurer_invite_status", [
+  "pending",
+  "accepted",
+  "rejected",
 ]);
 
 // ─── Payment ────────────────────────────────────────────────────────────────
@@ -50,8 +58,8 @@ export const loanRequestOriginEnum = pgEnum("loan_request_origin", [
 ]);
 
 export const loanRequestStatusEnum = pgEnum("loan_request_status", [
-  "pending_adhyaksha",
-  "pending_koshadhyaksha",
+  "pending_adhyaksh",
+  "pending_koshadhyaksh",
   "approved",
   "rejected",
 ]);
@@ -113,6 +121,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "join_request_approved",
   "join_request_rejected",
   "role_changed",
+  "treasurer_invite",
   "contribution_due",
   "contribution_late",
   "loan_requested",

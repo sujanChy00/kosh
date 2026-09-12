@@ -45,7 +45,7 @@ export const ProfileLinks = () => {
             fontSize: 15,
           }}
         >
-          Update Profile
+          My Profile
         </Text>
         <ListItem.Trailing>
           <Icon name={CHEVRON_RIGHT} color={mutedColor} size={18} />

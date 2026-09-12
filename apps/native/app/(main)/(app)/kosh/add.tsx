@@ -1,9 +1,10 @@
-import { Text, View } from "react-native";
+import { AddKoshForm } from "@/form/kosh/add-kosh-form";
+import { View } from "react-native";
 
 const KoshAddScreen = () => {
   return (
-    <View>
-      <Text>KoshAddScreen</Text>
+    <View className="flex-1">
+      <AddKoshForm />
     </View>
   );
 };

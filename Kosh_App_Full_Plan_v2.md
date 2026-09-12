@@ -6,22 +6,22 @@ A multi-tenant mobile app (Expo/Android-first) that lets any community savings g
 
 ## 1. Roles & Permissions
 
-Role names are Nepali-facing in the UI; internally the app can still store them as simple codes (e.g. `admin` / `treasurer` / `member`) mapped to these display names.
+Role names are Nepali — internally the app stores them as simple codes `adhyaksh` / `koshadhyaksh` / `sadasya`, displayed to users as **Adhyaksh** / **Koshadhyaksh** / **Sadasya**.
 
 | Role (Nepali) | English equivalent | Manages Members | Initiates Transactions | Approves Transactions | Views Own Data |
 |---|---|---|---|---|---|
-| **Adhyaksha** | Admin | Yes | Yes | No | Yes |
-| **Koshadhyaksha** | Treasurer | No | No | Yes | Yes |
+| **Adhyaksh** | Admin | Yes | Yes | No | Yes |
+| **Koshadhyaksh** | Treasurer | No | No | Yes | Yes |
 | **Sadasya** | Member | No | No | No | Yes (view-only) |
 
-Each user holds exactly **one role per kosh** — no combined roles. Adhyaksha proposes/initiates transactions, Koshadhyaksha approves them, Sadasya only views. This keeps the initiator and approver strictly separate, which is the entire point of the approval system.
+Each user holds exactly **one role per kosh** — no combined roles. Adhyaksh proposes/initiates transactions, Koshadhyaksh approves them, Sadasya only views. This keeps the initiator and approver strictly separate, which is the entire point of the approval system.
 
-**Important:** role governs *management/approval permissions only* — it has no bearing on participation. **All three roles contribute monthly, can take loans, and receive an equal kosh-end payout, including Adhyaksha and Koshadhyaksha themselves.** "Sadasya" is not a synonym for "the people who save money" — everyone in the kosh does that; Sadasya just means "no management or approval powers." Worth keeping this distinction explicit everywhere the plan says "member," since it's easy to accidentally read that word as "Sadasya-only."
+**Important:** role governs *management/approval permissions only* — it has no bearing on participation. **All three roles contribute monthly, can take loans, and receive an equal kosh-end payout, including Adhyaksh and Koshadhyaksh themselves.** "Sadasya" is not a synonym for "the people who save money" — everyone in the kosh does that; Sadasya just means "no management or approval powers." Worth keeping this distinction explicit everywhere the plan says "member," since it's easy to accidentally read that word as "Sadasya-only."
 
-- Default role on joining a kosh (via QR/link invite) is **Sadasya**. Adhyaksha can change roles afterward — **no approval required for role changes** (kept simple for now).
-- **Approval rule:** every transaction (contribution confirmation, loan disbursement, kosh-end payout) requires approval. If a kosh has multiple Koshadhyaksha, **all** must approve.
-- **Rejection flow:** rejecting Koshadhyaksha must give a reason. Adhyaksha can edit and resubmit. On resubmission, **all Koshadhyaksha must re-approve** (no carried-over approvals). Every rejection is logged (reason + timestamp) for audit/transparency.
-- A user can be Adhyaksha and/or Sadasya of **multiple kosh** — Slack-style switcher between them, with all data (transactions, chat) scoped to whichever kosh is currently active.
+- Default role on joining a kosh (via QR/link invite) is **Sadasya**. Adhyaksh can change roles afterward — **no approval required for role changes** (kept simple for now).
+- **Approval rule:** every transaction (contribution confirmation, loan disbursement, kosh-end payout) requires approval. If a kosh has multiple Koshadhyaksh, **all** must approve.
+- **Rejection flow:** rejecting Koshadhyaksh must give a reason. Adhyaksh can edit and resubmit. On resubmission, **all Koshadhyaksh must re-approve** (no carried-over approvals). Every rejection is logged (reason + timestamp) for audit/transparency.
+- A user can be Adhyaksh and/or Sadasya of **multiple kosh** — Slack-style switcher between them, with all data (transactions, chat) scoped to whichever kosh is currently active.
 
 ---
 
@@ -29,14 +29,16 @@ Each user holds exactly **one role per kosh** — no combined roles. Adhyaksha p
 
 One invite mechanism, shareable three ways — a plain **code**, a **link**, or a **QR code** (all three are just different presentations of the same underlying token). No email-targeted invites for now.
 
+Distinct from the kosh's stable **kosh code** (e.g. `SAGA-7XPK`, shown on reports and never changes), each **invite token** is a regenerable `PREFIX-XXXX` value tied to a specific invite record — so a revoked or expired invite doesn't affect the kosh code at all.
+
 **Flow:**
-1. Adhyaksha generates an invite for the kosh.
+1. Adhyaksh generates an invite for the kosh.
 2. An in-app **QR scanner** lets a user scan the code directly (`expo-camera`'s built-in barcode scanning); tapping a link works the same way via the `kosh-app://invite/{token}` deep link; a plain code can be typed in manually.
 3. Scanning/tapping/entering opens a screen showing the **kosh's details** (name, description, icon) and a "Request to Join" action.
-4. On submission, the user is placed in a **Pending** state (`kosh_memberships.status = pending`), and Adhyaksha receives a notification that a join request is waiting.
-5. Adhyaksha reviews a **Join Requests** list (per kosh) and approves or rejects each one. Approval flips status to `active` with role `Sadasya`.
+4. On submission, the user is placed in a **Pending** state (`kosh_memberships.status = pending`), and Adhyaksh receives a notification that a join request is waiting.
+5. Adhyaksh reviews a **Join Requests** list (per kosh) and approves or rejects each one. Approval flips status to `active` with role `Sadasya`.
 
-**Invite hygiene:** invites have an **expiration date** and a **usage cap**; Adhyaksha can revoke/regenerate anytime. Anyone who scans/taps an expired invite sees a clear "Invite expired" state rather than a generic error.
+**Invite hygiene:** invites **always have an expiration date** (default **7 days**, mandatory — never an open-ended invite), a **usage cap** (default 50), and Adhyaksh can revoke/regenerate anytime. A code, link, or QR all resolve to the same expiring token, so there's no way to share an invite that never expires. Anyone who scans/taps an expired invite sees a clear "Invite expired" state rather than a generic error.
 
 **Phone-based invites remain removed** — auth is email-only, and SMS costs money to send.
 
@@ -103,7 +105,7 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 **Financial Settings**
 - Monthly contribution amount
 - Contribution due date (editable after creation)
-- Currency (NPR default)
+- Currency: **NPR (Nepali Rupees) only** — not configurable at creation or later
 
 **Loan Settings**
 - Member interest rate (%)
@@ -112,15 +114,23 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 - Late repayment penalty (optional)
 
 **Duration**
-- Start date, duration (e.g. 3/5 years/custom) → auto-calculated end date
+- Start date (**optional** — if not set it defaults to today; future dates are blocked, the picker caps at "today"), duration (e.g. 3/5 years/custom) → auto-calculated end date
 
 **Membership**
-- Minimum required Koshadhyaksha (0 or more)
 - Max members (optional)
+- Treasurers (Koshadhyaksh) are **not set at creation** — the Adhyaksh invites members to become treasurers afterward via the request/accept flow below
+- Kosh code (`SAGA-7XPK`-style) auto-generated at creation, stable for the kosh's lifetime
+
+**Treasurer (Koshadhyaksh) invitation flow**
+- The Adhyaksh picks a member from the kosh's member list and sends a **treasurer invitation** — a request, not an instant promotion.
+- The member gets a notification with the invitation and can **accept** (immediately becomes a Koshadhyaksh) or **reject**.
+- On reject, the member is asked for a **reason (optional)** — if given it's stored and shown to the Adhyaksh, who sees *"[Member] rejected your request to be a Koshadhyaksh (Treasurer)"* with the reason attached.
+- On accept, the member's role flips to Koshadhyaksh and the Adhyaksh is notified of the acceptance.
+- The Adhyaksh can see the status and any rejection reason of every past invitation for a kosh.
 
 **Auto-created on kosh creation**
 - Group chat for all members (persistent, tied to this kosh)
-- Adhyaksha's own membership record
+- Adhyaksh's own membership record
 
 ---
 
@@ -133,35 +143,35 @@ Biometrics are a **local, device-level gate** — the server never verifies a fi
 - Payment details (optional, multiple allowed): bank account, wallet (eSewa/Khalti), QR code — one marked **primary**
 
 **Kosh Membership (per kosh joined)**
-- Role (Adhyaksha/Koshadhyaksha/Sadasya), join date, status (active/left/removed)
+- Role (Adhyaksh/Koshadhyaksh/Sadasya), join date, status (active/left/removed)
 - Loan taken so far, contribution history — both derived from transaction records, not manually entered
 
 ---
 
 ## 7. Loan Management
 
-**Applies to any participant regardless of role** — Adhyaksha and Koshadhyaksha can borrow too, at the same member interest rate as a Sadasya, since they're kosh participants like anyone else. (Worth deciding later whether a Koshadhyaksha approving their *own* loan request creates a conflict of interest — see Open Decisions.)
+**Applies to any participant regardless of role** — Adhyaksh and Koshadhyaksh can borrow too, at the same member interest rate as a Sadasya, since they're kosh participants like anyone else. (Worth deciding later whether a Koshadhyaksh approving their *own* loan request creates a conflict of interest — see Open Decisions.)
 
 **Two ways a loan gets started, converging on the same approval steps:**
 
 **A. Member-requested** — any participant submits a loan request (amount, optional note) directly in the app.
 1. **Every kosh member gets a notification** naming who requested a loan and how much — informational, for group transparency.
-2. The request appears in a **Loan Requests** section on the kosh's details screen — visible to everyone, but only Adhyaksha and Koshadhyaksha see approve/reject actions; a Sadasya can only view it and its status.
-3. **Adhyaksha approves or rejects it.** Approving here is what moves it forward — it doesn't disburse yet, it converts the request into an actual loan pending sign-off.
-4. **Koshadhyaksha approval is still required** before disbursement (all Koshadhyaksha, per the standard rule).
+2. The request appears in a **Loan Requests** section on the kosh's details screen — visible to everyone, but only Adhyaksh and Koshadhyaksh see approve/reject actions; a Sadasya can only view it and its status.
+3. **Adhyaksh approves or rejects it.** Approving here is what moves it forward — it doesn't disburse yet, it converts the request into an actual loan pending sign-off.
+4. **Koshadhyaksh approval is still required** before disbursement (all Koshadhyaksh, per the standard rule).
 
-**B. Adhyaksha-initiated** — for a loan someone requested in person or over a messaging app, outside the kosh app entirely. Adhyaksha manually enters the borrower and amount.
+**B. Adhyaksh-initiated** — for a loan someone requested in person or over a messaging app, outside the kosh app entirely. Adhyaksh manually enters the borrower and amount.
 1. This also **broadcasts a notification to every kosh member** — same transparency, even though the request itself didn't originate in-app.
-2. **Koshadhyaksha approval is still required** before disbursement, same as path A.
+2. **Koshadhyaksh approval is still required** before disbursement, same as path A.
 
-**Either way:** only Adhyaksha and Koshadhyaksha can ever approve/reject a loan — a Sadasya (including the requester themselves) can only view status. Once resolved — disbursed or rejected — **every kosh member gets a notification of the outcome**, not just the borrower.
+**Either way:** only Adhyaksh and Koshadhyaksh can ever approve/reject a loan — a Sadasya (including the requester themselves) can only view status. Once resolved — disbursed or rejected — **every kosh member gets a notification of the outcome**, not just the borrower.
 
 Beyond the request/approval flow:
 - Interest rates and loan cap set per kosh (see §5)
 - Loan cap is a **per-member cap**, same value for every participant
-- Adhyaksha picks which of the borrower's payout methods to disburse to, if they have more than one on file
+- Adhyaksh picks which of the borrower's payout methods to disburse to, if they have more than one on file
 - Participants see "amount taken / amount remaining" against the kosh's loan cap at all times
-- Repayments: Adhyaksha can **Mark as Paid (full installment)** or **Enter Amount** (partial/lump-sum)
+- Repayments: Adhyaksh can **Mark as Paid (full installment)** or **Enter Amount** (partial/lump-sum)
   - Underpay → shortfall carries forward, interest continues accruing on outstanding principal
   - Overpay → extra reduces principal directly, lowering future interest
 - Overdue installments trigger reminders
@@ -170,10 +180,10 @@ Beyond the request/approval flow:
 
 ## 8. Contribution Tracking
 
-**Applies to every participant regardless of role** — Adhyaksha and Koshadhyaksha contribute monthly the same as any Sadasya. The Adhyaksha still records/confirms payments for everyone (including their own), since that's a management action, not a participation restriction.
+**Applies to every participant regardless of role** — Adhyaksh and Koshadhyaksh contribute monthly the same as any Sadasya. The Adhyaksh still records/confirms payments for everyone (including their own), since that's a management action, not a participation restriction.
 
 - On the due date, a **Pending** record auto-generates per active participant (all roles)
-- Adhyaksha marks **Paid (full)** or **Enter Amount** (partial)
+- Adhyaksh marks **Paid (full)** or **Enter Amount** (partial)
   - Full amount → **Paid**
   - Less than full → **Partial**, remainder carries into next due amount
   - Due date passes with balance outstanding → **Late**, automatic penalty applies to the outstanding portion only
@@ -184,7 +194,7 @@ Beyond the request/approval flow:
 
 ## 9. Kosh-End Payout
 
-- On kosh term completion, remaining fund is split **equally per participant — every kosh member regardless of role (Adhyaksha, Koshadhyaksha, and Sadasya all included)**
+- On kosh term completion, remaining fund is split **equally per participant — every kosh member regardless of role (Adhyaksh, Koshadhyaksh, and Sadasya all included)**
 - Any participant with an **outstanding loan has it deducted from their payout first**
 - Payout sent to their chosen payment method (bank/wallet/QR) if set, otherwise handled manually
 
@@ -200,7 +210,7 @@ Beyond the request/approval flow:
 ## 11. Notifications
 
 **Kosh-scoped types** (filterable by kosh):
-- Join request submitted (to Adhyaksha)
+- Join request submitted (to Adhyaksh)
 - Join request approved / rejected (to requester)
 - Role changed (to affected person)
 - Contribution due (reminder)
@@ -209,8 +219,8 @@ Beyond the request/approval flow:
 - **Loan request approved & disbursed (broadcast to all kosh members)**
 - **Loan request rejected (broadcast to all kosh members)**
 - Loan repayment due / overdue (to borrower)
-- Transaction pending approval (to Koshadhyaksha)
-- Transaction approved / rejected (to initiating Adhyaksha)
+- Transaction pending approval (to Koshadhyaksh)
+- Transaction approved / rejected (to initiating Adhyaksh)
 - Chat message
 - Kosh ending soon (term completion approaching)
 - Kosh-end payout processed
@@ -252,7 +262,7 @@ Beyond the request/approval flow:
 **Ads (MVP):** shown to everyone by default, no exceptions yet. Implemented via AdMob (`react-native-google-mobile-ads`), which requires a **development build (EAS Build)**, not Expo Go, since it needs native modules.
 - Recommend non-intrusive placement (e.g. banner ads on dashboard/list screens) and **no ads on transaction, approval, or payment-related screens** — mixing ads into money-movement flows undermines trust in a financial app.
 
-**Subscription (ad removal) — deferred, design kept for later:** Adhyaksha would subscribe to a **monthly plan, per kosh**, to remove ads for that kosh. When active, **all members of that kosh** see no ads.
+**Subscription (ad removal) — deferred, design kept for later:** Adhyaksh would subscribe to a **monthly plan, per kosh**, to remove ads for that kosh. When active, **all members of that kosh** see no ads.
 - **Assumption to confirm whenever this gets built:** ad-free status is scoped to that specific kosh's screens — a person in 2 kosh (one subscribed, one not) still sees ads while viewing the unsubscribed one. Flag if account-wide is actually preferred instead.
 - **Known blockers to resolve before building this** (see Open Decisions):
   - Nepal isn't currently a supported country for Google Play merchant/payments profile registration — Play Billing can't be set up under a Nepal-registered account as-is.
@@ -263,7 +273,7 @@ Beyond the request/approval flow:
 
 ## 14. Data Model (draft)
 
-- **Kosh**: id, code (e.g. `SAGA-7XPK`), name, description, icon, monthly_amount, due_date, currency, member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date, duration, end_date, min_treasurers, max_members
+- **Kosh**: id, code (e.g. `SAGA-7XPK`), name, description, icon, monthly_amount, due_date, currency (NPR only), member_interest_rate, non_member_interest_rate, loan_cap, late_penalty, start_date (optional — defaults to today), duration, end_date, max_members
 - **User**: id, name, email, email_verified, password_hash, photo, biometric_enabled, selected_kosh_id
 - **PaymentMethod**: id, user_id, type (bank/wallet/qr), details, is_primary
 - **KoshMembership**: id, kosh_id, user_id, role, join_date, status
@@ -319,20 +329,20 @@ Beyond the request/approval flow:
 - Kosh creation flow with all fields from §5
 - Invite flow: QR code, shareable link
 - Member joins → defaults to Sadasya role
-- Adhyaksha member-management screen: view members, change roles, remove members
+- Adhyaksh member-management screen: view members, change roles, remove members
 - Kosh switcher UI (multi-kosh support)
 - Auto-create group chat on kosh creation (basic text messages at this stage)
 
 ### Phase 2 — Contributions & Loans (Weeks 5–8)
 - Contribution tracking: auto-generate monthly Pending records, Mark Paid / Enter Amount flows, Partial/Late status logic, automatic penalty on Late
-- Loan issuance: per-member cap, member vs. non-member interest rate, Adhyaksha selects borrower + payout method (manual/cash for now, since payment integration is a later phase)
+- Loan issuance: per-member cap, member vs. non-member interest rate, Adhyaksh selects borrower + payout method (manual/cash for now, since payment integration is a later phase)
 - Loan repayment: Mark Paid / Enter Amount, over/underpayment handling
 - Combined member list view (contribution + loan status side by side)
 
 ### Phase 3 — Approval Workflow (Weeks 9–10)
-- Koshadhyaksha role wired into transaction flow: every transaction requires all-Koshadhyaksha approval
+- Koshadhyaksh role wired into transaction flow: every transaction requires all-Koshadhyaksh approval
 - Rejection with reason, resubmission requiring full re-approval
-- Approval/rejection history log, visible to Adhyaksha and Koshadhyaksha
+- Approval/rejection history log, visible to Adhyaksh and Koshadhyaksh
 
 ### Phase 4 — Reports, Chat, Payout Logic (Weeks 11–13)
 - PDF/CSV export: monthly/annual reports, individual member statements
@@ -373,13 +383,13 @@ Beyond the request/approval flow:
 
 ## 17. Open Decisions to Revisit
 
-1. Should a kosh be required to have at least 1 Koshadhyaksha, or can it run Adhyaksha-only?
+1. ~~Should a kosh be required to have at least 1 Koshadhyaksh, or can it run Adhyaksh-only?~~ **Resolved:** a kosh defaults to Adhyaksh-only; treasurers are added on demand via the invite/accept flow, so no minimum is enforced.
 2. Loan cap: stay fully manual, or add a system-suggested safe cap based on kosh balance?
 3. What happens if kosh-end payout is negative after loan deduction (member owes more than their share)?
-4. Do non-member borrowers need any app account, or are they just tracked as a record by Adhyaksha?
+4. Do non-member borrowers need any app account, or are they just tracked as a record by Adhyaksh?
 5. Should backdating for contribution payments be added later if Late-flag inaccuracies become a real problem?
 6. Should users be encouraged to add a backup verified contact method beyond email, for account recovery?
-7. Conflict of interest: if a Koshadhyaksha requests a loan for themselves, should a *different* Koshadhyaksha be required to approve it (rather than potentially self-approving), or does the all-Koshadhyaksha-must-approve rule already cover this adequately once there's more than one Koshadhyaksha?
-8. Ad-free scoping: does an Adhyaksha's subscription remove ads only within that specific kosh's screens, or account-wide for everyone in it across all their kosh? *(revisit when Phase 9 is actually scheduled)*
-9. Should a rejected loan request show Adhyaksha's reason to the whole kosh (full transparency) or just to the requester (less exposure for the person who was declined)?
+7. Conflict of interest: if a Koshadhyaksh requests a loan for themselves, should a *different* Koshadhyaksh be required to approve it (rather than potentially self-approving), or does the all-Koshadhyaksh-must-approve rule already cover this adequately once there's more than one Koshadhyaksh?
+8. Ad-free scoping: does an Adhyaksh's subscription remove ads only within that specific kosh's screens, or account-wide for everyone in it across all their kosh? *(revisit when Phase 9 is actually scheduled)*
+9. Should a rejected loan request show Adhyaksh's reason to the whole kosh (full transparency) or just to the requester (less exposure for the person who was declined)?
 10. Subscription path: register a Play Console merchant account under a supported-country entity (e.g. a US LLC), or keep distributing outside the Play Store to sidestep both the Nepal merchant-eligibility gap and the Play Billing policy requirement for ad-free features? Needs deciding before Phase 9 starts, not before.

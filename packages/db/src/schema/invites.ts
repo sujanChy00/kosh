@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -27,7 +27,10 @@ export const invite = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     maxUses: integer("max_uses"),
     useCount: integer("use_count").notNull().default(0),
-    expiresAt: timestamp("expires_at").notNull(),
+    // Invites always expire — code/link/QR all carry this expiry. Default 7 days.
+    expiresAt: timestamp("expires_at")
+      .notNull()
+      .default(sql`(now() + interval '7 days')`),
     status: inviteStatusEnum("status").notNull().default("active"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
