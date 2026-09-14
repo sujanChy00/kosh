@@ -40,11 +40,17 @@ export const loanRequest = pgTable(
       .notNull()
       .references(() => kosh.id, { onDelete: "cascade" }),
     origin: loanRequestOriginEnum("origin").notNull(),
-    // The borrower — themselves if member_requested, or selected by Adhyaksh
-    // if admin_initiated.
-    requestedBy: text("requested_by")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    // The borrower — themselves if member_requested / member loan, or an
+    // external (non-member) borrower who has no account. Exactly one of
+    // requestedBy / nonMemberBorrowerId must be set; that XOR is enforced in
+    // the mutation layer, not as a DB constraint.
+    requestedBy: text("requested_by").references(() => user.id, {
+      onDelete: "cascade",
+    }), // null when the borrower is external (non-member)
+    nonMemberBorrowerId: uuid("non_member_borrower_id").references(
+      () => nonMemberBorrower.id,
+      { onDelete: "cascade" },
+    ),
     // Who actually submitted the record (equals requestedBy for
     // member_requested; the Adhyaksh for admin_initiated).
     createdBy: text("created_by")
@@ -109,6 +115,11 @@ export const loan = pgTable(
 );
 
 // ─── Loan Repayments ────────────────────────────────────────────────────────
+// Business rule (chosen, not inferable from the schema): each repayment is
+// applied interest-first — the payment first pays down whatever interest has
+// accrued, and only then reduces principal. The recorded portions must add up
+// to the full payment (principal_portion + interest_portion = amount paid),
+// so an interest-only or principal-only payment is allowed.
 export const loanRepayment = pgTable(
   "loan_repayment",
   {
@@ -116,7 +127,8 @@ export const loanRepayment = pgTable(
     loanId: uuid("loan_id")
       .notNull()
       .references(() => loan.id, { onDelete: "cascade" }),
-    amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+    principalPortion: decimal("principal_portion", { precision: 12, scale: 2 }).notNull(),
+    interestPortion: decimal("interest_portion", { precision: 12, scale: 2 }).notNull().default("0"),
     date: timestamp("date").defaultNow().notNull(),
     remainingBalanceAfter: decimal("remaining_balance_after", {
       precision: 12,
@@ -151,6 +163,11 @@ export const loanRequestRelations = relations(loanRequest, ({ one }) => ({
     fields: [loanRequest.requestedBy],
     references: [user.id],
     relationName: "loanRequestRequester",
+  }),
+  nonMemberBorrower: one(nonMemberBorrower, {
+    fields: [loanRequest.nonMemberBorrowerId],
+    references: [nonMemberBorrower.id],
+    relationName: "loanRequestNonMemberBorrower",
   }),
   creator: one(user, {
     fields: [loanRequest.createdBy],

@@ -1,4 +1,6 @@
 import { protectedProcedure, publicProcedure, router } from "../index";
+import { contributionRouter } from "./contribution";
+import { inviteRouter } from "./invite";
 import { koshRouter } from "./kosh";
 import { membershipRouter } from "./membership";
 
@@ -14,5 +16,7 @@ export const appRouter = router({
   }),
   kosh: koshRouter,
   membership: membershipRouter,
+  invite: inviteRouter,
+  contribution: contributionRouter,
 });
 export type AppRouter = typeof appRouter;

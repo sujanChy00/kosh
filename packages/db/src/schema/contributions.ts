@@ -25,9 +25,13 @@ export const contribution = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     period: date("period").notNull(), // represents the contribution month
     expectedAmount: decimal("expected_amount", { precision: 12, scale: 2 }).notNull(),
-    paidAmount: decimal("paid_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    // Renamed from paid_amount: scoped strictly to the base contribution,
+    // excluding any penalty. Total received for a period is computed as
+    // contribution_amount + penalty_paid (not stored, to avoid drift).
+    contributionAmount: decimal("contribution_amount", { precision: 12, scale: 2 }).notNull().default("0"),
     status: contributionStatusEnum("status").notNull().default("pending"),
-    penaltyAmount: decimal("penalty_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    penaltyAssessed: decimal("penalty_assessed", { precision: 12, scale: 2 }).notNull().default("0"), // penalty charged for lateness
+    penaltyPaid: decimal("penalty_paid", { precision: 12, scale: 2 }).notNull().default("0"), // how much of that penalty was actually collected
     datePaid: timestamp("date_paid"),
     recordedBy: text("recorded_by")
       .notNull()

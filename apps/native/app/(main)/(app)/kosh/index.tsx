@@ -1,4 +1,5 @@
 import PLUST_ICON from "@expo/material-symbols/add.xml";
+import RECORD_ICON from "@expo/material-symbols/edit_square.xml";
 import { LegendList } from "@legendapp/list/react-native";
 import type { KoshListItem } from "@kosh-app/api/routers/kosh";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -45,10 +46,29 @@ const KoshCard = ({ kosh }: { kosh: KoshListItem }) => {
         <ThemedText className="text-sm text-muted">
           {kosh.currency} {formatAmount(kosh.monthlyAmount)} / month
         </ThemedText>
-        <Chip variant="soft" color="primary" size="sm">
-          <Chip.Label>{ROLE_LABELS[kosh.role]}</Chip.Label>
-        </Chip>
+        <View className="flex-row items-center gap-3">
+          <ThemedText className="text-sm text-muted">
+            {kosh.memberCount} {kosh.memberCount === 1 ? "member" : "members"}
+          </ThemedText>
+          <Chip variant="soft" color="primary" size="sm">
+            <Chip.Label>{ROLE_LABELS[kosh.role]}</Chip.Label>
+          </Chip>
+        </View>
       </Card.Footer>
+      <View className="mt-1 flex-row items-center justify-between">
+        <View className="gap-0.5">
+          <ThemedText className="text-xs text-muted">Total collected</ThemedText>
+          <ThemedText className="font-medium">
+            {kosh.currency} {formatAmount(kosh.totalCollected)}
+          </ThemedText>
+        </View>
+        <View className="items-end gap-0.5">
+          <ThemedText className="text-xs text-muted">In kosh now</ThemedText>
+          <ThemedText className="font-medium">
+            {kosh.currency} {formatAmount(kosh.totalRemaining)}
+          </ThemedText>
+        </View>
+      </View>
     </Card>
   );
 };
@@ -75,6 +95,16 @@ const KoshScreen = () => {
     <View className="flex-1">
       <Stack.Title>My Kosh</Stack.Title>
       <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          variant="prominent"
+          onPress={() => {
+            router.push({
+              pathname: "/contribution",
+            });
+          }}
+        >
+          <Stack.Toolbar.Icon sf="pencil.and.list.clipboard" src={RECORD_ICON} />
+        </Stack.Toolbar.Button>
         <Stack.Toolbar.Button
           variant="prominent"
           onPress={() => {

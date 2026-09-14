@@ -14,6 +14,12 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
+        name="contribution"
+        options={{
+          headerTitle: "Contributions",
+        }}
+      />
+      <Stack.Screen
         name="about"
         options={{
           headerTitle: "About",

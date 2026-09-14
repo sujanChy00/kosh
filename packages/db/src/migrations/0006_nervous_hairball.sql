@@ -1,0 +1,1 @@
+ALTER TABLE "contribution" ADD COLUMN "penalty_paid" numeric(12, 2) DEFAULT '0' NOT NULL;

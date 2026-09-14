@@ -140,9 +140,10 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | member_id | uuid, fk → users | |
 | period | date | represents the contribution month |
 | expected_amount | decimal | |
-| paid_amount | decimal, default 0 | |
+| contribution_amount | decimal, default 0 | amount of the base contribution paid (excludes any penalty) |
 | status | enum(pending, paid, partial, late) | |
-| penalty_amount | decimal, default 0 | |
+| penalty_assessed | decimal, default 0 | penalty charged for late payment |
+| penalty_paid | decimal, default 0 | how much of that penalty has actually been collected |
 | date_paid | timestamp, nullable | |
 | recorded_by | uuid, fk → users | |
 | created_at | timestamp | |
@@ -154,7 +155,8 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | id | uuid, pk | |
 | kosh_id | uuid, fk → kosh | |
 | origin | enum(member_requested, admin_initiated) | which path created this |
-| requested_by | uuid, fk → users | the borrower — themselves if member-requested, or selected by Adhyaksh if admin-initiated |
+| requested_by | uuid, fk → users, nullable | the member borrower; **null for external (non-member) borrowers** — exactly one of `requested_by` / `non_member_borrower_id` must be set (XOR enforced in the mutation layer, not as a DB constraint) |
+| non_member_borrower_id | uuid, fk → non_member_borrowers, nullable | set when the borrower is external |
 | created_by | uuid, fk → users | who actually submitted the record (equals `requested_by` for member_requested; the Adhyaksh for admin_initiated) |
 | amount_requested | decimal | |
 | note | text, nullable | |
@@ -193,11 +195,13 @@ Note: since auth uses **Better-Auth**, it manages its own core tables (`user`, `
 | notes | text, nullable | |
 
 ### loan_repayments
+*(each repayment is split; business rule: interest-first — payment pays down accrued interest before principal. principal_portion + interest_portion = full amount paid)*
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid, pk | |
 | loan_id | uuid, fk → loans | |
-| amount | decimal | |
+| principal_portion | decimal | portion of the payment applied to principal |
+| interest_portion | decimal, default 0 | portion applied to interest |
 | date | timestamp | |
 | remaining_balance_after | decimal | |
 | recorded_by | uuid, fk → users | |
@@ -378,7 +382,7 @@ So there's no biometric data, hashes, or challenge sent to your server at all �
 - `auth` — handled mostly by Better-Auth directly, plus custom procedures for biometric-related settings
 - `kosh` — create, update settings, list user's kosh, switch context
 - `membership` — invite (targeted/open), join requests, role changes (**treasurer invite → member accept/reject with optional reason**), remove member
-- `contribution` — generate monthly records, mark paid/partial, list per member
+- `contribution` — `periodData(koshId, period?)` (lazy-generates per-member rows + default period + penalty/late badges), `record` (single member + optional loan repayment) and `recordBulk` (multi-member, per-entry isolation). Adhyaksh-only. **No hard date-blocking**: any period is always recordable; date only drives default period and late badges.
 - `loan` — issue, repay, list per member, per kosh
 - `transaction` — create (wraps contribution/loan/payout actions requiring approval), approve, reject, list pending
 - `payout` — kosh-end payout calculation and execution

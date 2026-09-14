@@ -1,8 +1,10 @@
 import { db } from "@kosh-app/db";
 import { user } from "@kosh-app/db/schema/auth";
+import { contribution } from "@kosh-app/db/schema/contributions";
 import { kosh, koshMembership } from "@kosh-app/db/schema/kosh";
+import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -24,6 +26,9 @@ export type KoshListItem = {
   endDate: string;
   role: "adhyaksh" | "koshadhyaksh" | "sadasya";
   joinedAt: string | null;
+  memberCount: number;
+  totalCollected: string;
+  totalRemaining: string;
 };
 
 const createKoshSchema = z
@@ -130,6 +135,53 @@ export const koshRouter = router({
             endDate: kosh.endDate,
             createdAt: kosh.createdAt,
           },
+          memberCount: sql<number>`(
+            select count(*)::int
+            from ${koshMembership}
+            where ${koshMembership.koshId} = ${kosh.id}
+              and ${koshMembership.status} = 'active'
+          )`,
+          // totalCollected: lifetime money that has genuinely entered the kosh.
+          // Contributions + collected penalties + interest actually received.
+          // Loan principal is NOT re-counted here — it was already counted once
+          // when originally contributed, so re-adding it on repayment would
+          // double-count it.
+          totalCollected: sql<string>`(
+            (
+              select coalesce(sum(${contribution.contributionAmount}), 0)
+                     + coalesce(sum(${contribution.penaltyPaid}), 0)
+              from ${contribution}
+              where ${contribution.koshId} = ${kosh.id}
+            ) + coalesce((
+              select sum(${loanRepayment.interestPortion})
+              from ${loanRepayment}
+              inner join ${loan} on ${loan.id} = ${loanRepayment.loanId}
+              where ${loan.koshId} = ${kosh.id}
+            ), 0)
+          )`,
+          // totalRemaining: actual liquid balance right now. Active AND
+          // defaulted loans both still reduce this (defaulted balances are
+          // money genuinely gone); paid_off loans are excluded (balance is 0).
+          totalRemaining: sql<string>`(
+            (
+              (
+                select coalesce(sum(${contribution.contributionAmount}), 0)
+                       + coalesce(sum(${contribution.penaltyPaid}), 0)
+                from ${contribution}
+                where ${contribution.koshId} = ${kosh.id}
+              ) + coalesce((
+                select sum(${loanRepayment.interestPortion})
+                from ${loanRepayment}
+                inner join ${loan} on ${loan.id} = ${loanRepayment.loanId}
+                where ${loan.koshId} = ${kosh.id}
+              ), 0)
+            ) - (
+              select coalesce(sum(${loan.amountRemaining}), 0)
+              from ${loan}
+              where ${loan.koshId} = ${kosh.id}
+                and ${loan.status} in ('active', 'defaulted')
+            )
+          )`,
         })
         .from(koshMembership)
         .innerJoin(kosh, eq(koshMembership.koshId, kosh.id))
@@ -154,6 +206,9 @@ export const koshRouter = router({
           endDate: row.kosh.endDate,
           role: row.membership.role,
           joinedAt: row.membership.joinedAt,
+          memberCount: row.memberCount,
+          totalCollected: row.totalCollected,
+          totalRemaining: row.totalRemaining,
         })),
         nextCursor:
           hasMore && last

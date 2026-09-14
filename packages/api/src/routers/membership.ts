@@ -1,8 +1,5 @@
 import { db } from "@kosh-app/db";
-import {
-  koshMembership,
-  koshRoleRequest,
-} from "@kosh-app/db/schema/kosh";
+import { koshMembership, koshRoleRequest } from "@kosh-app/db/schema/kosh";
 import { notification } from "@kosh-app/db/schema/notifications";
 import { TRPCError } from "@trpc/server";
 import { and, eq } from "drizzle-orm";
@@ -10,7 +7,7 @@ import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
 
-const koshIdSchema = z.string().uuid();
+const koshIdSchema = z.uuid();
 
 async function getActiveMembership(koshId: string, userId: string) {
   return db.query.koshMembership.findFirst({
@@ -70,7 +67,10 @@ export const membershipRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Kosh not found" });
       }
 
-      const adminMembership = await getActiveMembership(input.koshId, ctx.session.user.id);
+      const adminMembership = await getActiveMembership(
+        input.koshId,
+        ctx.session.user.id,
+      );
       if (!adminMembership || adminMembership.role !== "adhyaksh") {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -265,8 +265,7 @@ export const membershipRouter = router({
       );
       if (
         !membership ||
-        (membership.role !== "adhyaksh" &&
-          membership.role !== "koshadhyaksh")
+        (membership.role !== "adhyaksh" && membership.role !== "koshadhyaksh")
       ) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -277,7 +276,9 @@ export const membershipRouter = router({
       return db.query.koshRoleRequest.findMany({
         where: (r, { eq: q }) => q(r.koshId, input.koshId),
         with: {
-          invitee: { columns: { id: true, name: true, email: true, image: true } },
+          invitee: {
+            columns: { id: true, name: true, email: true, image: true },
+          },
           inviter: { columns: { id: true, name: true } },
         },
         orderBy: (r, { desc }) => [desc(r.createdAt)],

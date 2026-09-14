@@ -180,12 +180,12 @@ Beyond the request/approval flow:
 
 **Applies to every participant regardless of role** — Adhyaksh and Koshadhyaksh contribute monthly the same as any Sadasya. The Adhyaksh still records/confirms payments for everyone (including their own), since that's a management action, not a participation restriction.
 
-- On the due date, a **Pending** record auto-generates per active participant (all roles)
+- On the due date, a **Pending** record auto-generates per active participant (all roles) *(implemented as lazy-generation: `contribution.periodData` materializes a per-member row for the requested period on demand, defaulting to the current cycle)*
 - Adhyaksh marks **Paid (full)** or **Enter Amount** (partial)
   - Full amount → **Paid**
   - Less than full → **Partial**, remainder carries into next due amount
   - Due date passes with balance outstanding → **Late**, automatic penalty applies to the outstanding portion only
-- No backdating for now — payment date = date of entry (may revisit later if this causes inaccurate Late flags in practice)
+- **Historical recording is allowed** — any period (past/current/future) can always be recorded; the payment date defaults to the entry date and late badges flag overdue periods. No hard blocking (decision logged in the checklist §16).
 - Participant list view in kosh details shows, per person (any role): contribution status + next due date, and loan status (amount remaining, next installment) side by side
 
 ---
