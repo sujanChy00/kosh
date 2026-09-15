@@ -11,7 +11,7 @@ interface SelectFieldProps {
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
   description?: string;
-  variant?: "dialog" | "dropdown";
+  presentation?: "dialog" | "dropdown";
   title?: string;
 }
 
@@ -25,7 +25,7 @@ export const SelectField = ({
   disabled,
   prefix,
   suffix,
-  variant,
+  presentation,
   title,
 }: FormInputBaseProps<SelectFieldProps>) => {
   const field = useFieldContext<string | undefined>();
@@ -48,7 +48,7 @@ export const SelectField = ({
         prefix={prefix}
         suffix={suffix}
         description={description}
-        variant={variant}
+        presentation={presentation}
         title={title}
       />
       {!!fieldError?.message && <FieldError>{fieldError?.message}</FieldError>}

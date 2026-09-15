@@ -197,7 +197,7 @@ export const AddKoshForm = () => {
               name="due_day"
               children={(field) => (
                 <field.SelectField
-                  variant="dialog"
+                  presentation="dialog"
                   prefix={<Icon source={EVENT_REPEAT_ICON} size={18} />}
                   label="Due day of the month"
                   options={DUE_DAY_OPTIONS}

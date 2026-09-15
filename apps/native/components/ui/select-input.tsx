@@ -46,7 +46,7 @@ interface SelectInputProps {
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
   description?: string;
-  variant?: "dropdown" | "dialog";
+  presentation?: "dropdown" | "dialog";
   title?: string;
 }
 
@@ -61,7 +61,7 @@ export const SelectInput = ({
   description,
   prefix,
   suffix,
-  variant = "dropdown",
+  presentation = "dropdown",
   title,
 }: SelectInputProps) => {
   const [mutedForeground] = useCSSVariable(["--color-muted-foreground"]) as [
@@ -83,7 +83,7 @@ export const SelectInput = ({
     [onValueChange, onClose],
   );
 
-  if (variant === "dialog")
+  if (presentation === "dialog")
     return (
       <Host matchContents={{ vertical: true }} style={{ width: "100%" }}>
         <Box modifiers={[fillMaxWidth()]}>
