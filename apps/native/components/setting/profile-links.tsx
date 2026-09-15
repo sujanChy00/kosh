@@ -6,7 +6,7 @@ import LOCK_ICON from "@expo/material-symbols/lock_reset.xml";
 import ACCOUNT_ICON from "@expo/material-symbols/manage_accounts.xml";
 import PAYMENT_ICON from "@expo/material-symbols/payments.xml";
 import SAVING_ICON from "@expo/material-symbols/savings.xml";
-import { Column, Icon, ListItem, Spacer, Text } from "@expo/ui";
+import { Column, Icon, ListItem, Text } from "@expo/ui";
 import { HorizontalDivider } from "@expo/ui/jetpack-compose";
 import { useRouter } from "expo-router";
 import { useCSSVariable } from "uniwind";
@@ -17,23 +17,10 @@ export const ProfileLinks = () => {
 
   return (
     <Column>
-      <Text
-        style={{
-          paddingHorizontal: 16,
-        }}
-        textStyle={{
-          fontSize: 14,
-          fontFamily: "notosans-regular",
-          color: mutedColor,
-        }}
-      >
-        Profile
-      </Text>
-      <Spacer size={20} />
       <HorizontalDivider thickness={StyleSheet.hairlineWidth} />
       <ListItem
         onPress={() => {
-          router.push("/setting/update-profile");
+          router.push("/profile/update-profile");
         }}
       >
         <ListItem.Leading>
@@ -53,7 +40,7 @@ export const ProfileLinks = () => {
       </ListItem>
       <ListItem
         onPress={() => {
-          router.push("/setting/update-password");
+          router.push("/profile/update-password");
         }}
       >
         <ListItem.Leading>

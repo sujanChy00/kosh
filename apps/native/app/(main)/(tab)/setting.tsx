@@ -1,23 +1,29 @@
 import { Host } from "@/components/layout/host";
 import { LegalInfo } from "@/components/setting/legal-info";
 import { Preference } from "@/components/setting/preference";
+import { ProfileHeader } from "@/components/setting/profile-header";
 import { ProfileLinks } from "@/components/setting/profile-links";
 import { Security } from "@/components/setting/security";
-import { Column, List, Spacer } from "@expo/ui";
+import { Column, List } from "@expo/ui";
+import { Spacer, Surface } from "@expo/ui/jetpack-compose";
+import { size } from "@expo/ui/jetpack-compose/modifiers";
 import { View } from "react-native";
 
 const SettingsScreen = () => {
   return (
-    <View collapsable={false} className="flex-1 pt-safe-offset-14">
+    <View collapsable={false} className="flex-1">
       <Host style={{ flex: 1 }}>
         <List>
-          <Column spacing={20}>
-            <ProfileLinks />
-            <Preference />
-            <LegalInfo />
-            <Security />
-          </Column>
-          <Spacer size={30} />
+          <ProfileHeader />
+          <Surface>
+            <Column>
+              <ProfileLinks />
+              <Preference />
+              <LegalInfo />
+              <Security />
+              <Spacer modifiers={[size(0, 20)]} />
+            </Column>
+          </Surface>
         </List>
       </Host>
     </View>

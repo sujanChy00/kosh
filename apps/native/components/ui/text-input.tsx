@@ -6,6 +6,7 @@ import {
 } from "@expo/ui/jetpack-compose";
 import { fillMaxWidth, weight } from "@expo/ui/jetpack-compose/modifiers";
 import { forwardRef, useCallback } from "react";
+import { useCSSVariable } from "uniwind";
 import { Host } from "../layout/host";
 
 // const container = tv({
@@ -52,6 +53,9 @@ export const TextInput = forwardRef<TextFieldRef, TextInputProps>(
     },
     ref,
   ) => {
+    const [mutedForeground] = useCSSVariable(["--color-muted-foreground"]) as [
+      string,
+    ];
     const text = useNativeState(value ?? "");
     const handleChange = useCallback(
       (textValue: string) => {
@@ -109,6 +113,7 @@ export const TextInput = forwardRef<TextFieldRef, TextInputProps>(
                 textStyle={{
                   fontSize: 12,
                   fontFamily: "notosans-regular",
+                  color: mutedForeground,
                 }}
               >
                 {description}

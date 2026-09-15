@@ -1,7 +1,5 @@
-import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { PrimaryButton } from "@/components/ui/button";
-import { isIOS } from "@/constants/platform";
 import {
   UPDATE_PASSWORD_FORM_VALUE,
   UPDATE_PASSWORD_SCHEMA,
@@ -12,7 +10,7 @@ import { authClient } from "@/lib/auth-client";
 import { errorToast, successToast } from "@/utils/toast";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 const UpdatePasswordScreen = () => {
   const router = useRouter();
@@ -54,56 +52,62 @@ const UpdatePasswordScreen = () => {
   });
 
   return (
-    <KeyboardAvoidingView
-      behavior={isIOS ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
+    <form.AppForm>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
         contentContainerClassName="pt-12 pb-4"
       >
-        <form.AppForm>
-          <View className="px-4 gap-y-6 pt-6">
-            <ThemedText className="text-xs font-mono-semibold uppercase tracking-[0.2em] text-primary pb-6">
-              Keep your account secure
-            </ThemedText>
-            <form.AppField
-              name="current_password"
-              children={(field) => (
-                <field.PasswordField
-                  label="Current Password"
-                  placeholder="********"
-                />
-              )}
-            />
-            <form.AppField
-              name="new_password"
-              children={(field) => (
-                <field.PasswordField
-                  label="New Password"
-                  placeholder="********"
-                />
-              )}
-            />
-            <form.AppField
-              name="confirm_password"
-              children={(field) => (
-                <field.PasswordField
-                  label="Confirm New Password"
-                  placeholder="********"
-                />
-              )}
-            />
-            <form.SubmitButton>
-              <PrimaryButton.Label>Update Password</PrimaryButton.Label>
-            </form.SubmitButton>
-          </View>
-        </form.AppForm>
-        <AnimatedSpacer height={100} />
+        <View className="px-4 gap-y-6 pt-6">
+          <form.AppField
+            name="current_password"
+            children={(field) => (
+              <field.PasswordField
+                label="Current Password"
+                placeholder="********"
+              />
+            )}
+          />
+          <form.AppField
+            name="new_password"
+            children={(field) => (
+              <field.PasswordField
+                label="New Password"
+                placeholder="********"
+              />
+            )}
+          />
+          <form.AppField
+            name="confirm_password"
+            children={(field) => (
+              <field.PasswordField
+                label="Confirm New Password"
+                placeholder="********"
+              />
+            )}
+          />
+        </View>
+        <AnimatedSpacer height={300} />
       </ScrollView>
-    </KeyboardAvoidingView>
+      <KeyboardStickyView
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 12,
+        }}
+        offset={{
+          closed: -20,
+          opened: -10,
+        }}
+      >
+        <form.SubmitButton>
+          <PrimaryButton.Label>Update Password</PrimaryButton.Label>
+        </form.SubmitButton>
+      </KeyboardStickyView>
+    </form.AppForm>
   );
 };
 

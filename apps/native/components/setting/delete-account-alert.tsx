@@ -126,7 +126,13 @@ export const DeleteAccountAlert = () => {
             ]}
           >
             <Column modifiers={[padding(25, 25, 25, 25)]}>
-              <Text textStyle={{ fontSize: 20, fontWeight: "600" }}>
+              <Text
+                textStyle={{
+                  fontSize: 20,
+                  fontWeight: "600",
+                  fontFamily: "notosans-regular",
+                }}
+              >
                 Delete Account?
               </Text>
               <Spacer modifiers={[height(10)]} />
@@ -166,6 +172,7 @@ export const DeleteAccountAlert = () => {
                 <BasicTextField
                   autoFocus
                   value={password}
+                  onValueChange={handleValueChange}
                   visualTransformation={showPassword ? "none" : "password"}
                   modifiers={[
                     weight(1),

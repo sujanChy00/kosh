@@ -1,5 +1,5 @@
 import { useFieldContext } from "@/contexts/form-context";
-import { Field, FieldDescription, FieldError } from "../ui/field";
+import { Field, FieldError } from "../ui/field";
 import { SelectInput } from "../ui/select-input";
 import { FormInputBaseProps } from "./types";
 
@@ -8,6 +8,11 @@ interface SelectFieldProps {
   className?: string;
   onValueChange?: (value: string) => void;
   disabled?: boolean;
+  prefix?: React.ReactNode;
+  suffix?: React.ReactNode;
+  description?: string;
+  variant?: "dialog" | "dropdown";
+  title?: string;
 }
 
 export const SelectField = ({
@@ -18,6 +23,10 @@ export const SelectField = ({
   onValueChange,
   placeholder,
   disabled,
+  prefix,
+  suffix,
+  variant,
+  title,
 }: FormInputBaseProps<SelectFieldProps>) => {
   const field = useFieldContext<string | undefined>();
   const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
@@ -36,8 +45,12 @@ export const SelectField = ({
         placeholder={placeholder}
         disabled={disabled}
         isInvalid={isInvalid}
+        prefix={prefix}
+        suffix={suffix}
+        description={description}
+        variant={variant}
+        title={title}
       />
-      {!!description && <FieldDescription>{description}</FieldDescription>}
       {!!fieldError?.message && <FieldError>{fieldError?.message}</FieldError>}
     </Field>
   );

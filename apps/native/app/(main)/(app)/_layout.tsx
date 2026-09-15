@@ -26,13 +26,13 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="setting/update-password"
+        name="profile/update-password"
         options={{
           headerTitle: "Update Password",
         }}
       />
       <Stack.Screen
-        name="setting/update-profile"
+        name="profile/update-profile"
         options={{
           headerTitle: "Update profile",
         }}

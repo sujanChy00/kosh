@@ -43,7 +43,10 @@ const FieldError = ({ className, ...rest }: TextProps) => {
 };
 const FieldDescription = ({ className, ...rest }: TextProps) => {
   return (
-    <ThemedText className={cn("text-muted text-xs", className)} {...rest} />
+    <ThemedText
+      className={cn("text-muted-foreground text-xs", className)}
+      {...rest}
+    />
   );
 };
 

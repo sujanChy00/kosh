@@ -2,7 +2,6 @@ import { PendingComponent } from "@/components/layout/pending-component";
 import { ProfileImagePicker } from "@/components/setting/profile-image-picker";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { PrimaryButton } from "@/components/ui/button";
-import { isIOS } from "@/constants/platform";
 import {
   UPDATE_PROFILE_FORM_VALUE,
   UPDATE_PROFILE_SCHEMA,
@@ -17,7 +16,7 @@ import MAIL_ICON from "@expo/material-symbols/mail.xml";
 import { Icon } from "@expo/ui/jetpack-compose";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
-import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 const UpdateProfileScreen = () => {
   const router = useRouter();
@@ -79,63 +78,72 @@ const UpdateProfileScreen = () => {
   if (isPending) return <PendingComponent />;
 
   return (
-    <KeyboardAvoidingView
-      behavior={isIOS ? "padding" : "height"}
-      style={{ flex: 1 }}
-    >
+    <form.AppForm>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="always"
         contentContainerClassName="pt-12 pb-4 px-4"
       >
-        <form.AppForm>
-          <View className="gap-y-6">
-            <form.AppField
-              name="image"
-              children={(field) => (
-                <View className="items-center py-4">
-                  <ProfileImagePicker
-                    onValueChange={field.handleChange}
-                    imagePickerOptions={{
-                      shape: "oval",
-                      allowsEditing: true,
-                      aspect: [1, 1],
-                    }}
-                    alt={user?.name}
-                    source={field.state.value}
-                  />
-                </View>
-              )}
-            />
-            <form.AppField
-              name="name"
-              children={(field) => (
-                <field.TextField
-                  prefix={<Icon size={18} source={PERSON_ICON} />}
-                  label="Full Name"
-                  placeholder={"Your name here"}
+        <View className="gap-y-6">
+          <form.AppField
+            name="image"
+            children={(field) => (
+              <View className="items-center py-4">
+                <ProfileImagePicker
+                  onValueChange={field.handleChange}
+                  imagePickerOptions={{
+                    shape: "oval",
+                    allowsEditing: true,
+                    aspect: [1, 1],
+                  }}
+                  alt={user?.name}
+                  source={field.state.value}
                 />
-              )}
-            />
-            <form.AppField
-              name="email"
-              children={(field) => (
-                <field.TextField
-                  enabled={false}
-                  prefix={<Icon size={18} source={MAIL_ICON} />}
-                  label="Email address"
-                />
-              )}
-            />
-            <form.SubmitButton>
-              <PrimaryButton.Label>Update Profile</PrimaryButton.Label>
-            </form.SubmitButton>
-          </View>
-        </form.AppForm>
-        <AnimatedSpacer height={100} />
+              </View>
+            )}
+          />
+          <form.AppField
+            name="name"
+            children={(field) => (
+              <field.TextField
+                prefix={<Icon size={18} source={PERSON_ICON} />}
+                label="Full Name"
+                placeholder={"Your name here"}
+              />
+            )}
+          />
+          <form.AppField
+            name="email"
+            children={(field) => (
+              <field.TextField
+                enabled={false}
+                prefix={<Icon size={18} source={MAIL_ICON} />}
+                label="Email address"
+              />
+            )}
+          />
+        </View>
+        <AnimatedSpacer height={400} />
       </ScrollView>
-    </KeyboardAvoidingView>
+      <KeyboardStickyView
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 12,
+        }}
+        offset={{
+          closed: -20,
+          opened: -10,
+        }}
+      >
+        <form.SubmitButton>
+          <PrimaryButton.Label>Update Profile</PrimaryButton.Label>
+        </form.SubmitButton>
+      </KeyboardStickyView>
+    </form.AppForm>
   );
 };
 

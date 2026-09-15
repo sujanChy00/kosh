@@ -5,7 +5,7 @@ import { LoginBiometricEnabler } from "@/components/setting/biometric-enabler";
 import { ThemeToggler } from "@/components/setting/theme-toggler";
 import { authClient } from "@/lib/auth-client";
 import { errorToast } from "@/utils/toast";
-import { Column, ListItem, Spacer, Text } from "@expo/ui";
+import { Column, ListItem, Text } from "@expo/ui";
 import { HorizontalDivider } from "@expo/ui/jetpack-compose";
 import { LanguageKey } from "@kosh-app/language";
 import { useCSSVariable } from "uniwind";
@@ -29,19 +29,6 @@ export const Preference = () => {
 
   return (
     <Column>
-      <Text
-        style={{
-          paddingHorizontal: 16,
-        }}
-        textStyle={{
-          fontSize: 14,
-          fontFamily: "notosans-regular",
-          color: mutedColor,
-        }}
-      >
-        Preferences
-      </Text>
-      <Spacer size={20} />
       <HorizontalDivider thickness={StyleSheet.hairlineWidth} />
       <ListItem>
         <Text

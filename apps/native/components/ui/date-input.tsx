@@ -12,6 +12,7 @@ import {
 } from "@expo/ui/jetpack-compose/modifiers";
 import { formatShortDate } from "@kosh-app/utils/date";
 import { useState } from "react";
+import { useCSSVariable } from "uniwind";
 import { Host } from "../layout/host";
 
 export interface DateInputProps {
@@ -41,6 +42,9 @@ export function DateInput({
   suffix,
   description,
 }: DateInputProps) {
+  const [mutedForeground] = useCSSVariable(["--color-muted-foreground"]) as [
+    string,
+  ];
   const [date, setDate] = useState<Date | undefined>(value ?? new Date());
   const dateValue = useNativeState(date ? formatShortDate(date) : "");
   const [show, setShow] = useState(false);
@@ -83,6 +87,7 @@ export function DateInput({
                 textStyle={{
                   fontSize: 12,
                   fontFamily: "notosans-regular",
+                  color: mutedForeground,
                 }}
               >
                 {description}

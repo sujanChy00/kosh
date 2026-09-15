@@ -4,7 +4,7 @@ import CHEVRON_RIGHT from "@expo/material-symbols/chevron_right.xml";
 import TERMS_ICON from "@expo/material-symbols/description.xml";
 import INFO_ICON from "@expo/material-symbols/info.xml";
 import PRIVACY_ICON from "@expo/material-symbols/privacy_tip.xml";
-import { Column, Icon, ListItem, Spacer, Text } from "@expo/ui";
+import { Column, Icon, ListItem, Text } from "@expo/ui";
 import { HorizontalDivider } from "@expo/ui/jetpack-compose";
 import { useRouter } from "expo-router";
 import { useCSSVariable } from "uniwind";
@@ -14,19 +14,6 @@ export const LegalInfo = () => {
   const router = useRouter();
   return (
     <Column>
-      <Text
-        style={{
-          paddingHorizontal: 16,
-        }}
-        textStyle={{
-          fontSize: 14,
-          fontFamily: "notosans-regular",
-          color: mutedColor,
-        }}
-      >
-        Legal Info
-      </Text>
-      <Spacer size={20} />
       <HorizontalDivider thickness={StyleSheet.hairlineWidth} />
       <ListItem
         onPress={() => {

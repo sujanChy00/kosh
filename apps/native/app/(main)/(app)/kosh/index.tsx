@@ -1,17 +1,17 @@
-import PLUST_ICON from "@expo/material-symbols/add.xml";
-import RECORD_ICON from "@expo/material-symbols/edit_square.xml";
-import JOIN_ICON from "@expo/material-symbols/group_add.xml";
-import { LegendList } from "@legendapp/list/react-native";
-import type { KoshListItem } from "@kosh-app/api/routers/kosh";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
-import { ActivityIndicator, Pressable, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
 import { OutlineButton, PrimaryButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { trpc } from "@/utils/trpc";
+import PLUST_ICON from "@expo/material-symbols/add.xml";
+import RECORD_ICON from "@expo/material-symbols/edit_square.xml";
+import JOIN_ICON from "@expo/material-symbols/group_add.xml";
+import type { KoshListItem } from "@kosh-app/api/routers/kosh";
+import { LegendList } from "@legendapp/list/react-native";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { Stack, useRouter } from "expo-router";
+import { ActivityIndicator, Pressable, View } from "react-native";
 
 const PAGE_SIZE = 10;
 
@@ -31,7 +31,9 @@ const KoshCard = ({ kosh }: { kosh: KoshListItem }) => {
     <Card className="gap-2">
       <Card.Body className="flex-row items-center gap-3">
         <Avatar>
-          <Avatar.Image source={kosh.iconUrl ? { uri: kosh.iconUrl } : undefined} />
+          <Avatar.Image
+            source={kosh.iconUrl ? { uri: kosh.iconUrl } : undefined}
+          />
           <Avatar.Fallback source={kosh.iconUrl} fallback={kosh.name} />
         </Avatar>
         <View className="flex-1 gap-1">
@@ -58,7 +60,9 @@ const KoshCard = ({ kosh }: { kosh: KoshListItem }) => {
       </Card.Footer>
       <View className="mt-1 flex-row items-center justify-between">
         <View className="gap-0.5">
-          <ThemedText className="text-xs text-muted">Total collected</ThemedText>
+          <ThemedText className="text-xs text-muted">
+            Total collected
+          </ThemedText>
           <ThemedText className="font-medium">
             {kosh.currency} {formatAmount(kosh.totalCollected)}
           </ThemedText>
@@ -115,7 +119,10 @@ const KoshScreen = () => {
             });
           }}
         >
-          <Stack.Toolbar.Icon sf="pencil.and.list.clipboard" src={RECORD_ICON} />
+          <Stack.Toolbar.Icon
+            sf="pencil.and.list.clipboard"
+            src={RECORD_ICON}
+          />
         </Stack.Toolbar.Button>
         <Stack.Toolbar.Button
           variant="prominent"
@@ -164,6 +171,7 @@ const KoshScreen = () => {
           showsVerticalScrollIndicator={false}
           refreshing={koshQuery.isRefetching}
           onRefresh={koshQuery.refetch}
+          recycleItems
           contentContainerStyle={{
             flexGrow: 1,
             padding: 16,
@@ -179,9 +187,7 @@ const KoshScreen = () => {
               >
                 <PrimaryButton.Label>Create a kosh</PrimaryButton.Label>
               </PrimaryButton>
-              <OutlineButton
-                onPress={() => router.push({ pathname: "/join" })}
-              >
+              <OutlineButton onPress={() => router.push({ pathname: "/join" })}>
                 <OutlineButton.Label>Join a kosh</OutlineButton.Label>
               </OutlineButton>
             </View>

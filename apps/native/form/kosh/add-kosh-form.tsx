@@ -9,6 +9,7 @@ import { errorToast, successToast } from "@/utils/toast";
 import { queryClient, trpc } from "@/utils/trpc";
 import ACCOUNT_BALANCE_ICON from "@expo/material-symbols/account_balance.xml";
 import CALENDAR_ICON from "@expo/material-symbols/calendar_month.xml";
+import EVENT_REPEAT_ICON from "@expo/material-symbols/event_repeat.xml";
 import GROUP_ICON from "@expo/material-symbols/group.xml";
 import NOTES_ICON from "@expo/material-symbols/notes.xml";
 import PAYMENT_ICON from "@expo/material-symbols/payments.xml";
@@ -201,8 +202,11 @@ export const AddKoshForm = () => {
                 name="due_day"
                 children={(field) => (
                   <field.SelectField
+                    variant="dialog"
+                    prefix={<Icon source={EVENT_REPEAT_ICON} size={18} />}
                     label="Due day of the month"
                     options={DUE_DAY_OPTIONS}
+                    title="Select Due Date"
                   />
                 )}
               />
@@ -279,6 +283,7 @@ export const AddKoshForm = () => {
                 name="apply_penalty"
                 children={(field) => (
                   <field.SwitchField
+                    className="gap-y-0"
                     label="Apply late penalty"
                     description="Charge the late penalty when contributions stay unpaid."
                   />
