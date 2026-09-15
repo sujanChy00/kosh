@@ -1,0 +1,7 @@
+{
+  "extends": "@kosh-app/config/tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["./smoke-contribution.ts"]
+}

@@ -1,9 +1,8 @@
 import { useHaptics } from "@/hooks/use-haptics";
-import { Switch } from "@expo/ui";
-import { View } from "react-native";
-import { twMerge } from "tailwind-merge";
+import { Spacer, Switch, Text } from "@expo/ui";
+import { Row } from "@expo/ui/jetpack-compose";
+import { clickable } from "@expo/ui/jetpack-compose/modifiers";
 import { Host } from "../layout/host";
-import { ThemedText } from "../themed-text";
 
 export interface SwitchInputProps extends React.ComponentProps<typeof Switch> {
   className?: string;
@@ -11,6 +10,7 @@ export interface SwitchInputProps extends React.ComponentProps<typeof Switch> {
 }
 
 export const SwitchInput = ({
+  value,
   onValueChange,
   label,
   labelClassName,
@@ -18,18 +18,28 @@ export const SwitchInput = ({
   ...rest
 }: SwitchInputProps) => {
   const haptics = useHaptics();
+
+  const toggle = () => {
+    const next = !value;
+    haptics(next ? "toggle-on" : "toggle-off");
+    onValueChange(next);
+  };
+
   return (
-    <View className={twMerge("flex-row items-center", className)}>
-      {label && <ThemedText className={labelClassName}>{label}</ThemedText>}
-      <Host matchContents>
-        <Switch
-          {...rest}
-          onValueChange={(checked) => {
-            haptics(checked ? "toggle-on" : "toggle-off");
-            onValueChange(checked);
-          }}
-        />
-      </Host>
-    </View>
+    <Host matchContents={{ vertical: true }} style={{ width: "100%" }}>
+      <Row verticalAlignment="center" modifiers={[clickable(toggle)]}>
+        {label && (
+          <Text
+            textStyle={{
+              fontFamily: "notosans-regular",
+            }}
+          >
+            {label}
+          </Text>
+        )}
+        <Spacer flexible />
+        <Switch {...rest} value={value} onValueChange={toggle} />
+      </Row>
+    </Host>
   );
 };

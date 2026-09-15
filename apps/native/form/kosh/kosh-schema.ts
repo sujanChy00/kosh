@@ -41,6 +41,15 @@ export const ADD_KOSH_SCHEMA = v.object({
     v.string(),
     v.regex(/^(\d+(\.\d{1,2})?)?$/, "Enter a valid amount"),
   ),
+  apply_penalty: v.boolean(),
+  penalty_grace_days: v.pipe(
+    v.string(),
+    v.regex(/^\d{0,2}$/, "Enter a whole number"),
+    v.check(
+      (input) => input === "" || Number(input) <= 15,
+      "Must be 15 days or fewer",
+    ),
+  ),
   start_date: v.pipe(
     v.optional(v.date("Select a start date")),
     v.check((input) => input instanceof Date, "Select a start date"),

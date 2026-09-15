@@ -58,6 +58,7 @@ export const usePasskeyBiometrics = () => {
   const toggle = useCallback(
     async (enabled: boolean) => {
       if (isPending) return false;
+      haptics(enabled ? "toggle-on" : "toggle-off");
       setIsPending(true);
       setPendingValue(enabled);
       let succeeded = false;

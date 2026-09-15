@@ -13,6 +13,8 @@ import { signInWithPasskey } from "@/lib/passkey";
 import { storage } from "@/utils/storage";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
+import EMAIL_ICON from "@expo/material-symbols/mail.xml";
+import { Icon } from "@expo/ui/jetpack-compose";
 import { LOGIN_BIOMETRIC_ENABLED } from "@kosh-app/utils/constants/data";
 import { useSelector } from "@tanstack/react-form";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
@@ -148,20 +150,12 @@ export const LoginForm = () => {
               name="email"
               children={(field) => (
                 <field.TextField
-                  accessibilityLabel="Email Address"
-                  prefix={
-                    <StyledSymbolView
-                      name={{
-                        android: "email",
-                        ios: "envelope",
-                      }}
-                      tintColorClassName="accent-muted"
-                      size={18}
-                    />
-                  }
+                  prefix={<Icon source={EMAIL_ICON} size={18} />}
                   label="Email address"
-                  keyboardType="email-address"
                   placeholder="user@example.com"
+                  keyboardOptions={{
+                    keyboardType: "email",
+                  }}
                 />
               )}
             />
@@ -170,7 +164,6 @@ export const LoginForm = () => {
               children={(field) => (
                 <Field className="items-center">
                   <field.PasswordField
-                    returnKeyType="done"
                     label="Password"
                     placeholder="********"
                   />

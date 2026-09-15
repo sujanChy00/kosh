@@ -506,6 +506,25 @@ const ContributionScreen = () => {
                         </View>
                       </View>
 
+                      {/* Carried-over arrears from previous periods (read-only) */}
+                      {(parseFloat(member.arrears.penalty) > 0 ||
+                        parseFloat(member.arrears.contribution) > 0) && (
+                        <View className="rounded-lg bg-danger/10 p-2.5">
+                          <ThemedText className="text-xs font-medium text-danger">
+                            Also owes from previous periods
+                          </ThemedText>
+                          <ThemedText className="text-xs text-muted">
+                            {parseFloat(member.arrears.contribution) > 0
+                              ? `Contribution ${kosh?.currency} ${formatAmountStr(member.arrears.contribution)}`
+                              : "Contribution fully paid"}
+                            {"  ·  "}
+                            {parseFloat(member.arrears.penalty) > 0
+                              ? `Penalty ${kosh?.currency} ${formatAmountStr(member.arrears.penalty)}`
+                              : "Penalty cleared"}
+                          </ThemedText>
+                        </View>
+                      )}
+
                       {/* Contribution input */}
                       <Field>
                         <FieldLabel>Contribution ({kosh?.currency})</FieldLabel>

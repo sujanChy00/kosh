@@ -42,6 +42,10 @@ const createKoshSchema = z
     nonMemberInterestRate: z.number().min(0).max(100),
     loanCap: z.number().positive().max(9_999_999_999),
     latePenaltyAmount: z.number().positive().optional(),
+    // When applyPenalty is on, the late penalty kicks in `penaltyGraceDays`
+    // days after the due date; omitting it means the day after the due date.
+    applyPenalty: z.boolean().optional(),
+    penaltyGraceDays: z.number().int().min(0).max(15).optional(),
     // Optional: when omitted the server defaults it to today.
     startDate: z
       .string()
@@ -131,6 +135,9 @@ export const koshRouter = router({
             monthlyAmount: kosh.monthlyAmount,
             currency: kosh.currency,
             dueDay: kosh.dueDay,
+            latePenaltyAmount: kosh.latePenaltyAmount,
+            applyPenalty: kosh.applyPenalty,
+            penaltyGraceDays: kosh.penaltyGraceDays,
             startDate: kosh.startDate,
             endDate: kosh.endDate,
             createdAt: kosh.createdAt,
@@ -202,6 +209,9 @@ export const koshRouter = router({
           monthlyAmount: row.kosh.monthlyAmount,
           currency: row.kosh.currency,
           dueDay: row.kosh.dueDay,
+          latePenaltyAmount: row.kosh.latePenaltyAmount,
+          applyPenalty: row.kosh.applyPenalty,
+          penaltyGraceDays: row.kosh.penaltyGraceDays,
           startDate: row.kosh.startDate,
           endDate: row.kosh.endDate,
           role: row.membership.role,
@@ -246,6 +256,10 @@ export const koshRouter = router({
                 input.latePenaltyAmount != null
                   ? String(input.latePenaltyAmount)
                   : null,
+              applyPenalty: input.applyPenalty ?? false,
+              penaltyGraceDays: input.applyPenalty
+                ? input.penaltyGraceDays ?? null
+                : null,
               startDate: toDateString(startDate),
               durationMonths: input.durationMonths,
               endDate: toDateString(endDate),

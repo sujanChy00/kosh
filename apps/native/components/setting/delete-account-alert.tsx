@@ -1,3 +1,4 @@
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { authClient } from "@/lib/auth-client";
 import { storage } from "@/utils/storage";
 import { errorToast, successToast } from "@/utils/toast";
@@ -5,22 +6,26 @@ import { queryClient } from "@/utils/trpc";
 import { Icon, ListItem, Text } from "@expo/ui";
 import {
   BasicAlertDialog,
+  BasicTextField,
+  Box,
   Column,
   IconToggleButton,
   Row,
   Spacer,
   Surface,
   TextButton,
-  TextField,
   useNativeState,
 } from "@expo/ui/jetpack-compose";
 import {
   align,
+  background,
   clip,
+  dropShadow,
   fillMaxWidth,
   height,
   padding,
   Shapes,
+  weight,
   wrapContentHeight,
   wrapContentWidth,
 } from "@expo/ui/jetpack-compose/modifiers";
@@ -43,6 +48,7 @@ const VISIBLITY_OFF = Icon.select({
 });
 
 export const DeleteAccountAlert = () => {
+  const { colors } = useAppTheme();
   const [showPassword, setShowPassword] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const password = useNativeState("");
@@ -133,29 +139,59 @@ export const DeleteAccountAlert = () => {
                 data will be permanently deleted.
               </Text>
               <Spacer modifiers={[height(16)]} />
-              <TextField
-                autoFocus
-                value={password}
-                onValueChange={handleValueChange}
-                visualTransformation={showPassword ? "none" : "password"}
-                modifiers={[fillMaxWidth()]}
+              <Row
+                verticalAlignment="center"
+                modifiers={[
+                  clip(Shapes.RoundedCorner(16)),
+                  dropShadow(Shapes.Rectangle, {
+                    radius: 3,
+                    spread: 0,
+                    offsetX: 0,
+                    offsetY: 1,
+                    color: "#000000",
+                    alpha: 0.1,
+                  }),
+                  dropShadow(Shapes.Rectangle, {
+                    radius: 2,
+                    spread: -1,
+                    offsetX: 0,
+                    offsetY: 1,
+                    color: "#000000",
+                    alpha: 0.1,
+                  }),
+                  background(colors.background),
+                  fillMaxWidth(),
+                ]}
               >
-                <TextField.Label>
-                  <Text>Your Password</Text>
-                </TextField.Label>
-                <TextField.TrailingIcon>
-                  <IconToggleButton
-                    checked={showPassword}
-                    onCheckedChange={setShowPassword}
-                  >
-                    <Icon
-                    
-                      name={showPassword ? VISIBLITY_ON : VISIBLITY_OFF}
-                      size={24}
-                    />
-                  </IconToggleButton>
-                </TextField.TrailingIcon>
-              </TextField>
+                <BasicTextField
+                  autoFocus
+                  value={password}
+                  visualTransformation={showPassword ? "none" : "password"}
+                  modifiers={[
+                    weight(1),
+                    clip(Shapes.RoundedCorner(16)),
+                    padding(12, 16, 12, 16),
+                  ]}
+                >
+                  <BasicTextField.DecorationBox>
+                    <Box>
+                      <BasicTextField.Placeholder>
+                        <Text>********</Text>
+                      </BasicTextField.Placeholder>
+                      <BasicTextField.InnerTextField />
+                    </Box>
+                  </BasicTextField.DecorationBox>
+                </BasicTextField>
+                <IconToggleButton
+                  checked={showPassword}
+                  onCheckedChange={setShowPassword}
+                >
+                  <Icon
+                    name={showPassword ? VISIBLITY_ON : VISIBLITY_OFF}
+                    size={24}
+                  />
+                </IconToggleButton>
+              </Row>
 
               <Spacer modifiers={[height(24)]} />
               <Row modifiers={[align("end")]}>

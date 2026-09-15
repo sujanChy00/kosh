@@ -21,7 +21,6 @@ export const VerifyEmailForm = () => {
   const haptics = useHaptics();
   const { email = "" } = useLocalSearchParams<{ email?: string }>();
   const [token, setToken] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const { secondsLeft, isExpired, restart } = useCountdown(OTP_EXPIRY_SECONDS, {
     onExpire: () => {
@@ -34,7 +33,6 @@ export const VerifyEmailForm = () => {
 
   const onVerifyEmail = async () => {
     if (!token.trim() || isExpired) return;
-    setIsSubmitting(true);
     await authClient.emailOtp.verifyEmail(
       { email: email.trim(), otp: token.trim() },
       {
@@ -51,7 +49,6 @@ export const VerifyEmailForm = () => {
         },
       },
     );
-    setIsSubmitting(false);
   };
 
   const onResend = async () => {
@@ -126,7 +123,9 @@ export const VerifyEmailForm = () => {
               value={token}
               onChangeText={setToken}
               maxLength={6}
-              keyboardType="number-pad"
+              keyboardOptions={{
+                keyboardType: "number",
+              }}
             />
           </Field>
           <View className="gap-y-3">

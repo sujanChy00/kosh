@@ -49,6 +49,24 @@ const AppLayout = () => {
           headerTitle: "Add a new kosh",
         }}
       />
+      <Stack.Screen
+        name="kosh/[id]"
+        options={{
+          headerTitle: "Kosh",
+        }}
+      />
+      <Stack.Screen
+        name="join"
+        options={{
+          headerTitle: "Join kosh",
+        }}
+      />
+      <Stack.Screen
+        name="join-requests"
+        options={{
+          headerTitle: "Join requests",
+        }}
+      />
     </Stack>
   );
 };

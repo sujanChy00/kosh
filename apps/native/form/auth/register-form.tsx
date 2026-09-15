@@ -1,5 +1,4 @@
 import { Host } from "@/components/layout/host";
-import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { isIOS } from "@/constants/platform";
 import { useForm } from "@/hooks/use-form";
@@ -8,7 +7,10 @@ import { useLanguage } from "@/hooks/use-language";
 import { authClient } from "@/lib/auth-client";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
+import PERSON_ICON from "@expo/material-symbols/group.xml";
+import MAIL_ICON from "@expo/material-symbols/mail.xml";
 import { Checkbox } from "@expo/ui";
+import { Icon } from "@expo/ui/jetpack-compose";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
@@ -107,17 +109,7 @@ export const RegisterForm = () => {
               name="name"
               children={(field) => (
                 <field.TextField
-                  accessibilityLabel="User Name"
-                  prefix={
-                    <StyledSymbolView
-                      name={{
-                        android: "group",
-                        ios: "person.3",
-                      }}
-                      tintColorClassName="accent-muted"
-                      size={18}
-                    />
-                  }
+                  prefix={<Icon size={18} source={PERSON_ICON} />}
                   label="Full Name"
                   placeholder="Your name here"
                 />
@@ -127,19 +119,11 @@ export const RegisterForm = () => {
               name="email"
               children={(field) => (
                 <field.TextField
-                  accessibilityLabel="Email Address"
-                  prefix={
-                    <StyledSymbolView
-                      name={{
-                        android: "email",
-                        ios: "envelope",
-                      }}
-                      tintColorClassName="accent-muted"
-                      size={18}
-                    />
-                  }
+                  prefix={<Icon size={18} source={MAIL_ICON} />}
                   label="Email address"
-                  keyboardType="email-address"
+                  keyboardOptions={{
+                    keyboardType: "email",
+                  }}
                   placeholder="user@example.com"
                 />
               )}

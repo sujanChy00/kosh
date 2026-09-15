@@ -1,72 +1,122 @@
-import { useCallback, useState } from "react";
+import { Text } from "@expo/ui";
 import {
-  BlurEvent,
-  FocusEvent,
-  TextInput as NativeTextInput,
-  TextInputProps as NativeTextInputProps,
-  View,
-} from "react-native";
-import { twMerge } from "tailwind-merge";
-import { tv } from "tailwind-variants";
+  OutlinedTextField,
+  TextFieldRef,
+  useNativeState,
+} from "@expo/ui/jetpack-compose";
+import { fillMaxWidth, weight } from "@expo/ui/jetpack-compose/modifiers";
+import { forwardRef, useCallback } from "react";
+import { Host } from "../layout/host";
 
-const container = tv({
-  base: "w-full bg-surface shadow rounded-2xl overflow-hidden",
-  variants: {
-    isDisabled: { true: "opacity-50" },
-    isFocused: { true: "ring-2 ring-primary" },
-    isInvalid: { true: "ring-2 ring-danger" },
-  },
-  defaultVariants: { isDisabled: false, isFocused: false, isInvalid: false },
-});
+// const container = tv({
+//   base: "w-full bg-surface shadow rounded-2xl overflow-hidden",
+//   variants: {
+//     isDisabled: { true: "opacity-50" },
+//     isFocused: { true: "ring-2 ring-primary" },
+//     isInvalid: { true: "ring-2 ring-danger" },
+//   },
+//   defaultVariants: { isDisabled: false, isFocused: false, isInvalid: false },
+// });
 
-export interface TextInputProps extends NativeTextInputProps {
+export interface TextInputProps extends Omit<
+  React.ComponentProps<typeof OutlinedTextField>,
+  "value" | "onValueChange" | "isError"
+> {
   isInvalid?: boolean;
-  containerClassName?: string;
+  placeholder?: string;
+  label?: string;
+  onChangeText?: (text: string) => void;
+  value?: string;
+  prefix?: React.ReactNode;
+  suffix?: React.ReactNode;
+  description?: string;
+  placeholderProps?: React.ComponentProps<typeof Text>;
 }
 
-export const TextInput = ({
-  className,
-  containerClassName,
-  editable = true,
-  isInvalid = false,
-  onFocus: onFocusProp,
-  onBlur: onBlurProp,
-  ...rest
-}: TextInputProps) => {
-  const [isFocused, setIsFocused] = useState(false);
-
-  const handleFocus = useCallback(
-    (event: FocusEvent) => {
-      setIsFocused(true);
-      onFocusProp?.(event);
+export const TextInput = forwardRef<TextFieldRef, TextInputProps>(
+  (
+    {
+      isInvalid = false,
+      placeholder,
+      label,
+      onChangeText,
+      value,
+      prefix,
+      suffix,
+      description,
+      placeholderProps,
+      modifiers,
+      singleLine = true,
+      keyboardOptions,
+      ...rest
     },
-    [onFocusProp],
-  );
+    ref,
+  ) => {
+    const text = useNativeState(value ?? "");
+    const handleChange = useCallback(
+      (textValue: string) => {
+        text.value = textValue;
+        onChangeText?.(text.value);
+      },
+      [text, onChangeText],
+    );
 
-  const handleBlur = useCallback(
-    (event: BlurEvent) => {
-      setIsFocused(false);
-      onBlurProp?.(event);
-    },
-    [onBlurProp],
-  );
-
-  return (
-    <View
-      className={container({
-        isDisabled: !editable,
-        isFocused: isFocused && !isInvalid,
-        isInvalid,
-        className: containerClassName,
-      })}
-    >
-      <NativeTextInput
-        editable={editable}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        className={twMerge("px-3 py-4 text-foreground", className)}
-        {...rest}
-      />
-    </View>
-  );
-};
+    return (
+      <Host matchContents={{ vertical: true }} style={{ width: "100%" }}>
+        <OutlinedTextField
+          {...rest}
+          ref={ref}
+          singleLine={singleLine}
+          isError={isInvalid}
+          value={text}
+          keyboardOptions={{
+            capitalization: keyboardOptions?.capitalization ?? "none",
+            autoCorrectEnabled: keyboardOptions?.autoCorrectEnabled ?? false,
+            ...keyboardOptions,
+          }}
+          modifiers={[weight(1), fillMaxWidth(), ...(modifiers ?? [])]}
+          onValueChange={handleChange}
+        >
+          {prefix && (
+            <OutlinedTextField.LeadingIcon>
+              {prefix}
+            </OutlinedTextField.LeadingIcon>
+          )}
+          {label && (
+            <OutlinedTextField.Label>
+              <Text
+                textStyle={{
+                  fontFamily: "notosans-regular",
+                }}
+              >
+                {label}
+              </Text>
+            </OutlinedTextField.Label>
+          )}
+          {placeholder && (
+            <OutlinedTextField.Placeholder>
+              <Text {...placeholderProps}>{placeholder}</Text>
+            </OutlinedTextField.Placeholder>
+          )}
+          {suffix && (
+            <OutlinedTextField.TrailingIcon>
+              {suffix}
+            </OutlinedTextField.TrailingIcon>
+          )}
+          {description && (
+            <OutlinedTextField.SupportingText>
+              <Text
+                textStyle={{
+                  fontSize: 12,
+                  fontFamily: "notosans-regular",
+                }}
+              >
+                {description}
+              </Text>
+            </OutlinedTextField.SupportingText>
+          )}
+        </OutlinedTextField>
+      </Host>
+    );
+  },
+);

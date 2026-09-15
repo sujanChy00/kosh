@@ -1,6 +1,5 @@
 import { PendingComponent } from "@/components/layout/pending-component";
 import { ProfileImagePicker } from "@/components/setting/profile-image-picker";
-import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { PrimaryButton } from "@/components/ui/button";
 import { isIOS } from "@/constants/platform";
@@ -13,6 +12,9 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
 import { isRemoteImage, uploadToCloudinary } from "@/lib/cloudinary";
 import { errorToast, successToast } from "@/utils/toast";
+import PERSON_ICON from "@expo/material-symbols/group.xml";
+import MAIL_ICON from "@expo/material-symbols/mail.xml";
+import { Icon } from "@expo/ui/jetpack-compose";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -110,20 +112,9 @@ const UpdateProfileScreen = () => {
               name="name"
               children={(field) => (
                 <field.TextField
-                  accessibilityLabel="Full Name"
-                  prefix={
-                    <StyledSymbolView
-                      name={{
-                        android: "person",
-                        ios: "person",
-                      }}
-                      tintColorClassName="accent-muted"
-                      size={18}
-                    />
-                  }
+                  prefix={<Icon size={18} source={PERSON_ICON} />}
                   label="Full Name"
                   placeholder={"Your name here"}
-                  autoCapitalize="words"
                 />
               )}
             />
@@ -131,20 +122,9 @@ const UpdateProfileScreen = () => {
               name="email"
               children={(field) => (
                 <field.TextField
-                  accessibilityLabel="Email Address"
-                  isDisabled
-                  prefix={
-                    <StyledSymbolView
-                      name={{
-                        android: "email",
-                        ios: "envelope",
-                      }}
-                      tintColorClassName="accent-muted"
-                      size={18}
-                    />
-                  }
+                  enabled={false}
+                  prefix={<Icon size={18} source={MAIL_ICON} />}
                   label="Email address"
-                  keyboardType="email-address"
                 />
               )}
             />

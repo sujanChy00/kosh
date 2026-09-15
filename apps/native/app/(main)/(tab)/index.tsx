@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { ScrollView } from "react-native";
+import { Button, ScrollView } from "react-native";
 
 import { HomeHeader } from "@/components/home/home-header";
 import { SelectInput } from "@/components/ui/select-input";
 import { trpc } from "@/utils/trpc";
 import { Shapes } from "@expo/ui/jetpack-compose/modifiers";
+import { Link } from "expo-router";
 import { useState } from "react";
 
 const LANGUAGES = [
@@ -33,6 +34,9 @@ export default function Home() {
           console.log(v);
         }}
       />
+      <Link asChild href="/join">
+        <Button title="Join" />
+      </Link>
     </ScrollView>
   );
 }

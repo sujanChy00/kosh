@@ -7,8 +7,7 @@
  *   bun --env-file=apps/server/.env run scripts/smoke-contribution.ts
  */
 import { db } from "@kosh-app/db";
-import { session as sessionSchema } from "@kosh-app/db/schema/auth";
-import { user } from "@kosh-app/db/schema/auth";
+import { session as sessionSchema, user } from "@kosh-app/db/schema/auth";
 import { contribution } from "@kosh-app/db/schema/contributions";
 import { koshMembership } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
@@ -16,14 +15,18 @@ import { and, eq } from "drizzle-orm";
 
 const SERVER = "http://localhost:3000";
 const ADHYAKSH_ID = "kQzvJxn8fXDvM3RIOSfQabUlDqhKS6zn";
-const KOSH_ID = "8b26f1eb-9f70-417f-8131-7eaf740b59d7";
 
 const rand = () => Math.random().toString(36).slice(2, 10);
 const uid = (prefix: string) => `${prefix}-${rand()}${rand()}`;
 
 let sessionTokens: string[] = [];
 
-async function rpc<T>(path: string, type: "query" | "mutation", input: unknown, token?: string) {
+async function rpc<T>(
+  path: string,
+  type: "query" | "mutation",
+  input: unknown,
+  token?: string,
+) {
   const headers: Record<string, string> = {
     ...(token ? { authorization: `Bearer ${token}` } : {}),
   };
@@ -65,6 +68,7 @@ async function rpc<T>(path: string, type: "query" | "mutation", input: unknown, 
 }
 
 const closeTo = (a: number, b: number, eps = 0.011) => Math.abs(a - b) <= eps;
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 async function makeSession(userId: string) {
   const token = `test-${uid("tok")}`;
@@ -85,6 +89,17 @@ function check(name: string, cond: boolean, extra = "") {
 }
 
 async function main() {
+  // Resolve the kosh the adhyaksh manages so the smoke test stays valid even
+  // as dev koshes are created/recreated.
+  const myMemberships = await db.query.koshMembership.findMany({
+    where: (m, { and, eq: q }) =>
+      and(q(m.userId, ADHYAKSH_ID), q(m.role, "adhyaksh")),
+    columns: { koshId: true },
+  });
+  const koshId = myMemberships[0]?.koshId;
+  if (!koshId) throw new Error("adhyaksh manages no kosh");
+  console.log("  kosh id:", koshId);
+
   const adhyakshToken = await makeSession(ADHYAKSH_ID);
   const memberId = uid("smk");
   const sadasyaId = uid("smkss");
@@ -93,27 +108,57 @@ async function main() {
 
   try {
     // ── Session works (bearer) ───────────────────────────────────────────
-    const list = await rpc<any>("kosh.list", "query", { limit: 5 }, adhyakshToken);
-    const myKosh = list.items.find((k: any) => k.id === KOSH_ID);
+    const list = await rpc<any>(
+      "kosh.list",
+      "query",
+      { limit: 5 },
+      adhyakshToken,
+    );
+    const myKosh = list.items.find((k: any) => k.id === koshId);
     check("kosh.list returns the kosh", Boolean(myKosh));
     const dueDay = myKosh.dueDay;
     const monthlyAmount = parseFloat(myKosh.monthlyAmount);
     const currency = myKosh.currency;
-    console.log("  kosh:", { name: myKosh.name, dueDay, monthlyAmount, currency });
+    console.log("  kosh:", {
+      name: myKosh.name,
+      dueDay,
+      monthlyAmount,
+      currency,
+    });
+    // Baseline totals: the kosh may already hold data recorded from the app,
+    // so totals checks below assert *deltas* introduced by this run, not
+    // absolute values.
+    const baseCollected = parseFloat(myKosh.totalCollected);
+    const baseRemaining = parseFloat(myKosh.totalRemaining);
 
     // ── periodData without period → default period resolves ─────────────
     pd0 = await rpc<any>(
       "contribution.periodData",
       "query",
-      { koshId: KOSH_ID },
+      { koshId: koshId },
       adhyakshToken,
     );
-    check("periodData returns 1 member initially", pd0.members.length === 1, `n=${pd0.members.length}`);
-    check("periodData defaultPeriod is a valid period", /^\d{4}-\d\d-01$/.test(pd0.defaultPeriod));
-    check("periodData resolved period === defaultPeriod", pd0.period.value === pd0.defaultPeriod);
+    check(
+      "periodData resolves members",
+      pd0.members.length >= 1,
+      `n=${pd0.members.length}`,
+    );
+    const initialMemberCount = pd0.members.length;
+    check(
+      "periodData defaultPeriod is a valid period",
+      /^\d{4}-\d\d-01$/.test(pd0.defaultPeriod),
+    );
+    check(
+      "periodData resolved period === defaultPeriod",
+      pd0.period.value === pd0.defaultPeriod,
+    );
     check("periodData threshold is 5", pd0.recordedLateThresholdDays === 5);
     const expectedDefault = defaultPeriodFor(dueDay);
-    check("defaultPeriod matches rule", pd0.defaultPeriod === expectedDefault, `${pd0.defaultPeriod} (want ${expectedDefault})`);
+    check(
+      "defaultPeriod matches rule",
+      pd0.defaultPeriod === expectedDefault,
+      `${pd0.defaultPeriod} (want ${expectedDefault})`,
+    );
     const prevMember = pd0.members[0];
     check(
       "member prefill = monthlyAmount when no record",
@@ -132,7 +177,7 @@ async function main() {
       emailVerified: true,
     });
     await db.insert(koshMembership).values({
-      koshId: KOSH_ID,
+      koshId: koshId,
       userId: memberId,
       role: "sadasya",
       status: "active",
@@ -145,7 +190,7 @@ async function main() {
       emailVerified: true,
     });
     await db.insert(koshMembership).values({
-      koshId: KOSH_ID,
+      koshId: koshId,
       userId: sadasyaId,
       role: "sadasya",
       status: "active",
@@ -156,31 +201,77 @@ async function main() {
     const pd1 = await rpc<any>(
       "contribution.periodData",
       "query",
-      { koshId: KOSH_ID },
+      { koshId: koshId },
       adhyakshToken,
     );
-    check("periodData now returns 3 members", pd1.members.length === 3, `n=${pd1.members.length}`);
+    check(
+      "periodData now includes the 2 smoke members",
+      pd1.members.length === initialMemberCount + 2,
+      `n=${pd1.members.length} (want ${initialMemberCount + 2})`,
+    );
     const smoke = pd1.members.find((m: any) => m.userId === memberId);
-    check("smoke member prefills present", smoke && parseFloat(smoke.expectedAmount) === monthlyAmount);
+    check(
+      "smoke member prefills present",
+      smoke && parseFloat(smoke.expectedAmount) === monthlyAmount,
+    );
+
+    // ── Penalty-gating fields (applyPenalty + grace) ─────────────────────
+    check(
+      "periodData.kosh.applyPenalty/penaltyGraceDays are present",
+      typeof pd1.kosh.applyPenalty === "boolean" &&
+        (pd1.kosh.penaltyGraceDays === null ||
+          typeof pd1.kosh.penaltyGraceDays === "number"),
+      `applyPenalty=${pd1.kosh.applyPenalty} penaltyGraceDays=${pd1.kosh.penaltyGraceDays}`,
+    );
+    check(
+      "periodData.period.isPenaltyDue is present",
+      typeof pd1.period.isPenaltyDue === "boolean",
+    );
+    // The coupling rule: an unpaid no-row member only gets a penalty
+    // prefill when the penalty is due; otherwise it must be null.
+    const expectedNoRowPrefill = pd1.period.isPenaltyDue
+      ? myKosh.latePenaltyAmount
+      : null;
+    check(
+      "unpaid no-row member penaltyPrefill matches isPenaltyDue rule",
+      smoke.penaltyPrefill === expectedNoRowPrefill,
+      `got ${smoke.penaltyPrefill} want ${expectedNoRowPrefill}`,
+    );
 
     // ── Non-adhyaksh is forbidden ────────────────────────────────────────
     const sadasyaToken = await makeSession(sadasyaId);
     try {
-      await rpc("contribution.periodData", "query", { koshId: KOSH_ID }, sadasyaToken);
+      await rpc(
+        "contribution.periodData",
+        "query",
+        { koshId: koshId },
+        sadasyaToken,
+      );
       check("sadasya periodData forbidden", false);
     } catch (e: any) {
-      check("sadasya periodData forbidden", e.message === "Only the Adhyaksh can record contributions");
+      check(
+        "sadasya periodData forbidden",
+        e.message === "Only the Adhyaksh can record contributions",
+      );
     }
     try {
       await rpc(
         "contribution.record",
         "mutation",
-        { koshId: KOSH_ID, period: pd0.period.value, memberId, contributionAmount: 100 },
+        {
+          koshId: koshId,
+          period: pd0.period.value,
+          memberId,
+          contributionAmount: 100,
+        },
         sadasyaToken,
       );
       check("sadasya record forbidden", false);
     } catch (e: any) {
-      check("sadasya record forbidden", e.message === "Only the Adhyaksh can record contributions");
+      check(
+        "sadasya record forbidden",
+        e.message === "Only the Adhyaksh can record contributions",
+      );
     }
 
     // ── Past-period bulk record: full + partial + penalty ───────────────
@@ -190,7 +281,7 @@ async function main() {
       "contribution.recordBulk",
       "mutation",
       {
-        koshId: KOSH_ID,
+        koshId: koshId,
         period: past,
         entries: [
           { memberId: ADHYAKSH_ID, contributionAmount: monthlyAmount },
@@ -199,26 +290,64 @@ async function main() {
       },
       adhyakshToken,
     );
-    check("recordBulk all entries ok", paidAll.summary.failed === 0, JSON.stringify(paidAll.summary));
+    check(
+      "recordBulk all entries ok",
+      paidAll.summary.failed === 0,
+      JSON.stringify(paidAll.summary),
+    );
     const aRow = paidAll.results.find((r: any) => r.memberId === ADHYAKSH_ID);
     const mRow = paidAll.results.find((r: any) => r.memberId === memberId);
-    check("past full record status paid", aRow?.contribution?.status === "paid", aRow?.contribution?.status);
-    check("past partial record status late", mRow?.contribution?.status === "late", mRow?.contribution?.status);
-    check("past partial contributionAmount stored", closeTo(parseFloat(mRow?.contribution?.contributionAmount ?? "-1"), monthlyAmount * 0.5));
-
-    // Penalty only applies when the period is past due AND short. Full payer
-    // has no shortfall → penalty assessed 0.
     check(
-    "full payer penalty assessed 0",
-    parseFloat(aRow?.contribution?.penaltyAssessed ?? "-1") === 0,
-    aRow?.contribution?.penaltyAssessed,
-  );
+      "past full record status paid",
+      aRow?.contribution?.status === "paid",
+      aRow?.contribution?.status,
+    );
+    check(
+      "past partial record status late",
+      mRow?.contribution?.status === "late",
+      mRow?.contribution?.status,
+    );
+    check(
+      "past partial contributionAmount stored",
+      closeTo(
+        parseFloat(mRow?.contribution?.contributionAmount ?? "-1"),
+        monthlyAmount * 0.5,
+      ),
+    );
 
-    const latePenalty = pd0.kosh.latePenaltyAmount ?? "0";
+    // Penalty applies when the period is penalty-due (past grace window) —
+    // being LATE is the trigger, so a full payer pays it too when they record
+    // late. Since the bulk entry above sent no penaltyPaid, collected is 0 but
+    // assessed follows the kosh's penalty config.
+    const koshPenalty = pd1.kosh.applyPenalty
+      ? parseFloat(pd1.kosh.latePenaltyAmount ?? "0")
+      : 0;
+    check(
+      "full payer (late) assessed the kosh penalty",
+      closeTo(
+        parseFloat(aRow?.contribution?.penaltyAssessed ?? "-1"),
+        koshPenalty,
+      ),
+      `got ${aRow?.contribution?.penaltyAssessed} want ${koshPenalty}`,
+    );
+    check(
+      "full payer penaltyPaid 0 when none entered",
+      parseFloat(aRow?.contribution?.penaltyPaid ?? "-1") === 0,
+      aRow?.contribution?.penaltyPaid,
+    );
+    check(
+      "partial payer assessed the kosh penalty",
+      closeTo(
+        parseFloat(mRow?.contribution?.penaltyAssessed ?? "-1"),
+        koshPenalty,
+      ),
+      `got ${mRow?.contribution?.penaltyAssessed} want ${koshPenalty}`,
+    );
+
     const upserted = await rpc<any>(
       "contribution.periodData",
       "query",
-      { koshId: KOSH_ID, period: past },
+      { koshId: koshId, period: past },
       adhyakshToken,
     );
     const mData = upserted.members.find((m: any) => m.userId === memberId);
@@ -228,8 +357,15 @@ async function main() {
       mData.penaltyPrefill !== null,
     );
     check(
-      "full payer shows no extra penalty",
-      parseFloat(aData.penaltyPrefill) === parseFloat(aData.existing?.penaltyAssessed ?? "0"),
+      "existing-row penaltyPrefill mirrors stored assessment",
+      parseFloat(aData.penaltyPrefill) ===
+        parseFloat(aData.existing?.penaltyAssessed ?? "0"),
+      `prefill=${aData.penaltyPrefill} assessed=${aData.existing?.penaltyAssessed}`,
+    );
+    check(
+      "past-period isPenaltyDue is true (overdue >> any grace)",
+      upserted.period.isPenaltyDue === true,
+      `got ${upserted.period.isPenaltyDue}`,
     );
 
     // ── Loan + repayment split ───────────────────────────────────────────
@@ -239,10 +375,10 @@ async function main() {
     const issueDate = new Date();
     issueDate.setDate(issueDate.getDate() - issueDaysAgo);
     const isoIssue = issueDate.toISOString().slice(0, 10);
-    const [loanRow] = await db
+    const loanRows = await db
       .insert(loan)
       .values({
-        koshId: KOSH_ID,
+        koshId: koshId,
         borrowerId: memberId,
         principal: String(principal),
         interestRate: String(rate),
@@ -251,6 +387,8 @@ async function main() {
         status: "active",
       })
       .returning();
+    const loanRow = loanRows[0];
+    if (!loanRow) throw new Error("loan insert returned no row");
     createdLoanId = loanRow.id;
 
     const accrued = principal * (rate / 100) * (issueDaysAgo / 365);
@@ -263,7 +401,7 @@ async function main() {
       "contribution.record",
       "mutation",
       {
-        koshId: KOSH_ID,
+        koshId: koshId,
         period: past,
         memberId,
         repaymentAmount: repayAmt,
@@ -273,22 +411,36 @@ async function main() {
     check("repayment ok", repaid.ok === true, JSON.stringify(repaid));
     check(
       "repayment interest-first split (interest)",
-      closeTo(parseFloat(repaid.repayment?.interestPortion ?? "-1"), interestPortion),
+      closeTo(
+        parseFloat(repaid.repayment?.interestPortion ?? "-1"),
+        interestPortion,
+      ),
       `got ${repaid.repayment?.interestPortion} want ~${interestPortion.toFixed(2)}`,
     );
     check(
       "repayment principal portion",
-      closeTo(parseFloat(repaid.repayment?.principalPortion ?? "-1"), principalPortion),
+      closeTo(
+        parseFloat(repaid.repayment?.principalPortion ?? "-1"),
+        principalPortion,
+      ),
       `got ${repaid.repayment?.principalPortion} want ~${principalPortion.toFixed(2)}`,
     );
     check(
       "remaining balance after",
-      closeTo(parseFloat(repaid.repayment?.remainingBalanceAfter ?? "-1"), remAfter),
+      closeTo(
+        parseFloat(repaid.repayment?.remainingBalanceAfter ?? "-1"),
+        remAfter,
+      ),
       `got ${repaid.repayment?.remainingBalanceAfter} want ~${remAfter.toFixed(2)}`,
     );
 
-    const loanAfter = await db.query.loan.findFirst({ where: (l, { eq: q }) => q(l.id, loanRow.id) });
-    check("loan amountRemaining updated", closeTo(parseFloat(loanAfter!.amountRemaining), remAfter));
+    const loanAfter = await db.query.loan.findFirst({
+      where: (l, { eq: q }) => q(l.id, loanRow.id),
+    });
+    check(
+      "loan amountRemaining updated",
+      closeTo(parseFloat(loanAfter!.amountRemaining), remAfter),
+    );
     check("loan still active", loanAfter!.status === "active");
 
     // ── Over-payment rejected; contribution still saved (independence) ──
@@ -296,7 +448,7 @@ async function main() {
       "contribution.recordBulk",
       "mutation",
       {
-        koshId: KOSH_ID,
+        koshId: koshId,
         period: past,
         entries: [
           {
@@ -309,7 +461,11 @@ async function main() {
       adhyakshToken,
     );
     const over = overpay.results[0];
-    check("over-payment entry flagged failed", over.ok === false, over.error ?? "");
+    check(
+      "over-payment entry flagged failed",
+      over.ok === false,
+      over.error ?? "",
+    );
     check(
       "over-payment error message",
       over.error === "Repayment amount exceeds the outstanding balance",
@@ -319,11 +475,17 @@ async function main() {
     const overContrib = await db
       .select({ c: contribution.contributionAmount })
       .from(contribution)
-      .where(and(eq(contribution.koshId, KOSH_ID), eq(contribution.memberId, memberId), eq(contribution.period, past)));
+      .where(
+        and(
+          eq(contribution.koshId, koshId),
+          eq(contribution.memberId, memberId),
+          eq(contribution.period, past),
+        ),
+      );
     check(
       "contribution was still written despite repayment failure",
-      closeTo(parseFloat(overContrib[0].c), monthlyAmount * 0.9),
-      `got ${overContrib[0].c}`,
+      closeTo(parseFloat(overContrib[0]?.c ?? "-1"), monthlyAmount * 0.9),
+      `got ${overContrib[0]?.c ?? "none"}`,
     );
 
     // ── Repayment for a member with no active loan fails cleanly ────────
@@ -331,7 +493,7 @@ async function main() {
       "contribution.recordBulk",
       "mutation",
       {
-        koshId: KOSH_ID,
+        koshId: koshId,
         period: past,
         entries: [{ memberId: ADHYAKSH_ID, repaymentAmount: 100 }],
       },
@@ -339,25 +501,30 @@ async function main() {
     );
     check(
       "no-loan + repayment flagged failed",
-      noLoan.results[0].ok === false && noLoan.results[0].error === "This member has no active loan to repay",
+      noLoan.results[0].ok === false &&
+        noLoan.results[0].error === "This member has no active loan to repay",
       noLoan.results[0].error ?? "",
     );
 
     // ── Totals move correctly ────────────────────────────────────────────
-    // Collected: MB1 full (past) MB2 90% ... let project:
-    // contributions: adhyaksh full (1), smoke: 0.5 then 0.9 → 1.4 total? No —
-    // the second write overwrote the first (upsert). smoke = 0.9 of monthly.
-    // contributions sum = monthly + 0.9*monthly
-    // penalties: 0 paid (none recorded) → 0
-    // loan interest collected = interestPortion (one repayment)
-    // totalRemaining = collected − sum(amountRemaining active/defaulted)
+    // Net effect of THIS run on the kosh:
+    //   contributions in `past`: adhyaksh full (2000) + smoke 0.9*monthly
+    //     (the initial 0.5*monthly was overwritten by the overpay write)
+    //   penalties: none paid → 0
+    //   loan interest collected: interestPortion (the one successful repayment)
+    //   loan subtracted from remaining: amountRemaining = remAfter
     const contribSum = monthlyAmount + monthlyAmount * 0.9;
     const interestSum = interestPortion;
-    const collected = contribSum + interestSum;
-    const remaining = collected - remAfter;
+    const collected = baseCollected + contribSum + interestSum;
+    const remaining = baseRemaining + contribSum + interestSum - remAfter;
 
-    const listAfter = await rpc<any>("kosh.list", "query", { limit: 5 }, adhyakshToken);
-    const koshAfter = listAfter.items.find((k: any) => k.id === KOSH_ID);
+    const listAfter = await rpc<any>(
+      "kosh.list",
+      "query",
+      { limit: 5 },
+      adhyakshToken,
+    );
+    const koshAfter = listAfter.items.find((k: any) => k.id === koshId);
     check(
       "totalCollected matches formula",
       closeTo(parseFloat(koshAfter.totalCollected), collected),
@@ -369,48 +536,181 @@ async function main() {
       `got ${koshAfter.totalRemaining} want ~${remaining.toFixed(2)}`,
     );
 
+    // ── Penalty cap: never collect more than assessed ─────────────────────
+    // Over-entering a penalty clamps to the assessed amount; a partial entry
+    // is recorded as-is.
+    const capped = await rpc<any>(
+      "contribution.record",
+      "mutation",
+      {
+        koshId: koshId,
+        period: past,
+        memberId,
+        contributionAmount: monthlyAmount * 0.9,
+        penaltyPaid: koshPenalty + 300,
+      },
+      adhyakshToken,
+    );
+    check(
+      "over-entered penalty clamps to assessed",
+      closeTo(
+        parseFloat(capped.contribution?.penaltyPaid ?? "-1"),
+        koshPenalty,
+      ),
+      `got ${capped.contribution?.penaltyPaid} want ${koshPenalty}`,
+    );
+    check(
+      "penaltyAssessed unchanged by over-entry",
+      closeTo(
+        parseFloat(capped.contribution?.penaltyAssessed ?? "-1"),
+        koshPenalty,
+      ),
+      `got ${capped.contribution?.penaltyAssessed} want ${koshPenalty}`,
+    );
+
+    const partialPenalty = round2(koshPenalty * 0.5);
+    const partial = await rpc<any>(
+      "contribution.record",
+      "mutation",
+      {
+        koshId: koshId,
+        period: past,
+        memberId,
+        contributionAmount: monthlyAmount * 0.9,
+        penaltyPaid: partialPenalty,
+      },
+      adhyakshToken,
+    );
+    check(
+      "partial penalty payment recorded as entered",
+      closeTo(
+        parseFloat(partial.contribution?.penaltyPaid ?? "-1"),
+        partialPenalty,
+      ),
+      `got ${partial.contribution?.penaltyPaid} want ${partialPenalty}`,
+    );
+
+    // ── Carried-over arrears surface on the current period ────────────────
+    const arrearsPd = await rpc<any>(
+      "contribution.periodData",
+      "query",
+      { koshId: koshId },
+      adhyakshToken,
+    );
+    const arMember = arrearsPd.members.find((m: any) => m.userId === memberId);
+    const arAdhyaksh = arrearsPd.members.find(
+      (m: any) => m.userId === ADHYAKSH_ID,
+    );
+    check(
+      "prior contribution arrears surfaced (distinct total)",
+      closeTo(
+        parseFloat(arMember.arrears.contribution ?? "-1"),
+        round2(monthlyAmount * 0.1),
+      ),
+      `got ${arMember.arrears.contribution} want ~${round2(monthlyAmount * 0.1)}`,
+    );
+    check(
+      "prior penalty arrears surfaced (distinct total)",
+      closeTo(
+        parseFloat(arMember.arrears.penalty ?? "-1"),
+        partialPenalty,
+      ),
+      `got ${arMember.arrears.penalty} want ${partialPenalty}`,
+    );
+    check(
+      "arrears calm for a full payer (contribution 0, penalty due)",
+      parseFloat(arAdhyaksh.arrears.contribution) === 0 &&
+        closeTo(parseFloat(arAdhyaksh.arrears.penalty), koshPenalty),
+      `got contribution=${arAdhyaksh.arrears.contribution} penalty=${arAdhyaksh.arrears.penalty}`,
+    );
+
     // ── Invalid entries rejected by zod ──────────────────────────────────
     try {
-      await rpc("contribution.recordBulk", "mutation", {
-        koshId: KOSH_ID,
-        period: "2026-13-01",
-        entries: [{ memberId }],
-      }, adhyakshToken);
+      await rpc(
+        "contribution.recordBulk",
+        "mutation",
+        {
+          koshId: koshId,
+          period: "2026-13-01",
+          entries: [{ memberId }],
+        },
+        adhyakshToken,
+      );
       check("bad period rejected", false);
     } catch (e: any) {
-      check("bad period rejected", e.code === "BAD_REQUEST" || Boolean(e.code), String(e.code));
+      check(
+        "bad period rejected",
+        e.code === "BAD_REQUEST" || Boolean(e.code),
+        String(e.code),
+      );
     }
     try {
-      await rpc("contribution.recordBulk", "mutation", {
-        koshId: KOSH_ID,
-        period: past,
-        entries: [{ memberId, contributionAmount: -5 }],
-      }, adhyakshToken);
+      await rpc(
+        "contribution.recordBulk",
+        "mutation",
+        {
+          koshId: koshId,
+          period: past,
+          entries: [{ memberId, contributionAmount: -5 }],
+        },
+        adhyakshToken,
+      );
       check("negative amount rejected", false);
     } catch (e: any) {
-      check("negative amount rejected", e.code === "BAD_REQUEST" || Boolean(e.code), String(e.code));
+      check(
+        "negative amount rejected",
+        e.code === "BAD_REQUEST" || Boolean(e.code),
+        String(e.code),
+      );
     }
 
-    console.log(failures === 0 ? "\nALL SMOKE TESTS PASSED" : `\n${failures} SMOKE TESTS FAILED`);
+    console.log(
+      failures === 0
+        ? "\nALL SMOKE TESTS PASSED"
+        : `\n${failures} SMOKE TESTS FAILED`,
+    );
   } finally {
-    // ── Cleanup everything created by this run ───────────────────────────
-    const testPeriods: string[] = [];
-    if (pd0) {
-      testPeriods.push(pd0.period.value, shiftPeriod(pd0.period.value, -3));
-    }
+    // ── Cleanup exactly what this run created ────────────────────────────
+    // Only the `past` period is written by the test, and only for the two
+    // throwaway members plus the adhyaksh. Never touch other periods or real
+    // members' rows (the default period is read-only here).
+    const testPeriods = pd0 ? [shiftPeriod(pd0.period.value, -3)] : [];
+    const testMemberIds = [memberId, sadasyaId, ADHYAKSH_ID];
     for (const p of testPeriods) {
-      await db.delete(contribution).where(and(eq(contribution.koshId, KOSH_ID), eq(contribution.period, p)));
+      for (const mid of testMemberIds) {
+        await db
+          .delete(contribution)
+          .where(
+            and(
+              eq(contribution.koshId, koshId),
+              eq(contribution.period, p),
+              eq(contribution.memberId, mid),
+            ),
+          );
+      }
     }
     if (createdLoanId) {
-      await db.delete(loanRepayment).where(eq(loanRepayment.loanId, createdLoanId));
+      await db
+        .delete(loanRepayment)
+        .where(eq(loanRepayment.loanId, createdLoanId));
       await db.delete(loan).where(eq(loan.id, createdLoanId));
     }
-    await db.delete(koshMembership).where(
-      and(eq(koshMembership.koshId, KOSH_ID), eq(koshMembership.userId, memberId)),
-    );
-    await db.delete(koshMembership).where(
-      and(eq(koshMembership.koshId, KOSH_ID), eq(koshMembership.userId, sadasyaId)),
-    );
+    await db
+      .delete(koshMembership)
+      .where(
+        and(
+          eq(koshMembership.koshId, koshId),
+          eq(koshMembership.userId, memberId),
+        ),
+      );
+    await db
+      .delete(koshMembership)
+      .where(
+        and(
+          eq(koshMembership.koshId, koshId),
+          eq(koshMembership.userId, sadasyaId),
+        ),
+      );
     await db.delete(user).where(eq(user.id, memberId));
     await db.delete(user).where(eq(user.id, sadasyaId));
     for (const token of sessionTokens) {
@@ -425,9 +725,12 @@ function defaultPeriodFor(dueDay: number, today = new Date()) {
   const DAY_MS = 86_400_000;
   const LATE = 5;
   const pad2 = (n: number) => String(n).padStart(2, "0");
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const daysUntil = (date: Date, now = new Date()) =>
-    Math.round((startOfDay(date).getTime() - startOfDay(now).getTime()) / DAY_MS);
+    Math.round(
+      (startOfDay(date).getTime() - startOfDay(now).getTime()) / DAY_MS,
+    );
   const periodFromParts = (year: number, month: number) => {
     const d = new Date(year, month - 1, 1);
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-01`;
@@ -446,6 +749,9 @@ function defaultPeriodFor(dueDay: number, today = new Date()) {
 
 function shiftPeriod(period: string, delta: number) {
   const [y, m] = period.split("-").map(Number);
+  if (y === undefined || m === undefined) {
+    throw new Error(`invalid period: ${period}`);
+  }
   const d = new Date(y, m - 1 + delta, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }

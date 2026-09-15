@@ -8,6 +8,7 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient } from "@/utils/trpc";
+import { fillMaxWidth } from "@expo/ui/jetpack-compose/modifiers";
 import { cn, formatTime } from "@kosh-app/utils";
 import { OTP_EXPIRY_SECONDS } from "@kosh-app/utils/constants/data";
 import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
@@ -140,9 +141,21 @@ export const ResetPasswordForm = () => {
                     </ThemedText>
                   </View>
                   <field.TextField
+                    placeholderProps={{
+                      modifiers: [fillMaxWidth()],
+                      textStyle: {
+                        textAlign: "center",
+                        fontFamily: "mono-regular",
+                      },
+                    }}
                     maxLength={6}
-                    keyboardType="number-pad"
-                    inputClassName="px-3"
+                    keyboardOptions={{
+                      keyboardType: "number",
+                    }}
+                    placeholder="000000"
+                    textStyle={{
+                      textAlign: "center",
+                    }}
                   />
                 </Field>
               )}

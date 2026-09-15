@@ -1,5 +1,4 @@
 import { ProfileImagePicker } from "@/components/setting/profile-image-picker";
-import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { isIOS } from "@/constants/platform";
@@ -8,11 +7,21 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { isRemoteImage, uploadToCloudinary } from "@/lib/cloudinary";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient, trpc } from "@/utils/trpc";
+import ACCOUNT_BALANCE_ICON from "@expo/material-symbols/account_balance.xml";
+import CALENDAR_ICON from "@expo/material-symbols/calendar_month.xml";
+import GROUP_ICON from "@expo/material-symbols/group.xml";
+import NOTES_ICON from "@expo/material-symbols/notes.xml";
+import PAYMENT_ICON from "@expo/material-symbols/payments.xml";
+import PERCENTAGE_ICON from "@expo/material-symbols/percent.xml";
+import CLOCK_ICON from "@expo/material-symbols/schedule.xml";
+import TIMER_ICON from "@expo/material-symbols/timer.xml";
+import WARNING_ICON from "@expo/material-symbols/warning.xml";
+import { Icon } from "@expo/ui/jetpack-compose";
 import type { CreateKoshInput } from "@kosh-app/api/routers/kosh";
 import { DUE_DAY_OPTIONS } from "@kosh-app/utils/constants/data";
 import { dateFormatterWithSeparator } from "@kosh-app/utils/date";
-import { useMutation } from "@tanstack/react-query";
 import { useSelector } from "@tanstack/react-form";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -54,10 +63,12 @@ export const AddKoshForm = () => {
     icon_url: "",
     monthly_amount: "",
     due_day: "",
-    member_interest_rate: "10",
-    non_member_interest_rate: "15",
+    member_interest_rate: "2",
+    non_member_interest_rate: "5",
     loan_cap: "",
     late_penalty_amount: "",
+    apply_penalty: false,
+    penalty_grace_days: "",
     start_date: undefined,
     duration_months: "",
     max_members: "",
@@ -98,6 +109,11 @@ export const AddKoshForm = () => {
         latePenaltyAmount: value.late_penalty_amount
           ? Number(value.late_penalty_amount)
           : undefined,
+        applyPenalty: value.apply_penalty,
+        penaltyGraceDays:
+          value.apply_penalty && value.penalty_grace_days !== ""
+            ? Number(value.penalty_grace_days)
+            : undefined,
         startDate: dateFormatterWithSeparator(value.start_date),
         durationMonths: Number(value.duration_months),
         maxMembers: value.max_members ? Number(value.max_members) : undefined,
@@ -106,8 +122,9 @@ export const AddKoshForm = () => {
     },
   });
 
-  const { name } = useSelector(form.store, (state) => ({
+  const { name, applyPenalty } = useSelector(form.store, (state) => ({
     name: state.values.name,
+    applyPenalty: state.values.apply_penalty,
   }));
 
   return (
@@ -146,17 +163,7 @@ export const AddKoshForm = () => {
                 name="name"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Kosh Name"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "group",
-                          ios: "person.2.fill",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
+                    prefix={<Icon source={GROUP_ICON} size={18} />}
                     label="Kosh name"
                     placeholder="e.g. Family Savings"
                   />
@@ -166,19 +173,9 @@ export const AddKoshForm = () => {
                 name="description"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Kosh Description"
-                    multiline
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "notes",
-                          ios: "text.alignleft",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
-                    label="Description"
+                    singleLine={false}
+                    prefix={<Icon source={NOTES_ICON} size={18} />}
+                    label="Description (optional)"
                     placeholder="What is this kosh for?"
                   />
                 )}
@@ -191,20 +188,12 @@ export const AddKoshForm = () => {
                 name="monthly_amount"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Monthly Amount"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "payments",
-                          ios: "banknote",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
+                    prefix={<Icon source={PAYMENT_ICON} size={18} />}
                     label="Monthly contribution (NPR)"
                     placeholder="e.g. 1000"
-                    keyboardType="decimal-pad"
+                    keyboardOptions={{
+                      keyboardType: "decimal",
+                    }}
                   />
                 )}
               />
@@ -221,6 +210,7 @@ export const AddKoshForm = () => {
                 name="start_date"
                 children={(field) => (
                   <field.DateField
+                    prefix={<Icon source={CALENDAR_ICON} size={18} />}
                     label="Start date"
                     placeholder="Select a start date"
                     description="If not set, it will default to today"
@@ -232,20 +222,12 @@ export const AddKoshForm = () => {
                 name="duration_months"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Duration"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "schedule",
-                          ios: "clock",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
+                    prefix={<Icon source={CLOCK_ICON} size={18} />}
                     label="Duration (months)"
                     placeholder="e.g. 12"
-                    keyboardType="number-pad"
+                    keyboardOptions={{
+                      keyboardType: "number",
+                    }}
                   />
                 )}
               />
@@ -257,20 +239,12 @@ export const AddKoshForm = () => {
                 name="member_interest_rate"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Member Interest Rate"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "percent",
-                          ios: "percent",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
+                    prefix={<Icon source={PERCENTAGE_ICON} size={18} />}
                     label="Member interest rate (%)"
                     placeholder="e.g. 10"
-                    keyboardType="decimal-pad"
+                    keyboardOptions={{
+                      keyboardType: "decimal",
+                    }}
                   />
                 )}
               />
@@ -278,20 +252,12 @@ export const AddKoshForm = () => {
                 name="non_member_interest_rate"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Non-member Interest Rate"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "percent",
-                          ios: "percent",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
+                    prefix={<Icon source={PERCENTAGE_ICON} size={18} />}
                     label="Non-member interest rate (%)"
                     placeholder="e.g. 15"
-                    keyboardType="decimal-pad"
+                    keyboardOptions={{
+                      keyboardType: "decimal",
+                    }}
                   />
                 )}
               />
@@ -299,44 +265,56 @@ export const AddKoshForm = () => {
                 name="loan_cap"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Loan Cap"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "account_balance",
-                          ios: "banknote.fill",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
+                    prefix={<Icon source={ACCOUNT_BALANCE_ICON} size={18} />}
                     label="Loan cap (NPR)"
                     placeholder="e.g. 50000"
-                    keyboardType="decimal-pad"
+                    keyboardOptions={{
+                      keyboardType: "decimal",
+                    }}
                   />
                 )}
               />
+
               <form.AppField
-                name="late_penalty_amount"
+                name="apply_penalty"
                 children={(field) => (
-                  <field.TextField
-                    accessibilityLabel="Late Penalty Amount"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "warning",
-                          ios: "exclamationmark.octagon",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
-                    label="Late penalty (NPR)"
-                    placeholder="Optional"
-                    keyboardType="decimal-pad"
+                  <field.SwitchField
+                    label="Apply late penalty"
+                    description="Charge the late penalty when contributions stay unpaid."
                   />
                 )}
               />
+              {applyPenalty ? (
+                <View className="gap-y-6">
+                  <form.AppField
+                    name="late_penalty_amount"
+                    children={(field) => (
+                      <field.TextField
+                        prefix={<Icon source={WARNING_ICON} size={18} />}
+                        label="Late penalty (NPR)"
+                        placeholder="Optional"
+                        keyboardOptions={{
+                          keyboardType: "decimal",
+                        }}
+                      />
+                    )}
+                  />
+                  <form.AppField
+                    name="penalty_grace_days"
+                    children={(field) => (
+                      <field.TextField
+                        prefix={<Icon source={TIMER_ICON} size={18} />}
+                        label="Penalty applies after (days)"
+                        description="Days after the due date before the penalty is charged. Leave empty to apply from the day after the due date."
+                        placeholder="Optional"
+                        keyboardOptions={{
+                          keyboardType: "number",
+                        }}
+                      />
+                    )}
+                  />
+                </View>
+              ) : null}
             </View>
 
             <View className="gap-y-4">
@@ -345,20 +323,12 @@ export const AddKoshForm = () => {
                 name="max_members"
                 children={(field) => (
                   <field.TextField
-                    accessibilityLabel="Maximum Members"
-                    prefix={
-                      <StyledSymbolView
-                        name={{
-                          android: "group",
-                          ios: "person.3.fill",
-                        }}
-                        tintColorClassName="accent-muted"
-                        size={18}
-                      />
-                    }
-                    label="Maximum members"
+                    prefix={<Icon source={GROUP_ICON} size={18} />}
+                    label="Maximum members (optional)"
                     placeholder="Optional"
-                    keyboardType="number-pad"
+                    keyboardOptions={{
+                      keyboardType: "number",
+                    }}
                   />
                 )}
               />
@@ -372,9 +342,10 @@ export const AddKoshForm = () => {
                   <field.PasswordField
                     label="Transaction PIN"
                     placeholder="6 digits"
-                    keyboardType="number-pad"
+                    keyboardOptions={{
+                      keyboardType: "numberPassword",
+                    }}
                     maxLength={6}
-                    textContentType="oneTimeCode"
                   />
                 )}
               />

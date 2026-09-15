@@ -1,13 +1,14 @@
 import PLUST_ICON from "@expo/material-symbols/add.xml";
 import RECORD_ICON from "@expo/material-symbols/edit_square.xml";
+import JOIN_ICON from "@expo/material-symbols/group_add.xml";
 import { LegendList } from "@legendapp/list/react-native";
 import type { KoshListItem } from "@kosh-app/api/routers/kosh";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
-import { PrimaryButton } from "@/components/ui/button";
+import { OutlineButton, PrimaryButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { trpc } from "@/utils/trpc";
@@ -98,6 +99,17 @@ const KoshScreen = () => {
         <Stack.Toolbar.Button
           variant="prominent"
           onPress={() => {
+            router.push({ pathname: "/join" });
+          }}
+        >
+          <Stack.Toolbar.Icon
+            sf="person.crop.circle.badge.plus"
+            src={JOIN_ICON}
+          />
+        </Stack.Toolbar.Button>
+        <Stack.Toolbar.Button
+          variant="prominent"
+          onPress={() => {
             router.push({
               pathname: "/contribution",
             });
@@ -134,7 +146,18 @@ const KoshScreen = () => {
         <LegendList
           data={koshList}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <KoshCard kosh={item} />}
+          renderItem={({ item }) => (
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: "/kosh/[id]",
+                  params: { id: item.id, name: item.name, role: item.role },
+                })
+              }
+            >
+              <KoshCard kosh={item} />
+            </Pressable>
+          )}
           onEndReached={loadMore}
           onEndReachedThreshold={0.4}
           estimatedItemSize={150}
@@ -156,6 +179,11 @@ const KoshScreen = () => {
               >
                 <PrimaryButton.Label>Create a kosh</PrimaryButton.Label>
               </PrimaryButton>
+              <OutlineButton
+                onPress={() => router.push({ pathname: "/join" })}
+              >
+                <OutlineButton.Label>Join a kosh</OutlineButton.Label>
+              </OutlineButton>
             </View>
           }
           ListFooterComponent={

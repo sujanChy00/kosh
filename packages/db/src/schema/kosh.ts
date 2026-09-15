@@ -6,6 +6,7 @@ import {
   integer,
   decimal,
   date,
+  boolean,
   uuid,
   uniqueIndex,
   index,
@@ -31,6 +32,11 @@ export const kosh = pgTable("kosh", {
   nonMemberInterestRate: decimal("non_member_interest_rate", { precision: 5, scale: 2 }).notNull(),
   loanCap: decimal("loan_cap", { precision: 12, scale: 2 }).notNull(),
   latePenaltyAmount: decimal("late_penalty_amount", { precision: 12, scale: 2 }),
+  // Whether the late penalty is enforced for this kosh. When on, the penalty
+  // kicks in `penaltyGraceDays` days after the due date; a null grace means
+  // it starts the day after the due date.
+  applyPenalty: boolean("apply_penalty").notNull().default(false),
+  penaltyGraceDays: integer("penalty_grace_days"),
   startDate: date("start_date").notNull(),
   durationMonths: integer("duration_months").notNull(),
   endDate: date("end_date").notNull(), // computed from start_date + duration_months

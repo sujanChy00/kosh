@@ -7,8 +7,14 @@ import { useCSSVariable } from "uniwind";
 export const LoginBiometricEnabler = () => {
   const [mutedColor] = useCSSVariable(["--color-muted"]) as [string];
   const { isAvailable, isEnabled, isPending, toggle } = usePasskeyBiometrics();
+
+  const handlePress = () => {
+    if (!isAvailable || isPending) return;
+    toggle(!isEnabled);
+  };
+
   return (
-    <ListItem>
+    <ListItem onPress={handlePress}>
       <Text
         textStyle={{
           fontFamily: "notosans-regular",

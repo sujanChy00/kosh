@@ -2,7 +2,7 @@ import { db } from "@kosh-app/db";
 import { contribution } from "@kosh-app/db/schema/contributions";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -19,6 +19,24 @@ const periodSchema = z
 // Shared by the default-period rule and the "recorded late" badge so the two
 // stay in sync.
 const LATE_THRESHOLD_DAYS = 5;
+
+// The late penalty kicks in `penaltyGraceDays` days after the due date. A
+// stored null grace means the day after the due date (1 day). When the kosh
+// has applyPenalty off, no penalty is ever due.
+const penaltyGraceDaysFor = (koshRow: { penaltyGraceDays: number | null }) =>
+  koshRow.penaltyGraceDays ?? 1;
+
+const isPenaltyDueFor = (
+  koshRow: {
+    applyPenalty: boolean;
+    latePenaltyAmount: string | null;
+    penaltyGraceDays: number | null;
+  },
+  dueDate: Date,
+) =>
+  koshRow.applyPenalty &&
+  koshRow.latePenaltyAmount != null &&
+  daysBetween(dueDate) >= penaltyGraceDaysFor(koshRow);
 
 const DAY_MS = 86_400_000;
 
@@ -148,6 +166,8 @@ async function requireAdhyaksh(koshId: string, userId: string) {
       monthlyAmount: true,
       dueDay: true,
       latePenaltyAmount: true,
+      applyPenalty: true,
+      penaltyGraceDays: true,
     },
   });
   if (!koshRow) {
@@ -208,10 +228,11 @@ async function applyMemberEntry(input: {
   };
   period: string;
   isPastDue: boolean;
+  isPenaltyDue: boolean;
   entry: RecordEntryInput;
   actorId: string;
 }) {
-  const { koshRow, period, isPastDue, entry, actorId } = input;
+  const { koshRow, period, isPastDue, isPenaltyDue, entry, actorId } = input;
 
   const membership = await db.query.koshMembership.findFirst({
     where: (m, { and: a, eq: q }) =>
@@ -253,20 +274,23 @@ async function applyMemberEntry(input: {
 
   // Penalty charged: a stored assessment is never recomputed (history is
   // preserved), otherwise the kosh's late penalty applies once this period is
-  // past its due date and the member is still short. Charged must always cover
-  // what was actually collected.
+  // past its grace window (`isPenaltyDue`) — late itself is the trigger, so a
+  // member who pays the full amount late still owes it. The adhyaksh can
+  // collect up to the assessed amount but never more (`min` cap); partial
+  // penalty payments are allowed.
   const outstanding = round2(expected - contributionAmount);
   const computedAssessed =
-    isPastDue && outstanding > 0
-      ? koshRow.latePenaltyAmount != null
-        ? parseFloat(koshRow.latePenaltyAmount)
-        : 0
+    isPenaltyDue && koshRow.latePenaltyAmount != null
+      ? parseFloat(koshRow.latePenaltyAmount)
       : 0;
   const penaltyAssessed = round2(
     Math.max(
       existing ? parseFloat(existing.penaltyAssessed) : computedAssessed,
-      penaltyPaid,
+      0,
     ),
+  );
+  const effectivePenaltyPaid = round2(
+    Math.min(penaltyPaid, penaltyAssessed),
   );
 
   let status: "paid" | "late" | "partial" | "pending";
@@ -276,7 +300,7 @@ async function applyMemberEntry(input: {
   else status = "pending";
 
   const datePaid =
-    contributionAmount + penaltyPaid > 0 ? new Date() : null;
+    contributionAmount + effectivePenaltyPaid > 0 ? new Date() : null;
 
   let contributionRow;
   if (existing) {
@@ -285,7 +309,7 @@ async function applyMemberEntry(input: {
       .set({
         contributionAmount: String(contributionAmount),
         penaltyAssessed: String(penaltyAssessed),
-        penaltyPaid: String(penaltyPaid),
+        penaltyPaid: String(effectivePenaltyPaid),
         status,
         datePaid,
       })
@@ -301,7 +325,7 @@ async function applyMemberEntry(input: {
         expectedAmount: String(expected),
         contributionAmount: String(contributionAmount),
         penaltyAssessed: String(penaltyAssessed),
-        penaltyPaid: String(penaltyPaid),
+        penaltyPaid: String(effectivePenaltyPaid),
         status,
         datePaid,
         recordedBy: actorId,
@@ -417,6 +441,7 @@ async function runBulk(
   const { koshRow } = await requireAdhyaksh(koshId, actorId);
   const dueDate = dueDateFor(period, koshRow.dueDay);
   const isPastDue = startOfDay(new Date()).getTime() > dueDate.getTime();
+  const isPenaltyDue = isPenaltyDueFor(koshRow, dueDate);
 
   const results = [];
   for (const entry of entries) {
@@ -425,6 +450,7 @@ async function runBulk(
         koshRow,
         period,
         isPastDue,
+        isPenaltyDue,
         entry,
         actorId,
       });
@@ -471,38 +497,82 @@ export const contributionRouter = router({
       const dueDate = dueDateFor(period, koshRow.dueDay);
       const overdueDays = daysBetween(dueDate);
       const isPastDue = overdueDays > 0;
+      const isPenaltyDue = isPenaltyDueFor(koshRow, dueDate);
+      const penaltyDueDate =
+        koshRow.applyPenalty && koshRow.latePenaltyAmount != null
+          ? toDateString(
+              new Date(
+                dueDate.getTime() +
+                  penaltyGraceDaysFor(koshRow) * DAY_MS,
+              ),
+            )
+          : null;
 
-      const [memberships, existingRows, activeLoans] = await Promise.all([
-        db.query.koshMembership.findMany({
-          where: (m, { and: a, eq: q }) =>
-            a(q(m.koshId, input.koshId), q(m.status, "active")),
-          with: {
-            user: { columns: { id: true, name: true, image: true } },
-          },
-          columns: { userId: true, role: true },
-        }),
-        db
-          .select()
-          .from(contribution)
-          .where(
-            and(eq(contribution.koshId, input.koshId), eq(contribution.period, period)),
-          ),
-        db
-          .select({
-            id: loan.id,
-            borrowerId: loan.borrowerId,
-            amountRemaining: loan.amountRemaining,
-          })
-          .from(loan)
-          .where(
-            and(eq(loan.koshId, input.koshId), eq(loan.status, "active")),
-          ),
-      ]);
+      const [memberships, existingRows, activeLoans, priorRows] =
+        await Promise.all([
+          db.query.koshMembership.findMany({
+            where: (m, { and: a, eq: q }) =>
+              a(q(m.koshId, input.koshId), q(m.status, "active")),
+            with: {
+              user: { columns: { id: true, name: true, image: true } },
+            },
+            columns: { userId: true, role: true },
+          }),
+          db
+            .select()
+            .from(contribution)
+            .where(
+              and(
+                eq(contribution.koshId, input.koshId),
+                eq(contribution.period, period),
+              ),
+            ),
+          db
+            .select({
+              id: loan.id,
+              borrowerId: loan.borrowerId,
+              amountRemaining: loan.amountRemaining,
+            })
+            .from(loan)
+            .where(
+              and(eq(loan.koshId, input.koshId), eq(loan.status, "active")),
+            ),
+          db
+            .select()
+            .from(contribution)
+            .where(
+              and(
+                eq(contribution.koshId, input.koshId),
+                lt(contribution.period, period),
+              ),
+            ),
+        ]);
 
       const rowByMember = new Map(existingRows.map((r) => [r.memberId, r]));
       const loanByMember = new Map(
         activeLoans.filter((l) => l.borrowerId).map((l) => [l.borrowerId, l]),
       );
+
+      // Carried-over arrears from periods before the one being viewed: how much
+      // contribution and penalty the member still owes from earlier cycles.
+      // Kept as two distinct amounts so arrears stay auditable.
+      const priorByMember = new Map<
+        string,
+        { contribution: number; penalty: number }
+      >();
+      for (const r of priorRows) {
+        const owed = priorByMember.get(r.memberId) ?? {
+          contribution: 0,
+          penalty: 0,
+        };
+        owed.contribution += round2(
+          Math.max(0, parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount)),
+        );
+        owed.penalty += round2(
+          Math.max(0, parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid)),
+        );
+        priorByMember.set(r.memberId, owed);
+      }
 
       const members = memberships.map((m) => {
         const row = rowByMember.get(m.userId);
@@ -512,9 +582,7 @@ export const contributionRouter = router({
         const paid = row ? parseFloat(row.contributionAmount) : 0;
         const recordedLate = overdueDays > LATE_THRESHOLD_DAYS && paid < expected;
 
-        const showPenalty = row
-          ? true
-          : isPastDue && koshRow.latePenaltyAmount != null;
+        const showPenalty = row ? true : isPenaltyDue;
         const penaltyPrefill = row
           ? row.penaltyAssessed
           : showPenalty
@@ -522,6 +590,10 @@ export const contributionRouter = router({
             : null;
 
         const loanRow = loanByMember.get(m.userId);
+        const prior = priorByMember.get(m.userId) ?? {
+          contribution: 0,
+          penalty: 0,
+        };
 
         return {
           userId: m.userId,
@@ -539,8 +611,13 @@ export const contributionRouter = router({
                 status: row.status,
                 contributionAmount: row.contributionAmount,
                 penaltyPaid: row.penaltyPaid,
+                penaltyAssessed: row.penaltyAssessed,
               }
             : null,
+          arrears: {
+            contribution: String(prior.contribution),
+            penalty: String(prior.penalty),
+          },
         };
       });
 
@@ -552,12 +629,16 @@ export const contributionRouter = router({
           monthlyAmount: koshRow.monthlyAmount,
           dueDay: koshRow.dueDay,
           latePenaltyAmount: koshRow.latePenaltyAmount,
+          applyPenalty: koshRow.applyPenalty,
+          penaltyGraceDays: koshRow.penaltyGraceDays,
         },
         period: {
           value: period,
           label: periodLabel(period),
           dueDate: toDateString(dueDate),
           isPastDue,
+          isPenaltyDue,
+          penaltyDueDate,
         },
         defaultPeriod: defaultPeriodFor(koshRow.dueDay),
         recordedLateThresholdDays: LATE_THRESHOLD_DAYS,
@@ -621,7 +702,12 @@ export type ContributionMemberData = {
     status: string;
     contributionAmount: string;
     penaltyPaid: string;
+    penaltyAssessed: string;
   } | null;
+  arrears: {
+    contribution: string;
+    penalty: string;
+  };
 };
 
 export type ContributionPeriodData = {
@@ -632,12 +718,16 @@ export type ContributionPeriodData = {
     monthlyAmount: string;
     dueDay: number;
     latePenaltyAmount: string | null;
+    applyPenalty: boolean;
+    penaltyGraceDays: number | null;
   };
   period: {
     value: string;
     label: string;
     dueDate: string;
     isPastDue: boolean;
+    isPenaltyDue: boolean;
+    penaltyDueDate: string | null;
   };
   defaultPeriod: string;
   recordedLateThresholdDays: number;

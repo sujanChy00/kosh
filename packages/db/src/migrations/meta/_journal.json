@@ -57,6 +57,13 @@
       "when": 1789300937890,
       "tag": "0007_skinny_shockwave",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789390254437,
+      "tag": "0008_familiar_zuras",
+      "breakpoints": true
     }
   ]
 }
