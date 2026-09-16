@@ -4,7 +4,7 @@ import { contribution } from "@kosh-app/db/schema/contributions";
 import { kosh, koshMembership } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -29,6 +29,24 @@ export type KoshListItem = {
   memberCount: number;
   totalCollected: string;
   totalRemaining: string;
+};
+
+export type KoshDetail = Omit<KoshListItem, "joinedAt"> & {
+  joinedAt: string | null;
+  members: {
+    userId: string;
+    name: string | null;
+    image: string | null;
+    role: "adhyaksh" | "koshadhyaksh" | "sadasya";
+    joinedAt: string | null;
+  }[];
+  maxMembers: number | null;
+  loanCap: string;
+  memberInterestRate: string;
+  nonMemberInterestRate: string;
+  latePenaltyAmount: string | null;
+  applyPenalty: boolean;
+  penaltyGraceDays: number | null;
 };
 
 const createKoshSchema = z
@@ -225,6 +243,139 @@ export const koshRouter = router({
             ? `${last.kosh.createdAt.getTime()}|${last.kosh.id}`
             : null,
       };
+    }),
+
+  getById: protectedProcedure
+    .input(z.object({ koshId: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db
+        .select()
+        .from(koshMembership)
+        .where(
+          and(
+            eq(koshMembership.koshId, input.koshId),
+            eq(koshMembership.userId, userId),
+            eq(koshMembership.status, "active"),
+          ),
+        )
+        .limit(1);
+
+      if (!membership[0]) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "You are not a member of this kosh",
+        });
+      }
+
+      const role = membership[0].role;
+
+      const [koshRow] = await db
+        .select()
+        .from(kosh)
+        .where(eq(kosh.id, input.koshId))
+        .limit(1);
+
+      if (!koshRow) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Kosh not found",
+        });
+      }
+
+      const [memberCountRow] = await db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(koshMembership)
+        .where(
+          and(
+            eq(koshMembership.koshId, input.koshId),
+            eq(koshMembership.status, "active"),
+          ),
+        );
+
+      const [contribRow] = await db
+        .select({
+          collected: sql<string>`coalesce(sum(${contribution.contributionAmount}), 0) + coalesce(sum(${contribution.penaltyPaid}), 0)`,
+        })
+        .from(contribution)
+        .where(eq(contribution.koshId, input.koshId));
+
+      const [interestRow] = await db
+        .select({
+          interest: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
+        })
+        .from(loanRepayment)
+        .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+        .where(eq(loan.koshId, input.koshId));
+
+      const [loanRow] = await db
+        .select({
+          outstanding: sql<string>`coalesce(sum(${loan.amountRemaining}), 0)`,
+        })
+        .from(loan)
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            inArray(loan.status, ["active", "defaulted"]),
+          ),
+        );
+
+      const collected =
+        (parseFloat(contribRow?.collected ?? "0") || 0) +
+        (parseFloat(interestRow?.interest ?? "0") || 0);
+      const outstanding = parseFloat(loanRow?.outstanding ?? "0") || 0;
+
+      const members = await db
+        .select({
+          userId: koshMembership.userId,
+          name: user.name,
+          image: user.image,
+          role: koshMembership.role,
+          joinedAt: koshMembership.joinedAt,
+        })
+        .from(koshMembership)
+        .innerJoin(user, eq(koshMembership.userId, user.id))
+        .where(
+          and(
+            eq(koshMembership.koshId, input.koshId),
+            eq(koshMembership.status, "active"),
+          ),
+        )
+        .orderBy(koshMembership.joinedAt);
+
+      return {
+        id: koshRow.id,
+        name: koshRow.name,
+        description: koshRow.description,
+        iconUrl: koshRow.iconUrl,
+        monthlyAmount: koshRow.monthlyAmount,
+        currency: koshRow.currency,
+        dueDay: koshRow.dueDay,
+        latePenaltyAmount: koshRow.latePenaltyAmount,
+        applyPenalty: koshRow.applyPenalty,
+        penaltyGraceDays: koshRow.penaltyGraceDays,
+        startDate: koshRow.startDate,
+        endDate: koshRow.endDate,
+        role: role,
+        joinedAt: membership[0].joinedAt?.toISOString() ?? null,
+        memberCount: memberCountRow?.count ?? 0,
+        totalCollected: String(collected),
+        totalRemaining: String(collected - outstanding),
+        maxMembers: koshRow.maxMembers,
+        loanCap: koshRow.loanCap,
+        memberInterestRate: koshRow.memberInterestRate,
+        nonMemberInterestRate: koshRow.nonMemberInterestRate,
+        members: members.map((m) => ({
+          userId: m.userId,
+          name: m.name,
+          image: m.image,
+          role: m.role,
+          joinedAt: m.joinedAt?.toISOString() ?? null,
+        })),
+      } satisfies KoshDetail;
     }),
 
   create: protectedProcedure

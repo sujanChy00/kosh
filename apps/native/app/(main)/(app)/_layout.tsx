@@ -52,7 +52,7 @@ const AppLayout = () => {
       <Stack.Screen
         name="kosh/[id]"
         options={{
-          headerTitle: "Kosh",
+          headerShown: false,
         }}
       />
       <Stack.Screen

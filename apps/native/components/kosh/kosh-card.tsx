@@ -53,7 +53,7 @@ export const KoshCard = memo(({ kosh }: { kosh: KoshListItem }) => {
             <View className="flex-row items-center justify-between gap-3">
               <ThemedText className="text-muted-foreground">In Kosh</ThemedText>
               <ThemedText className="text-xl font-mono-semibold">
-                NPR {formatAmount(kosh.totalRemaining)}
+                रु {formatAmount(kosh.totalRemaining)}
               </ThemedText>
             </View>
             <View className="flex-row items-center justify-between gap-3">
@@ -61,7 +61,7 @@ export const KoshCard = memo(({ kosh }: { kosh: KoshListItem }) => {
                 Collected
               </ThemedText>
               <ThemedText className="text-base font-mono-regular text-muted-foreground">
-                NPR {formatAmount(kosh.totalCollected)}
+                रु {formatAmount(kosh.totalCollected)}
               </ThemedText>
             </View>
           </Card.Body>
@@ -71,7 +71,7 @@ export const KoshCard = memo(({ kosh }: { kosh: KoshListItem }) => {
               Monthly Contribution
             </ThemedText>
             <ThemedText className="font-mono-medium">
-              NPR {formatAmount(kosh.monthlyAmount)}
+              रु {formatAmount(kosh.monthlyAmount)}
             </ThemedText>
           </Card.Footer>
         </Card>
