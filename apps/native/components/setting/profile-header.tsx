@@ -1,5 +1,5 @@
 import { authClient } from "@/lib/auth-client";
-import CHEVRON_RIGHT from "@expo/material-symbols/chevron_right.xml";
+import VERIFIED_ICON from "@expo/material-symbols/verified.xml";
 import { Column, Spacer } from "@expo/ui";
 import { Box, Icon, Image, Row, Text } from "@expo/ui/jetpack-compose";
 import {
@@ -20,10 +20,11 @@ import { useCSSVariable } from "uniwind";
 export const ProfileHeader = () => {
   const { top } = useSafeAreaInsets();
   const router = useRouter();
-  const [mutedColor, surfaceSecondary] = useCSSVariable([
+  const [mutedColor, surfaceSecondary, successColor] = useCSSVariable([
     "--color-muted",
     "--color-surface-secondary",
-  ]) as [string, string];
+    "--color-success",
+  ]) as [string, string, string];
   const { data } = authClient.useSession();
   const user = data?.user;
   return (
@@ -76,7 +77,7 @@ export const ProfileHeader = () => {
         </Column>
       </Row>
       <Spacer size={10} />
-      <Icon size={18} source={CHEVRON_RIGHT} />
+      <Icon source={VERIFIED_ICON} tint={successColor} />
     </Row>
   );
 };

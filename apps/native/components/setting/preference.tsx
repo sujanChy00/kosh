@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { LanguageSelector } from "@/components/layout/language-selector";
-import { LoginBiometricEnabler } from "@/components/setting/biometric-enabler";
+import { LoginBiometricEnabler } from "@/components/setting/login-biometric-enabler";
 import { ThemeToggler } from "@/components/setting/theme-toggler";
 import { authClient } from "@/lib/auth-client";
 import { errorToast } from "@/utils/toast";

@@ -8,3 +8,7 @@ export const formatTime = (totalSeconds: number) => {
     .toString()
     .padStart(2, "0")}`;
 };
+export const formatAmount = (amount: string) =>
+  new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
+    Number(amount),
+  );
