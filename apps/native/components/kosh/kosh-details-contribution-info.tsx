@@ -9,13 +9,6 @@ export const KoshDetailsContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
   return (
     <View className="gap-y-3">
       <View className="flex-row items-center justify-between gap-3">
-        <ThemedText>Start date</ThemedText>
-        <ThemedText className="font-mono-medium">
-          {formatShortDate(new Date(kosh.startDate))}
-        </ThemedText>
-      </View>
-      <Separator />
-      <View className="flex-row items-center justify-between gap-3">
         <ThemedText>Monthly amount</ThemedText>
         <ThemedText className="font-mono-medium">
           रु {formatAmount(kosh.monthlyAmount)}
@@ -49,6 +42,27 @@ export const KoshDetailsContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
           </View>
         </>
       )}
+      <Separator />
+      <View className="flex-row items-center justify-between gap-3">
+        <ThemedText>Start date</ThemedText>
+        <ThemedText className="font-mono-medium">
+          {formatShortDate(new Date(kosh.startDate))}
+        </ThemedText>
+      </View>
+      <Separator />
+      <View className="flex-row items-center justify-between gap-3">
+        <ThemedText>End date</ThemedText>
+        <ThemedText className="font-mono-medium">
+          {formatShortDate(new Date(kosh.endDate))}
+        </ThemedText>
+      </View>
+      <Separator />
+      <View className="flex-row items-center justify-between gap-3">
+        <ThemedText>Duration</ThemedText>
+        <ThemedText className="font-mono-medium">
+          {kosh.durationMonths} months
+        </ThemedText>
+      </View>
     </View>
   );
 };

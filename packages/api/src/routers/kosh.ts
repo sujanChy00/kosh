@@ -41,6 +41,7 @@ export type KoshDetail = Omit<KoshListItem, "joinedAt"> & {
     joinedAt: string | null;
   }[];
   maxMembers: number | null;
+  durationMonths: number;
   loanCap: string;
   memberInterestRate: string;
   nonMemberInterestRate: string;
@@ -359,6 +360,7 @@ export const koshRouter = router({
         penaltyGraceDays: koshRow.penaltyGraceDays,
         startDate: koshRow.startDate,
         endDate: koshRow.endDate,
+        durationMonths: koshRow.durationMonths,
         role: role,
         joinedAt: membership[0].joinedAt?.toISOString() ?? null,
         memberCount: memberCountRow?.count ?? 0,
