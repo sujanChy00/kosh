@@ -5,7 +5,7 @@ import { TouchableOpacity, View } from "react-native";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
 
-export const KoshDetailsMembersList = ({ kosh }: { kosh: KoshDetail }) => {
+export const KoshMembersList = ({ kosh }: { kosh: KoshDetail }) => {
   return (
     <View className="gap-y-2">
       <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">

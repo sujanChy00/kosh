@@ -5,7 +5,7 @@ import { View } from "react-native";
 import { ThemedText } from "../themed-text";
 import { Separator } from "../ui/separator";
 
-export const KoshDetailsContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
+export const KoshContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
   return (
     <View className="gap-y-3">
       <View className="flex-row items-center justify-between gap-3">

@@ -56,6 +56,12 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
+        name="kosh/[id]/invite"
+        options={{
+          headerTitle: "Invite",
+        }}
+      />
+      <Stack.Screen
         name="join"
         options={{
           headerTitle: "Join kosh",

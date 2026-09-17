@@ -1,13 +1,15 @@
-import { KoshDetailsAmountInfo } from "@/components/kosh/kosh-details-amount-info";
-import { KoshDetailsContributionInfo } from "@/components/kosh/kosh-details-contribution-info";
+import { InviteButton } from "@/components/kosh/invite-button";
+import { KoshAmountInfo } from "@/components/kosh/kosh-amount-info";
+import { KoshContributionInfo } from "@/components/kosh/kosh-contribution-info";
 import { KoshDetailsHeader } from "@/components/kosh/kosh-details-header";
-import { KoshDetailsMembersList } from "@/components/kosh/kosh-details-membership-list";
 import { KoshLoanTerms } from "@/components/kosh/kosh-loan-terms";
+import { KoshMembersList } from "@/components/kosh/kosh-membership-list";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
+import { PrimaryButton } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { Link, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
 
 const KoshDetailScreen = () => {
@@ -45,12 +47,28 @@ const KoshDetailScreen = () => {
     >
       <View className="gap-y-6 px-4 pb-4 bg-primary pt-safe-offset-14">
         <KoshDetailsHeader kosh={koshData} />
-        <KoshDetailsAmountInfo kosh={koshData} />
+        <KoshAmountInfo kosh={koshData} />
       </View>
       <View className="gap-y-6 px-4">
-        <KoshDetailsContributionInfo kosh={koshData} />
-        <KoshDetailsMembersList kosh={koshData} />
+        <KoshContributionInfo kosh={koshData} />
+        <KoshMembersList kosh={koshData} />
         <KoshLoanTerms kosh={koshData} />
+      </View>
+      <View className="flex-row items-center w-full gap-3 px-4">
+        <InviteButton koshId={koshData.id} />
+        <Link
+          asChild
+          href={{
+            pathname: "/kosh/[id]/invite",
+            params: {
+              id: koshData.id,
+            },
+          }}
+        >
+          <PrimaryButton wrapperClassName="flex-1">
+            <PrimaryButton.Label>Record Contribution</PrimaryButton.Label>
+          </PrimaryButton>
+        </Link>
       </View>
     </ScrollView>
   );

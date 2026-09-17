@@ -29,3 +29,16 @@ export const formatLongDate = (date: Date) => {
 
   return `${weekday}, ${formattedDate.replace(",", "")}`;
 };
+
+export const formatRemainingDays = (date: Date) => {
+  const now = new Date();
+
+  const diff = date.getTime() - now.getTime();
+  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+
+  if (days <= 0) {
+    return "Expired";
+  }
+
+  return `${days} ${days === 1 ? "day" : "days"} left`;
+};

@@ -3,7 +3,7 @@ import { formatAmount } from "@kosh-app/utils";
 import { View } from "react-native";
 import { ThemedText } from "../themed-text";
 
-export const KoshDetailsAmountInfo = ({ kosh }: { kosh: KoshDetail }) => {
+export const KoshAmountInfo = ({ kosh }: { kosh: KoshDetail }) => {
   return (
     <View className="flex-row justify-end gap-3">
       <View className="gap-y-2">
