@@ -31,9 +31,14 @@ import { Host } from "../layout/host";
 interface Props {
   isVisible: boolean;
   setIsVisible: (visible: boolean) => void;
+  onConfirm: (value: string) => void;
 }
 
-export const KoshJoinDialog = ({ isVisible, setIsVisible }: Props) => {
+export const KoshJoinDialog = ({
+  isVisible,
+  setIsVisible,
+  onConfirm: onConfirmProp,
+}: Props) => {
   const { colors } = useAppTheme();
   const code = useNativeState("");
   const router = useRouter();
@@ -54,10 +59,7 @@ export const KoshJoinDialog = ({ isVisible, setIsVisible }: Props) => {
       });
       return;
     }
-    router.push({
-      pathname: "/join",
-      params: { token: code.value },
-    });
+    onConfirmProp(code.value);
     code.value = "";
     setIsVisible(false);
   }, [code, router]);
@@ -97,6 +99,7 @@ export const KoshJoinDialog = ({ isVisible, setIsVisible }: Props) => {
                 <Spacer modifiers={[height(24)]} />
                 <BasicTextField
                   autoFocus
+                  maxLength={10}
                   value={code}
                   onValueChange={handleValueChange}
                   modifiers={[

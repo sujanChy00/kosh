@@ -20,7 +20,7 @@ const Title = ({ className, ...props }: TextProps) => (
   />
 );
 const Description = ({ className, ...props }: TextProps) => (
-  <ThemedText className={cn("text-base text-muted", className)} {...props} />
+  <ThemedText className={cn("text-muted", className)} {...props} />
 );
 export const Card = Object.assign(Root, {
   Header,

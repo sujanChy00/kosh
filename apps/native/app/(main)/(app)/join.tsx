@@ -1,20 +1,19 @@
+import { JoiningKoshPreview } from "@/components/kosh-join/joining-kosh-preview";
+import { KoshInvitationCodeError } from "@/components/kosh-join/kosh-invitation-code-error";
+import { KoshJoinCodeInput } from "@/components/kosh-join/kosh-join-code-input";
+import { RequestedToJoin } from "@/components/kosh-join/requested-to-join";
+import { PendingComponent } from "@/components/layout/pending-component";
 import { ThemedText } from "@/components/themed-text";
-import { PrimaryButton } from "@/components/ui/button";
+import { OutlineButton, PrimaryButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TextInput } from "@/components/ui/text-input";
 import { useHaptics } from "@/hooks/use-haptics";
 import { errorToast, successToast } from "@/utils/toast";
 import { trpc } from "@/utils/trpc";
+import { formatAmount } from "@kosh-app/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { View } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
-
-const formatAmount = (amount: string) =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(
-    Number(amount),
-  );
+import { ActivityIndicator, View } from "react-native";
 
 const INVITE_STATUS_MESSAGES: Record<string, { title: string; body: string }> =
   {
@@ -56,6 +55,7 @@ const CenterCard = ({
 
 const JoinScreen = () => {
   const router = useRouter();
+  const [isVisible, setIsVisible] = useState(false);
   const haptics = useHaptics();
   const params = useLocalSearchParams<{ token?: string }>();
   const paramToken =
@@ -83,62 +83,41 @@ const JoinScreen = () => {
     trpc.invite.preview.queryOptions({ token }, { enabled: token.length > 0 }),
   );
 
-  const requestMutation = useMutation(
-    trpc.invite.requestJoin.mutationOptions({
-      onSuccess: () => {
-        haptics("success");
-        setRequested(true);
-        successToast({ title: "Join request sent" });
-      },
-      onError: (error) => {
-        haptics("error");
-        errorToast({
-          title: error.message || "Could not request to join",
-        });
-        previewQuery.refetch();
-      },
-    }),
-  );
+  c
 
   const preview = previewQuery.data;
   const inviteIssue = preview && INVITE_STATUS_MESSAGES[preview.inviteStatus];
 
-  if (!token)
+  if (!token) return <KoshJoinCodeInput />;
+
+  if (requested) return <RequestedToJoin />;
+
+  if (previewQuery.isLoading) return <PendingComponent />;
+
+  if (previewQuery.isError || !preview || !preview.kosh)
     return (
-      <>
-        <View className="px-4 pt-20 gap-y-10">
-          <View className="gap-y-1">
-            <ThemedText className="text-xl font-notosans-semibold capitalize">
-              Enter invitation code
-            </ThemedText>
-            <ThemedText className="text-muted-foreground">
-              Paste the invite code you got from the Adhyaksh of the kosh.
-            </ThemedText>
-          </View>
-          <TextInput placeholder="e.g. NEWK-XXXXXX" label="Invite code" />
-        </View>
-        <KeyboardStickyView
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            paddingHorizontal: 12,
-          }}
-          offset={{
-            closed: -20,
-            opened: -10,
-          }}
-        >
-          <PrimaryButton>
-            <PrimaryButton.Label>Join</PrimaryButton.Label>
-          </PrimaryButton>
-        </KeyboardStickyView>
-      </>
+      <KoshInvitationCodeError
+        onConfirm={(code) => {
+          setEnteredToken(code);
+          previewQuery.refetch();
+        }}
+        onRetry={() => previewQuery.refetch()}
+        message={
+          previewQuery.data?.inviteStatus === "not_found"
+            ? "This invite code doesn't look right."
+            : "Something went wrong loading this invite. Try again."
+        }
+      />
     );
 
-  return <View></View>;
-
+  return (
+    <JoiningKoshPreview
+      preview={preview}
+      token={token}
+      onRefetch={previewQuery.refetch}
+      onSuccess={() => setRequested(true)}
+    />
+  );
   // return (
   //   <ScrollView
   //     contentInsetAdjustmentBehavior="automatic"
@@ -241,57 +220,57 @@ const JoinScreen = () => {
   //         </PrimaryButton>
   //       </CenterCard>
   //     ) : (
-  //       <Card className="gap-3">
-  //         <Card.Body className="items-center gap-3 py-2">
-  //           <Card.Title className="text-center text-xl">
-  //             {preview.kosh.name}
-  //           </Card.Title>
-  //           {preview.kosh.description ? (
-  //             <Card.Description className="text-center text-sm">
-  //               {preview.kosh.description}
-  //             </Card.Description>
-  //           ) : null}
-  //           <View className="flex-row items-center gap-2">
-  //             <ThemedText className="text-sm text-muted">
-  //               NPR {formatAmount(preview.kosh.monthlyAmount)} / month
-  //             </ThemedText>
-  //             <View className="h-1 w-1 rounded-full bg-muted" />
-  //             <ThemedText className="text-sm text-muted">
-  //               {preview.kosh.memberCount}{" "}
-  //               {preview.kosh.memberCount === 1 ? "member" : "members"}
-  //             </ThemedText>
-  //           </View>
-  //           <ThemedText className="text-xs text-muted">
-  //             {preview.expiresAt
-  //               ? `Invite expires ${new Date(
-  //                   preview.expiresAt,
-  //                 ).toLocaleDateString(undefined, {
-  //                   day: "numeric",
-  //                   month: "short",
-  //                   year: "numeric",
-  //                 })}`
-  //               : "Invite"}{" "}
-  //             · {preview.useCount} used
-  //             {preview.maxUses ? ` of ${preview.maxUses}` : ""}
-  //           </ThemedText>
-  //         </Card.Body>
-  //         <Card.Footer className="gap-2">
-  //           <PrimaryButton
-  //             onPress={() => requestMutation.mutate({ token })}
-  //             disabled={requestMutation.isPending}
-  //           >
-  //             {requestMutation.isPending ? (
-  //               <ActivityIndicator color="#fff" />
-  //             ) : null}
-  //             <PrimaryButton.Label>
-  //               {requestMutation.isPending ? "Sending…" : "Join this kosh"}
-  //             </PrimaryButton.Label>
-  //           </PrimaryButton>
-  //           <OutlineButton onPress={() => router.replace("/")}>
-  //             <OutlineButton.Label>Not now</OutlineButton.Label>
-  //           </OutlineButton>
-  //         </Card.Footer>
-  //       </Card>
+  // <Card className="gap-3">
+  //   <Card.Body className="items-center gap-3 py-2">
+  //     <Card.Title className="text-center text-xl">
+  //       {preview.kosh.name}
+  //     </Card.Title>
+  //     {preview.kosh.description ? (
+  //       <Card.Description className="text-center text-sm">
+  //         {preview.kosh.description}
+  //       </Card.Description>
+  //     ) : null}
+  //     <View className="flex-row items-center gap-2">
+  //       <ThemedText className="text-sm text-muted">
+  //         NPR {formatAmount(preview.kosh.monthlyAmount)} / month
+  //       </ThemedText>
+  //       <View className="h-1 w-1 rounded-full bg-muted" />
+  //       <ThemedText className="text-sm text-muted">
+  //         {preview.kosh.memberCount}{" "}
+  //         {preview.kosh.memberCount === 1 ? "member" : "members"}
+  //       </ThemedText>
+  //     </View>
+  //     <ThemedText className="text-xs text-muted">
+  //       {preview.expiresAt
+  //         ? `Invite expires ${new Date(
+  //             preview.expiresAt,
+  //           ).toLocaleDateString(undefined, {
+  //             day: "numeric",
+  //             month: "short",
+  //             year: "numeric",
+  //           })}`
+  //         : "Invite"}{" "}
+  //       · {preview.useCount} used
+  //       {preview.maxUses ? ` of ${preview.maxUses}` : ""}
+  //     </ThemedText>
+  //   </Card.Body>
+  //   <Card.Footer className="gap-2">
+  //     <PrimaryButton
+  //       onPress={() => requestMutation.mutate({ token })}
+  //       disabled={requestMutation.isPending}
+  //     >
+  //       {requestMutation.isPending ? (
+  //         <ActivityIndicator color="#fff" />
+  //       ) : null}
+  //       <PrimaryButton.Label>
+  //         {requestMutation.isPending ? "Sending…" : "Join this kosh"}
+  //       </PrimaryButton.Label>
+  //     </PrimaryButton>
+  //     <OutlineButton onPress={() => router.replace("/")}>
+  //       <OutlineButton.Label>Not now</OutlineButton.Label>
+  //     </OutlineButton>
+  //   </Card.Footer>
+  // </Card>
   //     )}
   //   </ScrollView>
   // );

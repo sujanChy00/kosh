@@ -10,7 +10,16 @@ export const KoshEmptyComponent = memo(() => {
   const [isVisible, setIsVisible] = useState(false);
   return (
     <>
-      <KoshJoinDialog isVisible={isVisible} setIsVisible={setIsVisible} />
+      <KoshJoinDialog
+        isVisible={isVisible}
+        setIsVisible={setIsVisible}
+        onConfirm={(token) => {
+          router.push({
+            pathname: "/join",
+            params: { token },
+          });
+        }}
+      />
       <View className="flex-1 items-center justify-center gap-4 p-6">
         <View className="gap-y-0.5">
           <ThemedText className="text-center text-muted text-base">

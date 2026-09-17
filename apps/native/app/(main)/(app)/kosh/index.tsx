@@ -13,7 +13,16 @@ const KoshScreen = () => {
 
   return (
     <View className="flex-1">
-      <KoshJoinDialog isVisible={isVisible} setIsVisible={setIsVisible} />
+      <KoshJoinDialog
+        isVisible={isVisible}
+        setIsVisible={setIsVisible}
+        onConfirm={(token) => {
+          router.push({
+            pathname: "/join",
+            params: { token },
+          });
+        }}
+      />
       <Stack.Title>My Kosh</Stack.Title>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
