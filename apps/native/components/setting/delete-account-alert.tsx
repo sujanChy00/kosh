@@ -139,6 +139,7 @@ export const DeleteAccountAlert = () => {
               <Text
                 textStyle={{
                   fontSize: 14,
+                  fontFamily: "notosans-regular",
                 }}
               >
                 This action is irreversible. Your account and all associated

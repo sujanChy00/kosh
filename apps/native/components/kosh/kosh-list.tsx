@@ -44,7 +44,6 @@ export const KoshList = () => {
     [],
   );
   const keyExtractor = useCallback(({ id }: KoshListItem) => id.toString(), []);
-  const ListEmptyComponent = useCallback(() => <KoshEmptyComponent />, []);
   const ListFooterComponent = useCallback(
     () => (
       <ListFetchingMoreComponent
@@ -65,6 +64,8 @@ export const KoshList = () => {
       />
     );
 
+  if (koshList.length === 0) return <KoshEmptyComponent />;
+
   return (
     <LegendList
       maintainVisibleContentPosition
@@ -81,7 +82,6 @@ export const KoshList = () => {
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       ListFooterComponent={ListFooterComponent}
-      ListEmptyComponent={ListEmptyComponent}
       experimental_adaptiveRender={{
         enterVelocity: 6,
         exitVelocity: 3,

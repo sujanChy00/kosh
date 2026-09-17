@@ -1,5 +1,4 @@
-import { InviteButton } from "@/components/kosh/invite-button";
-import { KoshAmountInfo } from "@/components/kosh/kosh-amount-info";
+import { AnimatedView } from "@/components/animated-view";
 import { KoshContributionInfo } from "@/components/kosh/kosh-contribution-info";
 import { KoshDetailsHeader } from "@/components/kosh/kosh-details-header";
 import { KoshLoanTerms } from "@/components/kosh/kosh-loan-terms";
@@ -7,12 +6,16 @@ import { KoshMembersList } from "@/components/kosh/kosh-membership-list";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
 import { PrimaryButton } from "@/components/ui/button";
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocalSearchParams } from "expo-router";
 import { ScrollView, View } from "react-native";
+import { SlideInDown } from "react-native-reanimated";
 
 const KoshDetailScreen = () => {
+  const { colors } = useAppTheme();
+
   const params = useLocalSearchParams<{
     id: string;
   }>();
@@ -40,22 +43,23 @@ const KoshDetailScreen = () => {
     );
 
   return (
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentInsetAdjustmentBehavior="automatic"
-      contentContainerClassName="gap-y-6 pb-safe-offset-6"
-    >
-      <View className="gap-y-6 px-4 pb-4 bg-primary pt-safe-offset-14">
+    <View className="flex-1">
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerClassName="gap-y-6 pb-safe-offset-36"
+      >
         <KoshDetailsHeader kosh={koshData} />
-        <KoshAmountInfo kosh={koshData} />
-      </View>
-      <View className="gap-y-6 px-4">
-        <KoshContributionInfo kosh={koshData} />
-        <KoshMembersList kosh={koshData} />
-        <KoshLoanTerms kosh={koshData} />
-      </View>
-      <View className="flex-row items-center w-full gap-3 px-4">
-        <InviteButton koshId={koshData.id} />
+        <View className="gap-y-6 px-4">
+          <KoshLoanTerms kosh={koshData} />
+          <KoshContributionInfo kosh={koshData} />
+          <KoshMembersList kosh={koshData} />
+        </View>
+      </ScrollView>
+      <AnimatedView
+        className="absolute bottom-0 p-3 pb-safe-offset-6 w-full gap-y-2"
+        entering={SlideInDown.duration(400)}
+      >
         <Link
           asChild
           href={{
@@ -69,8 +73,8 @@ const KoshDetailScreen = () => {
             <PrimaryButton.Label>Record Contribution</PrimaryButton.Label>
           </PrimaryButton>
         </Link>
-      </View>
-    </ScrollView>
+      </AnimatedView>
+    </View>
   );
 };
 

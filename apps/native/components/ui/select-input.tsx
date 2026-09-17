@@ -2,11 +2,11 @@ import { ScrollView, Text } from "@expo/ui";
 import {
   BasicAlertDialog,
   Box,
+  Button,
   Column,
   DropdownMenuItem,
   ExposedDropdownMenu,
   ExposedDropdownMenuBox,
-  FilledTonalButton,
   HorizontalDivider,
   OutlinedTextField,
   RadioButton,
@@ -194,14 +194,14 @@ export const SelectInput = ({
                   <TextButton onClick={() => setExpanded(false)}>
                     <Text>Cancel</Text>
                   </TextButton>
-                  <FilledTonalButton
+                  <Button
                     onClick={() => {
                       selectedValue.value = selectInputValue;
                       handleOptionPress({ value: selectInputValue });
                     }}
                   >
                     <Text>Confirm</Text>
-                  </FilledTonalButton>
+                  </Button>
                 </Row>
               </Column>
             </Surface>

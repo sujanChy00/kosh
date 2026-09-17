@@ -7,7 +7,7 @@ import { Separator } from "../ui/separator";
 
 export const KoshContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
   return (
-    <View className="gap-y-3">
+    <View className="gap-y-3 bg-surface p-4 rounded-xl">
       <View className="flex-row items-center justify-between gap-3">
         <ThemedText>Monthly amount</ThemedText>
         <ThemedText className="font-mono-medium">

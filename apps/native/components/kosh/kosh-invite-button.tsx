@@ -3,10 +3,11 @@ import { errorToast, successToast } from "@/utils/toast";
 import { trpc } from "@/utils/trpc";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { ActivityIndicator } from "react-native";
-import { OutlineButton } from "../ui/button";
+import { ActivityIndicator, Pressable } from "react-native";
+import { StyledSymbolView } from "../styled-symbol-view";
+import { ThemedText } from "../themed-text";
 
-export const InviteButton = ({ koshId }: { koshId: string }) => {
+export const KoshInviteButton = ({ koshId }: { koshId: string }) => {
   const router = useRouter();
   const haptics = useHaptics();
   const mutation = useMutation(
@@ -39,11 +40,23 @@ export const InviteButton = ({ koshId }: { koshId: string }) => {
   };
 
   return (
-    <OutlineButton onPress={createInvite}>
-      {mutation.isPending && (
-        <ActivityIndicator colorClassName="accent-primary-foreground" />
+    <Pressable
+      hitSlop={10}
+      onPress={createInvite}
+      className="flex-row items-center gap-1"
+    >
+      <ThemedText className="text-sky-200">Invite</ThemedText>
+      {mutation.isPending ? (
+        <ActivityIndicator colorClassName="accent-sky-200" />
+      ) : (
+        <StyledSymbolView
+          tintColorClassName="accent-sky-200"
+          size={20}
+          name={{
+            android: "group_add",
+          }}
+        />
       )}
-      <OutlineButton.Label>Invite</OutlineButton.Label>
-    </OutlineButton>
+    </Pressable>
   );
 };
