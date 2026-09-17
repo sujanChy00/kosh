@@ -4,14 +4,14 @@ import { Card } from "@/components/ui/card";
 import { useHaptics } from "@/hooks/use-haptics";
 import { errorToast, successToast } from "@/utils/toast";
 import { trpc } from "@/utils/trpc";
-import type { KoshListItem } from "@kosh-app/api/routers/kosh";
+import type { InvitePreview } from "@kosh-app/api/routers/invite";
 import { formatAmount } from "@kosh-app/utils";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
 interface JoiningKoshPreviewProps {
-  preview: KoshListItem;
+  preview: InvitePreview;
   token: string;
   onRefetch: () => void;
   onSuccess: () => void;
@@ -42,6 +42,9 @@ export const JoiningKoshPreview = ({
       },
     }),
   );
+
+  if (!preview.kosh) return null;
+
   return (
     <View className="p-4 flex-1 justify-center">
       <Card className="gap-3">

@@ -8,12 +8,16 @@ interface KoshInvitationCodeErrorProps {
   onConfirm: (token: string) => void;
   onRetry: () => void;
   message: string;
+  title: string;
+  cancelButtonText?: string;
 }
 
 export const KoshInvitationCodeError = ({
   onConfirm,
   onRetry,
   message,
+  title,
+  cancelButtonText = "Ok",
 }: KoshInvitationCodeErrorProps) => {
   const [isVisible, setIsVisible] = useState(false);
   return (
@@ -23,11 +27,11 @@ export const KoshInvitationCodeError = ({
         setIsVisible={setIsVisible}
         onConfirm={onConfirm}
       />
-      <View className="p-4 flex-1 justify-center gap-y-6">
+      <View className="p-4 flex-1 justify-center">
         <Card className={"gap-y-6"}>
           <Card.Header className="gap-y-1">
             <Card.Title className="text-2xl text-center font-notosans-semibold">
-              Could not load invite
+              {title}
             </Card.Title>
             <Card.Description className="text-muted text-sm text-center">
               {message}
@@ -35,7 +39,7 @@ export const KoshInvitationCodeError = ({
           </Card.Header>
           <Card.Footer className={"gap-y-2"}>
             <PrimaryButton onPress={onRetry}>
-              <PrimaryButton.Label>Try again</PrimaryButton.Label>
+              <PrimaryButton.Label>{cancelButtonText}</PrimaryButton.Label>
             </PrimaryButton>
             <OutlineButton
               onPress={() => {

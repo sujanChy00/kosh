@@ -12,6 +12,23 @@ import { protectedProcedure, router } from "../index";
 const koshIdSchema = z.string().uuid();
 const tokenSchema = z.string().trim().toUpperCase().min(1).max(20);
 
+export type InvitePreview = {
+  inviteStatus: "active" | "expired" | "revoked" | "not_found";
+  expiresAt: string | null;
+  maxUses: number | null;
+  useCount: number;
+  kosh: {
+    id: string;
+    name: string;
+    description: string | null;
+    iconUrl: string | null;
+    monthlyAmount: string;
+    maxMembers: number | null;
+    memberCount: number;
+  } | null;
+  yourMembership: string;
+};
+
 // Ambiguity-free alphabet for shareable invite codes (no 0/O, 1/I, L).
 const TOKEN_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 
