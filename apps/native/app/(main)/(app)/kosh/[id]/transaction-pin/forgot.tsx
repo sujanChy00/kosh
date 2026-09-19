@@ -1,8 +1,9 @@
 import { TransactionPinPasswordDialog } from "@/components/kosh/transaction-pin/transaction-pin-password-dialog";
 import { ThemedText } from "@/components/themed-text";
 import { AnimatedSpacer } from "@/components/ui/animated-spacer";
-import { GhostButton, PrimaryButton } from "@/components/ui/button";
+import { PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { useAppTheme } from "@/contexts/app-theme-context";
 import {
   FORGOT_TRANSACTION_PIN_FORM_VALUES,
   forgotTransactionPinSchema,
@@ -17,9 +18,11 @@ import { useCountdown } from "@kosh-app/utils/hooks/use-count-down";
 import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 const ForgotTransactionPinScreen = () => {
+  const { colors } = useAppTheme();
   const router = useRouter();
   const haptics = useHaptics();
   const params = useLocalSearchParams<{ id: string; email?: string }>();
@@ -60,6 +63,7 @@ const ForgotTransactionPinScreen = () => {
     const resetMutation = useMutation(
       trpc.kosh.resetTransactionPin.mutationOptions({
         onSuccess: () => {
+          setPasswordVisible(false);
           haptics("success");
           successToast({ title: "Transaction PIN reset" });
           queryClient.invalidateQueries({
@@ -108,9 +112,8 @@ const ForgotTransactionPinScreen = () => {
       />
 
       <ScrollView
-        contentContainerClassName="p-4 pt-safe-offset-20 gap-y-10"
+        contentContainerClassName="px-4 pt-safe-offset-20 gap-y-10"
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
       >
         <View className="gap-y-3">
           <ThemedText className="text-2xl font-mono-semibold">
@@ -188,25 +191,35 @@ const ForgotTransactionPinScreen = () => {
             )}
           />
         </View>
-
-        <View className="gap-y-3">
-          <GhostButton
-            onPress={handleResend}
-            disabled={resendMutation.isPending}
-          >
-            <GhostButton.Label className="font-mono-medium uppercase">
-              RESEND
-            </GhostButton.Label>
-            {resendMutation.isPending && (
-              <ActivityIndicator colorClassName="accent-primary" />
-            )}
-          </GhostButton>
-          <form.SubmitButton>
-            <PrimaryButton.Label>Confirm Pin</PrimaryButton.Label>
-          </form.SubmitButton>
-        </View>
-        <AnimatedSpacer height={100} />
+        <AnimatedSpacer height={400} />
       </ScrollView>
+      <KeyboardStickyView
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 12,
+          backgroundColor: colors.background,
+        }}
+        offset={{
+          closed: -20,
+          opened: -10,
+        }}
+      >
+        <TouchableOpacity
+          className="py-3"
+          onPress={handleResend}
+          disabled={resendMutation.isPending}
+        >
+          <ThemedText className="text-center uppercase">
+            {resendMutation.isPending ? "Resending..." : "RESEND"}
+          </ThemedText>
+        </TouchableOpacity>
+        <form.SubmitButton disabled={resendMutation.isPending}>
+          <PrimaryButton.Label>Confirm Pin</PrimaryButton.Label>
+        </form.SubmitButton>
+      </KeyboardStickyView>
     </form.AppForm>
   );
 };

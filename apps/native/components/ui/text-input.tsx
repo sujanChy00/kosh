@@ -99,7 +99,13 @@ export const TextInput = forwardRef<TextFieldRef, TextInputProps>(
           )}
           {placeholder && (
             <OutlinedTextField.Placeholder>
-              <Text {...placeholderProps}>{placeholder}</Text>
+              <Text
+                modifiers={[fillMaxWidth()]}
+
+                {...placeholderProps}
+              >
+                {placeholder}
+              </Text>
             </OutlinedTextField.Placeholder>
           )}
           {suffix && (

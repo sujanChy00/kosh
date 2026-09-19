@@ -122,9 +122,19 @@ export const VerifyEmailForm = () => {
               autoFocus
               value={token}
               onChangeText={setToken}
+              placeholderProps={{
+                textStyle: {
+                  textAlign: "center",
+                  fontFamily: "mono-regular",
+                },
+              }}
               maxLength={6}
               keyboardOptions={{
                 keyboardType: "number",
+              }}
+              placeholder="000000"
+              textStyle={{
+                textAlign: "center",
               }}
             />
           </Field>

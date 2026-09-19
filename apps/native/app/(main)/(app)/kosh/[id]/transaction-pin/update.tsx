@@ -10,20 +10,11 @@ import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient, trpc } from "@/utils/trpc";
-import { Icon } from "@expo/ui";
 import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
-const VISIBLITY_ON = Icon.select({
-  ios: "eye",
-  android: require("@expo/material-symbols/visibility.xml"),
-});
-const VISIBLITY_OFF = Icon.select({
-  ios: "eye.slash",
-  android: require("@expo/material-symbols/visibility_off.xml"),
-});
 
 const UpdateTransactionPinScreen = () => {
   const haptics = useHaptics();
@@ -56,6 +47,7 @@ const UpdateTransactionPinScreen = () => {
         onSuccess: () => {
           haptics("success");
           successToast({ title: "Transaction PIN updated" });
+          setIsVisible(false);
           queryClient.invalidateQueries({
             queryKey: trpc.kosh.getById.queryKey({ koshId }),
           });
@@ -93,7 +85,9 @@ const UpdateTransactionPinScreen = () => {
         },
         onError: (error) => {
           haptics("error");
-          errorToast({ title: error.message || "Failed to send the reset code" });
+          errorToast({
+            title: error.message || "Failed to send the reset code",
+          });
         },
       }),
     );
@@ -114,7 +108,7 @@ const UpdateTransactionPinScreen = () => {
         setIsVisible={setIsVisible}
       />
       <ScrollView
-        contentContainerClassName="p-4 pt-safe-offset-20 gap-y-10"
+        contentContainerClassName="px-4 pt-safe-offset-20 gap-y-10"
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
@@ -184,7 +178,7 @@ const UpdateTransactionPinScreen = () => {
             {forgotMutation.isPending ? "Sending…" : "Forgot Pin?"}
           </ThemedText>
         </TouchableOpacity>
-        <form.SubmitButton>
+        <form.SubmitButton disabled={forgotMutation.isPending}>
           <ThemedText className="text-primary-foreground">
             {updateMutation.isPending ? "Submitting…" : "Submit"}
           </ThemedText>
