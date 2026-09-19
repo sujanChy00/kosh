@@ -188,7 +188,7 @@ const UpdateTransactionPinScreen = () => {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
-        <ThemedText className="text-2xl font-notosans-semibold">
+        <ThemedText className="text-2xl font-mono-semibold">
           Update Transaction Pin
         </ThemedText>
         <View className="gap-y-6">
