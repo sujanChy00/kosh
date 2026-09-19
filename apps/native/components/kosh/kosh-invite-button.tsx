@@ -51,9 +51,9 @@ export const KoshInviteButton = ({ koshId }: { koshId: string }) => {
       ) : (
         <StyledSymbolView
           tintColorClassName="accent-sky-200"
-          size={20}
+          size={18}
           name={{
-            android: "group_add",
+            android: "person_add",
           }}
         />
       )}

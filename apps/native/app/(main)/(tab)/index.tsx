@@ -34,7 +34,7 @@ export default function Home() {
           console.log(v);
         }}
       />
-      <Link asChild href="/join">
+      <Link asChild href="/kosh/join">
         <Button title="Join" />
       </Link>
     </ScrollView>

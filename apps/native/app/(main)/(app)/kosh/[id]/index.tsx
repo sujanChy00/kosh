@@ -5,6 +5,7 @@ import { KoshLoanTerms } from "@/components/kosh/kosh-loan-terms";
 import { KoshMembersList } from "@/components/kosh/kosh-membership-list";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
+import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { PrimaryButton } from "@/components/ui/button";
 import { useAppTheme } from "@/contexts/app-theme-context";
 import { trpc } from "@/utils/trpc";
@@ -70,6 +71,13 @@ const KoshDetailScreen = () => {
           }}
         >
           <PrimaryButton wrapperClassName="flex-1">
+            <StyledSymbolView
+              size={22}
+              tintColorClassName="accent-primary-foreground"
+              name={{
+                android: "radio_button_checked",
+              }}
+            />
             <PrimaryButton.Label>Record Contribution</PrimaryButton.Label>
           </PrimaryButton>
         </Link>

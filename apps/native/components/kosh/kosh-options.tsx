@@ -4,6 +4,7 @@ import { trpc } from "@/utils/trpc";
 import DELETE_ICON from "@expo/material-symbols/delete.xml";
 import EDIT_ICON from "@expo/material-symbols/edit.xml";
 import INVITE_ICON from "@expo/material-symbols/group_add.xml";
+import JOIN_REQUEST_ICON from "@expo/material-symbols/how_to_reg.xml";
 import { MenuView } from "@expo/ui/community/menu";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -51,6 +52,11 @@ export const KoshOptions = ({ koshId }: { koshId: string }) => {
         image: INVITE_ICON,
       },
       {
+        title: "Join request",
+        id: "join-request",
+        image: JOIN_REQUEST_ICON,
+      },
+      {
         title: "Delete",
         id: "delete",
         image: DELETE_ICON,
@@ -72,6 +78,15 @@ export const KoshOptions = ({ koshId }: { koshId: string }) => {
         break;
       case "invite":
         mutate({ koshId });
+        break;
+
+      case "join-request":
+        router.push({
+          pathname: "/kosh/[id]/join-request",
+          params: {
+            id: koshId,
+          },
+        });
         break;
     }
   }, []);

@@ -18,7 +18,7 @@ const KoshScreen = () => {
         setIsVisible={setIsVisible}
         onConfirm={(token) => {
           router.push({
-            pathname: "/join",
+            pathname: "/kosh/join",
             params: { token },
           });
         }}

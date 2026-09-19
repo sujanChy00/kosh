@@ -5,6 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { ErrorComponent } from "../layout/error-component";
 import { ListFetchingMoreComponent } from "../layout/list-fetching-more-component";
+import { ListSeparatorComponent } from "../layout/list-separator-component";
 import { PendingComponent } from "../layout/pending-component";
 import { KoshCard } from "./kosh-card";
 import { KoshEmptyComponent } from "./kosh-empty-component";
@@ -44,6 +45,7 @@ export const KoshList = () => {
     [],
   );
   const keyExtractor = useCallback(({ id }: KoshListItem) => id.toString(), []);
+  const ListSeparator = useCallback(() => <ListSeparatorComponent />, []);
   const ListFooterComponent = useCallback(
     () => (
       <ListFetchingMoreComponent
@@ -76,6 +78,7 @@ export const KoshList = () => {
       onEndReached={loadMore}
       refreshing={isRefetching}
       onRefresh={refetch}
+      ItemSeparatorComponent={ListSeparator}
       estimatedItemSize={239.625}
       showsVerticalScrollIndicator={false}
       recycleItems
