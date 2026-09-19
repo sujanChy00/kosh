@@ -40,7 +40,7 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
             <KoshOptions koshId={kosh.id} role={kosh.role} />
           </View>
           {kosh.description && (
-            <ThemedText className="text-gray-300-foreground text-xs">
+            <ThemedText className="text-gray-300 text-xs">
               {kosh.description}
             </ThemedText>
           )}

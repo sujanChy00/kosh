@@ -1,7 +1,7 @@
 import { db } from "@kosh-app/db";
 import { user } from "@kosh-app/db/schema/auth";
 import { contribution } from "@kosh-app/db/schema/contributions";
-import { kosh, koshMembership } from "@kosh-app/db/schema/kosh";
+import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
@@ -107,6 +107,61 @@ function addMonths(date: Date, months: number) {
   result.setDate(Math.min(day, lastDay));
   return result;
 }
+
+/** Full months between the kosh start date and today, inclusive of both
+ * endpoints. Used to keep the duration from being shrunk past periods that
+ * have already started. */
+function elapsedMonthsSince(startDate: string, now = new Date()) {
+  const [year, month] = startDate.split("-").map(Number);
+  const start = new Date(year, month - 1, 1);
+  const current = new Date(now.getFullYear(), now.getMonth(), 1);
+  return (
+    (current.getFullYear() - start.getFullYear()) * 12 +
+    (current.getMonth() - start.getMonth()) +
+    1
+  );
+}
+
+/** The list of contribution periods (`YYYY-MM-01`) that have already started,
+ * from the kosh's start month through the current month, capped at the kosh's
+ * end date. */
+function startedPeriods(
+  startDate: string,
+  endDate: string,
+  now = new Date(),
+) {
+  const [startYear, startMonth] = startDate.split("-").map(Number);
+  const [endYear, endMonth] = endDate.split("-").map(Number);
+  const start = new Date(startYear, startMonth - 1, 1);
+  const end = new Date(endYear, endMonth - 1, 1);
+  const current = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = current < end ? current : end;
+
+  const periods: string[] = [];
+  for (let d = start; d <= last; d = addMonths(d, 1)) {
+    periods.push(toDateString(d));
+  }
+  return periods;
+}
+
+const updateKoshSchema = z.object({
+  koshId: z.string().uuid(),
+  name: z.string().trim().min(1, "Name is required").max(80),
+  description: z.string().trim().max(500).optional(),
+  iconUrl: z.string().max(500).optional(),
+  monthlyAmount: z.number().positive().max(9_999_999_999),
+  dueDay: z.number().int().min(1).max(28),
+  memberInterestRate: z.number().min(0).max(100),
+  nonMemberInterestRate: z.number().min(0).max(100),
+  loanCap: z.number().positive().max(9_999_999_999),
+  latePenaltyAmount: z.number().positive().optional(),
+  applyPenalty: z.boolean().optional(),
+  penaltyGraceDays: z.number().int().min(0).max(15).optional(),
+  durationMonths: z.number().int().min(1).max(120),
+  maxMembers: z.number().int().min(1).optional(),
+});
+
+export type UpdateKoshInput = z.infer<typeof updateKoshSchema>;
 
 export const koshRouter = router({
   /** The kosh the current user is an active member of, newest first. */
@@ -406,7 +461,7 @@ export const koshRouter = router({
               nonMemberInterestRate: String(input.nonMemberInterestRate),
               loanCap: String(input.loanCap),
               latePenaltyAmount:
-                input.latePenaltyAmount != null
+                input.applyPenalty && input.latePenaltyAmount != null
                   ? String(input.latePenaltyAmount)
                   : null,
               applyPenalty: input.applyPenalty ?? false,
@@ -448,6 +503,174 @@ export const koshRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to create kosh",
+          cause: error,
+        });
+      }
+    }),
+
+  update: protectedProcedure
+    .input(updateKoshSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and, eq: q }) =>
+          and(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+        columns: { role: true },
+      });
+
+      if (membership?.role !== "adhyaksh" && membership?.role !== "koshadhyaksh") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only an adhyaksh or koshadhyaksh can update the kosh",
+        });
+      }
+
+      const [current] = await db
+        .select({
+          startDate: kosh.startDate,
+          endDate: kosh.endDate,
+          dueDay: kosh.dueDay,
+          monthlyAmount: kosh.monthlyAmount,
+          applyPenalty: kosh.applyPenalty,
+          latePenaltyAmount: kosh.latePenaltyAmount,
+          penaltyGraceDays: kosh.penaltyGraceDays,
+        })
+        .from(kosh)
+        .where(eq(kosh.id, input.koshId))
+        .limit(1);
+
+      if (!current) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Kosh not found" });
+      }
+
+      const startDate = new Date(`${current.startDate}T00:00:00`);
+      const endDate = toDateString(addMonths(startDate, input.durationMonths));
+
+      // Guard 1: duration can be extended freely but never reduced below how
+      // many periods have already started (start month through the current
+      // month, inclusive).
+      const elapsedMonths = elapsedMonthsSince(current.startDate);
+      if (input.durationMonths < elapsedMonths) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Duration cannot be reduced below ${elapsedMonths} month${
+            elapsedMonths === 1 ? "" : "s"
+          } (the kosh is already ${elapsedMonths} period${
+            elapsedMonths === 1 ? "" : "s"
+          } in)`,
+        });
+      }
+
+      // Guard 2: max members can go either way but never below the current
+      // active member count.
+      const [activeMemberRow] = await db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(koshMembership)
+        .where(
+          and(
+            eq(koshMembership.koshId, input.koshId),
+            eq(koshMembership.status, "active"),
+          ),
+        );
+      const activeMemberCount = activeMemberRow?.count ?? 0;
+      if (input.maxMembers != null && input.maxMembers < activeMemberCount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Maximum members cannot be set below the current member count (${activeMemberCount})`,
+        });
+      }
+
+      // Freeze the config for periods that have already started. If any
+      // contribution-affecting setting (due day, monthly amount, penalty
+      // rules) is changing, snapshot the OLD values for every started period
+      // that isn't frozen yet — history and the in-progress month keep the old
+      // rules; the new values apply only to periods that haven't begun. The
+      // unique (koshId, period) constraint makes repeated edits idempotent.
+      const newPeriodConfig = {
+        dueDay: input.dueDay,
+        monthlyAmount: String(input.monthlyAmount),
+        applyPenalty: input.applyPenalty ?? false,
+        latePenaltyAmount:
+          input.applyPenalty && input.latePenaltyAmount != null
+            ? String(input.latePenaltyAmount)
+            : null,
+        penaltyGraceDays: input.applyPenalty
+          ? input.penaltyGraceDays ?? null
+          : null,
+      };
+      const configChanged =
+        newPeriodConfig.dueDay !== current.dueDay ||
+        parseFloat(newPeriodConfig.monthlyAmount) !==
+          parseFloat(current.monthlyAmount) ||
+        newPeriodConfig.applyPenalty !== current.applyPenalty ||
+        newPeriodConfig.latePenaltyAmount !== current.latePenaltyAmount ||
+        newPeriodConfig.penaltyGraceDays !== current.penaltyGraceDays;
+
+      if (configChanged) {
+        const periods = startedPeriods(
+          current.startDate,
+          current.endDate,
+        );
+        if (periods.length > 0) {
+          await db
+            .insert(koshPeriod)
+            .values(
+              periods.map((period) => ({
+                koshId: input.koshId,
+                period,
+                dueDay: current.dueDay,
+                monthlyAmount: current.monthlyAmount,
+                applyPenalty: current.applyPenalty,
+                latePenaltyAmount: current.latePenaltyAmount,
+                penaltyGraceDays: current.penaltyGraceDays,
+              })),
+            )
+            .onConflictDoNothing();
+        }
+      }
+
+      try {
+        const [updated] = await db
+          .update(kosh)
+          .set({
+            name: input.name,
+            description: input.description || null,
+            iconUrl: input.iconUrl || null,
+            monthlyAmount: newPeriodConfig.monthlyAmount,
+            dueDay: newPeriodConfig.dueDay,
+            memberInterestRate: String(input.memberInterestRate),
+            nonMemberInterestRate: String(input.nonMemberInterestRate),
+            loanCap: String(input.loanCap),
+            applyPenalty: newPeriodConfig.applyPenalty,
+            latePenaltyAmount: newPeriodConfig.latePenaltyAmount,
+            penaltyGraceDays: newPeriodConfig.penaltyGraceDays,
+            durationMonths: input.durationMonths,
+            maxMembers: input.maxMembers ?? null,
+            endDate,
+          })
+          .where(eq(kosh.id, input.koshId))
+          .returning();
+
+        if (!updated) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Kosh not found",
+          });
+        }
+
+        return updated;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update kosh",
           cause: error,
         });
       }

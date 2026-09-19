@@ -17,7 +17,11 @@ import CLOCK_ICON from "@expo/material-symbols/schedule.xml";
 import TIMER_ICON from "@expo/material-symbols/timer.xml";
 import WARNING_ICON from "@expo/material-symbols/warning.xml";
 import { Icon } from "@expo/ui/jetpack-compose";
-import type { CreateKoshInput, KoshDetail } from "@kosh-app/api/routers/kosh";
+import type {
+  CreateKoshInput,
+  KoshDetail,
+  UpdateKoshInput,
+} from "@kosh-app/api/routers/kosh";
 import { DUE_DAY_OPTIONS } from "@kosh-app/utils/constants/data";
 import { dateFormatterWithSeparator } from "@kosh-app/utils/date";
 import { useSelector } from "@tanstack/react-form";
@@ -25,7 +29,17 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { ADD_KOSH_FORM_VALUE, ADD_KOSH_SCHEMA } from "./kosh-schema";
+import {
+  ADD_KOSH_FORM_VALUE,
+  ADD_KOSH_SCHEMA,
+  UPDATE_KOSH_SCHEMA,
+} from "./kosh-schema";
+
+interface KoshFormProps extends React.ComponentProps<
+  typeof KeyboardAwareScrollView
+> {
+  data?: KoshDetail;
+}
 
 const SectionTitle = ({ children }: { children: string }) => (
   <View className="mb-1 mt-2">
@@ -35,7 +49,7 @@ const SectionTitle = ({ children }: { children: string }) => (
   </View>
 );
 
-export const KoshForm = ({ data }: { data?: KoshDetail }) => {
+export const KoshForm = ({ data, ...rest }: KoshFormProps) => {
   const router = useRouter();
   const haptics = useHaptics();
 
@@ -57,11 +71,14 @@ export const KoshForm = ({ data }: { data?: KoshDetail }) => {
   );
   const updateMutation = useMutation(
     trpc.kosh.update.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (updated) => {
         haptics("success");
         successToast({ title: "Kosh updated successfully" });
         queryClient.invalidateQueries({
           queryKey: trpc.kosh.list.queryKey(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: trpc.kosh.getById.queryKey({ koshId: updated.id }),
         });
         router.back();
       },
@@ -93,7 +110,11 @@ export const KoshForm = ({ data }: { data?: KoshDetail }) => {
   const form = useForm({
     defaultValues,
     validators: {
-      onSubmit: ADD_KOSH_SCHEMA,
+      // Both schemas share an identical value shape; they differ only in
+      // whether transaction_pin is validated (create) or free-form (update).
+      onSubmit: (data
+        ? UPDATE_KOSH_SCHEMA
+        : ADD_KOSH_SCHEMA) as typeof ADD_KOSH_SCHEMA,
     },
     onSubmitInvalid: () => {
       haptics("error");
@@ -134,6 +155,33 @@ export const KoshForm = ({ data }: { data?: KoshDetail }) => {
         durationMonths: Number(value.duration_months),
         maxMembers: value.max_members ? Number(value.max_members) : undefined,
       };
+      if (data) {
+        if (data.role !== "adhyaksh") {
+          errorToast({
+            title: "Unauthorized",
+            description: "You are not authorized to edit this kosh.",
+          });
+          return;
+        }
+        const updateInput: UpdateKoshInput = {
+          koshId: data.id,
+          name: input.name,
+          description: input.description,
+          iconUrl: input.iconUrl,
+          monthlyAmount: input.monthlyAmount,
+          dueDay: input.dueDay,
+          memberInterestRate: input.memberInterestRate,
+          nonMemberInterestRate: input.nonMemberInterestRate,
+          loanCap: input.loanCap,
+          latePenaltyAmount: input.latePenaltyAmount,
+          applyPenalty: input.applyPenalty,
+          penaltyGraceDays: input.penaltyGraceDays,
+          durationMonths: input.durationMonths,
+          maxMembers: input.maxMembers,
+        };
+        updateMutation.mutate(updateInput);
+        return;
+      }
       createMutation.mutate(input);
     },
   });
@@ -143,12 +191,21 @@ export const KoshForm = ({ data }: { data?: KoshDetail }) => {
     applyPenalty: state.values.apply_penalty,
   }));
 
+  const dueDayChanged = useSelector(
+    form.store,
+    (state) =>
+      !!data &&
+      state.values.due_day !== "" &&
+      Number(state.values.due_day) !== data.dueDay,
+  );
+
   return (
     <KeyboardAwareScrollView
       contentInsetAdjustmentBehavior="automatic"
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="always"
       contentContainerClassName="pt-6 pb-4"
+      {...rest}
     >
       <form.AppForm>
         <View className="gap-y-6 px-4">
@@ -218,6 +275,11 @@ export const KoshForm = ({ data }: { data?: KoshDetail }) => {
                   label="Due day of the month"
                   options={DUE_DAY_OPTIONS}
                   title="Select Due Date"
+                  description={
+                    dueDayChanged
+                      ? "A due day change applies from next month; this month keeps its current due day."
+                      : undefined
+                  }
                 />
               )}
             />
@@ -229,7 +291,9 @@ export const KoshForm = ({ data }: { data?: KoshDetail }) => {
                   prefix={<Icon source={CALENDAR_ICON} size={18} />}
                   label="Start date"
                   placeholder="Select a start date"
-                  description="If not set, it will default to today"
+                  description={
+                    !data ? "If not set, it will default to today" : undefined
+                  }
                   maximumDate={new Date()}
                 />
               )}

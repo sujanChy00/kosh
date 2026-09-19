@@ -51,6 +51,33 @@ export const kosh = pgTable("kosh", {
     .notNull(),
 });
 
+// ─── Kosh Periods (config snapshots) ────────────────────────────────────────
+// One row per kosh + contribution period, capturing the config that was in
+// force when the period "started" (first touched, or frozen at edit time).
+// Past and in-progress periods are judged against these frozen values so that
+// changing dueDay/monthlyAmount/penalty settings does not retroactively
+// rewrite history. Future periods we haven't touched yet have no row and fall
+// back to the kosh's live config.
+export const koshPeriod = pgTable(
+  "kosh_period",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    koshId: uuid("kosh_id")
+      .notNull()
+      .references(() => kosh.id, { onDelete: "cascade" }),
+    period: date("period").notNull(), // "YYYY-MM-01" contribution month
+    dueDay: integer("due_day").notNull(),
+    monthlyAmount: decimal("monthly_amount", { precision: 12, scale: 2 }).notNull(),
+    applyPenalty: boolean("apply_penalty").notNull().default(false),
+    latePenaltyAmount: decimal("late_penalty_amount", { precision: 12, scale: 2 }),
+    penaltyGraceDays: integer("penalty_grace_days"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("kosh_period_kosh_period_uidx").on(table.koshId, table.period),
+  ],
+);
+
 // ─── Kosh Memberships ───────────────────────────────────────────────────────
 export const koshMembership = pgTable(
   "kosh_membership",
@@ -114,6 +141,14 @@ export const koshRelations = relations(kosh, ({ one, many }) => ({
   }),
   memberships: many(koshMembership),
   roleRequests: many(koshRoleRequest),
+  periods: many(koshPeriod),
+}));
+
+export const koshPeriodRelations = relations(koshPeriod, ({ one }) => ({
+  kosh: one(kosh, {
+    fields: [koshPeriod.koshId],
+    references: [kosh.id],
+  }),
 }));
 
 export const koshMembershipRelations = relations(koshMembership, ({ one }) => ({

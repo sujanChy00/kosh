@@ -12,7 +12,7 @@ const REQUIRED_INTEGER = v.pipe(
   v.regex(/^\d+$/, "Enter a whole number"),
 );
 
-export const ADD_KOSH_SCHEMA = v.object({
+const BASE_KOSH_FIELDS = {
   name: v.pipe(
     v.string("Name is required"),
     v.nonEmpty("Name is required"),
@@ -21,11 +21,6 @@ export const ADD_KOSH_SCHEMA = v.object({
   description: v.pipe(
     v.string(),
     v.maxLength(500, "Keep the description under 500 characters"),
-  ),
-  transaction_pin: v.pipe(
-    v.string("A 6-digit PIN is required"),
-    v.nonEmpty("A 6-digit PIN is required"),
-    v.regex(/^\d{6}$/, "PIN must be 6 digits"),
   ),
   icon_url: v.string(),
   monthly_amount: REQUIRED_NUMBER,
@@ -71,6 +66,23 @@ export const ADD_KOSH_SCHEMA = v.object({
   ),
   duration_months: REQUIRED_INTEGER,
   max_members: v.pipe(v.string(), v.regex(/^\d*$/, "Enter a whole number")),
+};
+
+export const ADD_KOSH_SCHEMA = v.object({
+  ...BASE_KOSH_FIELDS,
+  transaction_pin: v.pipe(
+    v.string("A 6-digit PIN is required"),
+    v.nonEmpty("A 6-digit PIN is required"),
+    v.regex(/^\d{6}$/, "PIN must be 6 digits"),
+  ),
+});
+
+export const UPDATE_KOSH_SCHEMA = v.object({
+  ...BASE_KOSH_FIELDS,
+  // The transaction PIN is not editable via this form — it has its own flow.
+  // Keep the field in the state so the create/update shapes stay aligned.
+  transaction_pin: v.string(),
 });
 
 export type ADD_KOSH_FORM_VALUE = v.InferOutput<typeof ADD_KOSH_SCHEMA>;
+export type UPDATE_KOSH_FORM_VALUE = v.InferOutput<typeof UPDATE_KOSH_SCHEMA>;

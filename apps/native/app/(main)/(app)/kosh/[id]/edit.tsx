@@ -4,6 +4,7 @@ import { KoshForm } from "@/form/kosh/kosh-form";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
+import { RefreshControl } from "react-native";
 
 const EditKosh = () => {
   const params = useLocalSearchParams<{
@@ -17,6 +18,7 @@ const EditKosh = () => {
     isError: koshError,
     error,
     refetch,
+    isRefetching,
   } = useQuery({
     ...trpc.kosh.getById.queryOptions({ koshId }),
     enabled: !!koshId,
@@ -32,7 +34,14 @@ const EditKosh = () => {
       />
     );
 
-  return <KoshForm data={koshData} />;
+  return (
+    <KoshForm
+      data={koshData}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+      }
+    />
+  );
 };
 
 export default EditKosh;

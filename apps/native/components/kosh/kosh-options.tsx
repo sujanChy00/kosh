@@ -5,6 +5,7 @@ import DELETE_ICON from "@expo/material-symbols/delete.xml";
 import EDIT_ICON from "@expo/material-symbols/edit.xml";
 import INVITE_ICON from "@expo/material-symbols/group_add.xml";
 import JOIN_REQUEST_ICON from "@expo/material-symbols/how_to_reg.xml";
+import UPDATE_TRANSACTION_PIN_ICON from "@expo/material-symbols/lock.xml";
 import { MenuView } from "@expo/ui/community/menu";
 import { KoshListItem } from "@kosh-app/api/routers/kosh";
 import { useMutation } from "@tanstack/react-query";
@@ -64,6 +65,11 @@ export const KoshOptions = ({ koshId, role }: KoshOptionsProps) => {
         image: JOIN_REQUEST_ICON,
       },
       {
+        title: "Update transaction pin",
+        id: "update-transaction-pin",
+        image: UPDATE_TRANSACTION_PIN_ICON,
+      },
+      {
         title: "Delete",
         id: "delete",
         image: DELETE_ICON,
@@ -86,13 +92,20 @@ export const KoshOptions = ({ koshId, role }: KoshOptionsProps) => {
       case "invite":
         mutate({ koshId });
         break;
-
       case "join-request":
         router.push({
           pathname: "/kosh/[id]/join-request",
           params: {
             id: koshId,
             role,
+          },
+        });
+        break;
+      case "update-transaction-pin":
+        router.push({
+          pathname: "/kosh/[id]/update-transaction-pin",
+          params: {
+            id: koshId,
           },
         });
         break;

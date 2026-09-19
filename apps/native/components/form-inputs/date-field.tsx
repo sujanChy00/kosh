@@ -20,7 +20,7 @@ export const DateField = ({
 
   return (
     <Field className={cn("relative", className)}>
-      <DateInput {...rest} isInvalid={isInvalid} />
+      <DateInput {...rest} isInvalid={isInvalid} isDisabled={isDisabled} />
       {!!fieldError?.message && <FieldError>{fieldError?.message}</FieldError>}
     </Field>
   );

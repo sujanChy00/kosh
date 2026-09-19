@@ -1,5 +1,6 @@
 import { db } from "@kosh-app/db";
 import { contribution } from "@kosh-app/db/schema/contributions";
+import { koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
 import { and, eq, lt } from "drizzle-orm";
@@ -174,6 +175,62 @@ async function requireAdhyaksh(koshId: string, userId: string) {
     throw new TRPCError({ code: "NOT_FOUND", message: "Kosh not found" });
   }
   return { koshRow };
+}
+
+/**
+ * Resolve the config that applies to one contribution period.
+ *
+ * A `kosh_period` row freezes the config (due day, monthly amount, penalty
+ * settings) that was in force when the period was first touched or when the
+ * kosh was edited after that period started. If a snapshot exists, those
+ * frozen values win so that later edits never retroactively rewrite history
+ * (e.g. changing the due date from 10 to 5 mid-month must not penalize people
+ * for the 10th). When no snapshot exists yet, this is the period's first
+ * touch: we snapshot the kosh's *current* config and return it, making the
+ * config deterministic from here on.
+ */
+async function resolvePeriodConfig(
+  koshId: string,
+  period: string,
+  fallback: {
+    monthlyAmount: string;
+    dueDay: number;
+    latePenaltyAmount: string | null;
+    applyPenalty: boolean;
+    penaltyGraceDays: number | null;
+  },
+) {
+  const snapshot = await db.query.koshPeriod.findFirst({
+    where: (p, { and: a, eq: q }) =>
+      a(q(p.koshId, koshId), q(p.period, period)),
+  });
+
+  if (snapshot) {
+    return {
+      monthlyAmount: snapshot.monthlyAmount,
+      dueDay: snapshot.dueDay,
+      latePenaltyAmount: snapshot.latePenaltyAmount,
+      applyPenalty: snapshot.applyPenalty,
+      penaltyGraceDays: snapshot.penaltyGraceDays,
+    };
+  }
+
+  // First touch: freeze the config currently in force for this period. The
+  // unique (koshId, period) constraint makes racing touches idempotent.
+  await db
+    .insert(koshPeriod)
+    .values({
+      koshId,
+      period,
+      monthlyAmount: fallback.monthlyAmount,
+      dueDay: fallback.dueDay,
+      latePenaltyAmount: fallback.latePenaltyAmount,
+      applyPenalty: fallback.applyPenalty,
+      penaltyGraceDays: fallback.penaltyGraceDays,
+    })
+    .onConflictDoNothing();
+
+  return fallback;
 }
 
 /**
@@ -439,15 +496,24 @@ async function runBulk(
   actorId: string,
 ) {
   const { koshRow } = await requireAdhyaksh(koshId, actorId);
-  const dueDate = dueDateFor(period, koshRow.dueDay);
+  const periodConfig = await resolvePeriodConfig(
+    koshRow.id,
+    period,
+    koshRow,
+  );
+  const dueDate = dueDateFor(period, periodConfig.dueDay);
   const isPastDue = startOfDay(new Date()).getTime() > dueDate.getTime();
-  const isPenaltyDue = isPenaltyDueFor(koshRow, dueDate);
+  const isPenaltyDue = isPenaltyDueFor(periodConfig, dueDate);
 
   const results = [];
   for (const entry of entries) {
     try {
       const saved = await applyMemberEntry({
-        koshRow,
+        koshRow: {
+          id: koshRow.id,
+          monthlyAmount: periodConfig.monthlyAmount,
+          latePenaltyAmount: periodConfig.latePenaltyAmount,
+        },
         period,
         isPastDue,
         isPenaltyDue,
@@ -494,16 +560,21 @@ export const contributionRouter = router({
       );
 
       const period = input.period ?? defaultPeriodFor(koshRow.dueDay);
-      const dueDate = dueDateFor(period, koshRow.dueDay);
+      const periodConfig = await resolvePeriodConfig(
+        koshRow.id,
+        period,
+        koshRow,
+      );
+      const dueDate = dueDateFor(period, periodConfig.dueDay);
       const overdueDays = daysBetween(dueDate);
       const isPastDue = overdueDays > 0;
-      const isPenaltyDue = isPenaltyDueFor(koshRow, dueDate);
+      const isPenaltyDue = isPenaltyDueFor(periodConfig, dueDate);
       const penaltyDueDate =
-        koshRow.applyPenalty && koshRow.latePenaltyAmount != null
+        periodConfig.applyPenalty && periodConfig.latePenaltyAmount != null
           ? toDateString(
               new Date(
                 dueDate.getTime() +
-                  penaltyGraceDaysFor(koshRow) * DAY_MS,
+                  penaltyGraceDaysFor(periodConfig) * DAY_MS,
               ),
             )
           : null;
@@ -578,7 +649,7 @@ export const contributionRouter = router({
         const row = rowByMember.get(m.userId);
         const expected = row
           ? parseFloat(row.expectedAmount)
-          : parseFloat(koshRow.monthlyAmount);
+          : parseFloat(periodConfig.monthlyAmount);
         const paid = row ? parseFloat(row.contributionAmount) : 0;
         const recordedLate = overdueDays > LATE_THRESHOLD_DAYS && paid < expected;
 
@@ -586,7 +657,7 @@ export const contributionRouter = router({
         const penaltyPrefill = row
           ? row.penaltyAssessed
           : showPenalty
-            ? (koshRow.latePenaltyAmount ?? "0")
+            ? (periodConfig.latePenaltyAmount ?? "0")
             : null;
 
         const loanRow = loanByMember.get(m.userId);
@@ -626,11 +697,11 @@ export const contributionRouter = router({
           id: koshRow.id,
           name: koshRow.name,
           currency: koshRow.currency,
-          monthlyAmount: koshRow.monthlyAmount,
-          dueDay: koshRow.dueDay,
-          latePenaltyAmount: koshRow.latePenaltyAmount,
-          applyPenalty: koshRow.applyPenalty,
-          penaltyGraceDays: koshRow.penaltyGraceDays,
+          monthlyAmount: periodConfig.monthlyAmount,
+          dueDay: periodConfig.dueDay,
+          latePenaltyAmount: periodConfig.latePenaltyAmount,
+          applyPenalty: periodConfig.applyPenalty,
+          penaltyGraceDays: periodConfig.penaltyGraceDays,
         },
         period: {
           value: period,

@@ -29,19 +29,14 @@ export const KoshContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
           {formatShortDate(new Date(kosh.endDate))}
         </ThemedText>
       </View>
-      {!!kosh.latePenaltyAmount && (
-        <>
-          <Separator />
-          <View className="flex-row items-center justify-between gap-3">
-            <ThemedText>Late Penalty</ThemedText>
-            <ThemedText className="font-mono-medium text-xs">
-              रु {formatAmount(kosh.latePenaltyAmount)}{" "}
-              {!!kosh.penaltyGraceDays &&
-                `- ${kosh.penaltyGraceDays} days grace`}
-            </ThemedText>
-          </View>
-        </>
-      )}
+      <Separator />
+      <View className="flex-row items-center justify-between gap-3">
+        <ThemedText>Late Penalty</ThemedText>
+        <ThemedText className="font-mono-medium text-xs">
+          रु {formatAmount(kosh.latePenaltyAmount ?? "0")}{" "}
+          {!!kosh.penaltyGraceDays && `- ${kosh.penaltyGraceDays} days grace`}
+        </ThemedText>
+      </View>
       <Separator />
       <View className="flex-row items-center justify-between gap-3">
         <ThemedText>Start date</ThemedText>
@@ -63,6 +58,17 @@ export const KoshContributionInfo = ({ kosh }: { kosh: KoshDetail }) => {
           {kosh.durationMonths} months
         </ThemedText>
       </View>
+      {!!kosh.maxMembers && (
+        <>
+          <Separator />
+          <View className="flex-row items-center justify-between gap-3">
+            <ThemedText>Max members</ThemedText>
+            <ThemedText className="font-mono-medium">
+              {kosh.maxMembers}
+            </ThemedText>
+          </View>
+        </>
+      )}
     </View>
   );
 };
