@@ -80,6 +80,31 @@ const UpdateTransactionPinScreen = () => {
     return { updateMutation, handleUpdate };
   })();
 
+  const { forgotMutation, handleForgot } = (() => {
+    const forgotMutation = useMutation(
+      trpc.kosh.requestTransactionPinReset.mutationOptions({
+        onSuccess: (data) => {
+          haptics("success");
+          successToast({ title: "Reset code sent" });
+          router.push({
+            pathname: "/kosh/[id]/transaction-pin/forgot",
+            params: { id: koshId, email: data.maskedEmail },
+          });
+        },
+        onError: (error) => {
+          haptics("error");
+          errorToast({ title: error.message || "Failed to send the reset code" });
+        },
+      }),
+    );
+
+    const handleForgot = () => {
+      if (forgotMutation.isPending) return;
+      forgotMutation.mutate({ koshId });
+    };
+    return { forgotMutation, handleForgot };
+  })();
+
   return (
     <form.AppForm>
       <TransactionPinPasswordDialog
@@ -150,8 +175,14 @@ const UpdateTransactionPinScreen = () => {
           opened: -10,
         }}
       >
-        <TouchableOpacity className="py-3" onPress={() => {}}>
-          <ThemedText className="text-center">Forgot Pin?</ThemedText>
+        <TouchableOpacity
+          className="py-3"
+          onPress={handleForgot}
+          disabled={forgotMutation.isPending}
+        >
+          <ThemedText className="text-center">
+            {forgotMutation.isPending ? "Sending…" : "Forgot Pin?"}
+          </ThemedText>
         </TouchableOpacity>
         <form.SubmitButton>
           <ThemedText className="text-primary-foreground">

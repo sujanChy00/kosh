@@ -68,6 +68,12 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
+        name="kosh/[id]/transaction-pin/forgot"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="kosh/[id]/invite"
         options={{
           headerTitle: "Invite",

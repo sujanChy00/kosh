@@ -1,11 +1,13 @@
-import { db } from "@kosh-app/db";
 import { auth } from "@kosh-app/auth";
-import { user } from "@kosh-app/db/schema/auth";
+import { sendTransactionPinResetEmail } from "@kosh-app/auth/email";
+import { db } from "@kosh-app/db";
+import { user, verification } from "@kosh-app/db/schema/auth";
 import { contribution } from "@kosh-app/db/schema/contributions";
 import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { randomInt } from "node:crypto";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -179,6 +181,26 @@ const updateTransactionPinSchema = z
 export type UpdateTransactionPinInput = z.infer<
   typeof updateTransactionPinSchema
 >;
+
+const requestTransactionPinResetSchema = z.object({
+  koshId: z.string().uuid(),
+});
+
+const resetTransactionPinSchema = z.object({
+  koshId: z.string().uuid(),
+  otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
+  newPin: z.string().regex(/^\d{6}$/, "New PIN must be 6 digits"),
+  password: z.string().min(1, "Password is required"),
+});
+
+const TRANSACTION_PIN_RESET_IDENTIFIER = (koshId: string) =>
+  `transaction-pin-reset:${koshId}`;
+
+function maskEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!domain) return email;
+  return `${local.slice(0, 1)}***@${domain}`;
+}
 
 export const koshRouter = router({
   /** The kosh the current user is an active member of, newest first. */
@@ -767,6 +789,156 @@ export const koshRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update transaction PIN",
+          cause: error,
+        });
+      }
+    }),
+
+  requestTransactionPinReset: protectedProcedure
+    .input(requestTransactionPinResetSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: q, eq: e }) =>
+          and(
+            e(m.koshId, input.koshId),
+            e(m.userId, userId),
+            e(m.status, "active"),
+          ),
+        columns: { role: true },
+      });
+      if (
+        membership?.role !== "adhyaksh" &&
+        membership?.role !== "koshadhyaksh"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only an adhyaksh or koshadhyaksh can reset the transaction PIN",
+        });
+      }
+
+      const email = ctx.session.user.email;
+      if (!email) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No email address on this account",
+        });
+      }
+
+      const otp = randomInt(0, 1_000_000).toString().padStart(6, "0");
+      const identifier = TRANSACTION_PIN_RESET_IDENTIFIER(input.koshId);
+      const expiresAt = new Date(Date.now() + 600_000);
+
+      // Replace any existing OTP for this kosh (single active code).
+      await db.delete(verification).where(eq(verification.identifier, identifier));
+      await db.insert(verification).values({
+        id: crypto.randomUUID(),
+        identifier,
+        value: otp,
+        expiresAt,
+      });
+
+      try {
+        await sendTransactionPinResetEmail({
+          to: email,
+          otp,
+          name: ctx.session.user.name || undefined,
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to send the reset code",
+          cause: error,
+        });
+      }
+
+      return { maskedEmail: maskEmail(email) };
+    }),
+
+  resetTransactionPin: protectedProcedure
+    .input(resetTransactionPinSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: q, eq: e }) =>
+          and(
+            e(m.koshId, input.koshId),
+            e(m.userId, userId),
+            e(m.status, "active"),
+          ),
+        columns: { role: true },
+      });
+      if (
+        membership?.role !== "adhyaksh" &&
+        membership?.role !== "koshadhyaksh"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only an adhyaksh or koshadhyaksh can reset the transaction PIN",
+        });
+      }
+
+      const identifier = TRANSACTION_PIN_RESET_IDENTIFIER(input.koshId);
+      const [stored] = await db
+        .select({ value: verification.value, expiresAt: verification.expiresAt })
+        .from(verification)
+        .where(eq(verification.identifier, identifier))
+        .limit(1);
+      if (!stored || stored.value !== input.otp) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The reset code is invalid",
+        });
+      }
+      if (stored.expiresAt.getTime() < Date.now()) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The reset code has expired",
+        });
+      }
+
+      // Re-confirm the account holder's password before applying the change.
+      try {
+        await auth.api.verifyPassword({
+          body: { password: input.password },
+          headers: ctx.headers,
+        });
+      } catch {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The password is incorrect",
+        });
+      }
+
+      try {
+        const [updated] = await db
+          .update(kosh)
+          .set({ transactionPin: input.newPin })
+          .where(eq(kosh.id, input.koshId))
+          .returning({ id: kosh.id });
+
+        if (!updated) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Kosh not found",
+          });
+        }
+
+        // Single-use: consume the OTP after a successful reset.
+        await db
+          .delete(verification)
+          .where(eq(verification.identifier, identifier));
+
+        return updated;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to reset transaction PIN",
           cause: error,
         });
       }

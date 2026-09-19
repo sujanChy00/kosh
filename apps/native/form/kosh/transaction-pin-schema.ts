@@ -39,3 +39,35 @@ export const transactionPinSchema = v.pipe(
 export type TRANSACTION_PIN_FORM_VALUES = v.InferOutput<
   typeof transactionPinSchema
 >;
+
+export const forgotTransactionPinSchema = v.pipe(
+  v.object({
+    otp: v.pipe(
+      v.string("Reset code is required"),
+      v.nonEmpty("Reset code is required"),
+      v.regex(/^\d{6}$/, "Reset code must be 6 digits"),
+    ),
+    newPin: v.pipe(
+      v.string("New PIN is required"),
+      v.nonEmpty("New PIN is required"),
+      v.regex(/^\d{6}$/, "PIN must be 6 digits"),
+    ),
+    confirmPin: v.pipe(
+      v.string("Confirm PIN is required"),
+      v.nonEmpty("Confirm PIN is required"),
+      v.regex(/^\d{6}$/, "PIN must be 6 digits"),
+    ),
+  }),
+  v.forward(
+    v.partialCheck(
+      [["newPin"], ["confirmPin"]],
+      (input) => input.newPin === input.confirmPin,
+      "PINs do not match",
+    ),
+    ["confirmPin"],
+  ),
+);
+
+export type FORGOT_TRANSACTION_PIN_FORM_VALUES = v.InferOutput<
+  typeof forgotTransactionPinSchema
+>;
