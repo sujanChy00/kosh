@@ -31,10 +31,7 @@ const UpdateTransactionPinScreen = () => {
   const { colors } = useAppTheme();
   const params = useLocalSearchParams<{ id: string }>();
   const koshId = params.id;
-  const [updateTransactionVisible, setUpdateTransactionVisible] =
-    useState(false);
-  const [forgotTransactionPinVisible, setForgotTransactionPinVisible] =
-    useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const form = useForm({
     defaultValues: {
       newPin: "",
@@ -46,7 +43,7 @@ const UpdateTransactionPinScreen = () => {
     },
 
     onSubmit: () => {
-      setUpdateTransactionVisible(true);
+      setIsVisible(true);
     },
     onSubmitInvalid: () => {
       haptics("error");
@@ -88,15 +85,9 @@ const UpdateTransactionPinScreen = () => {
       <TransactionPinPasswordDialog
         onConfirm={handleUpdate}
         confirmButtonText={updateMutation.isPending ? "Updating…" : "Update"}
-        isVisible={updateTransactionVisible}
-        setIsVisible={setUpdateTransactionVisible}
+        isVisible={isVisible}
+        setIsVisible={setIsVisible}
       />
-      <TransactionPinPasswordDialog
-        onConfirm={(password) => {}}
-        isVisible={forgotTransactionPinVisible}
-        setIsVisible={setForgotTransactionPinVisible}
-      />
-
       <ScrollView
         contentContainerClassName="p-4 pt-safe-offset-20 gap-y-10"
         showsVerticalScrollIndicator={false}
@@ -159,12 +150,7 @@ const UpdateTransactionPinScreen = () => {
           opened: -10,
         }}
       >
-        <TouchableOpacity
-          className="py-3"
-          onPress={() => {
-            setForgotTransactionPinVisible(true);
-          }}
-        >
+        <TouchableOpacity className="py-3" onPress={() => {}}>
           <ThemedText className="text-center">Forgot Pin?</ThemedText>
         </TouchableOpacity>
         <form.SubmitButton>
