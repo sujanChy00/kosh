@@ -10,6 +10,7 @@ interface KoshInvitationCodeErrorProps {
   message: string;
   title: string;
   cancelButtonText?: string;
+  onCancel?: () => void;
 }
 
 export const KoshInvitationCodeError = ({
@@ -25,10 +26,13 @@ export const KoshInvitationCodeError = ({
       <KoshJoinDialog
         isVisible={isVisible}
         setIsVisible={setIsVisible}
-        onConfirm={onConfirm}
+        onConfirm={(code) => {
+          onConfirm(code);
+          console.log(code);
+        }}
       />
       <View className="p-4 flex-1 justify-center">
-        <Card className={"gap-y-6"}>
+        <View className={"gap-y-6"}>
           <Card.Header className="gap-y-1">
             <Card.Title className="text-2xl text-center font-notosans-semibold">
               {title}
@@ -49,7 +53,7 @@ export const KoshInvitationCodeError = ({
               <OutlineButton.Label>Try another code</OutlineButton.Label>
             </OutlineButton>
           </Card.Footer>
-        </Card>
+        </View>
       </View>
     </>
   );

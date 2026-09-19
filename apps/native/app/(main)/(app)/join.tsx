@@ -1,11 +1,10 @@
 import { JoiningKoshPreview } from "@/components/kosh-join/joining-kosh-preview";
 import { KoshInvitationCodeError } from "@/components/kosh-join/kosh-invitation-code-error";
-import { KoshJoinCodeInput } from "@/components/kosh-join/kosh-join-code-input";
 import { RequestedToJoin } from "@/components/kosh-join/requested-to-join";
 import { PendingComponent } from "@/components/layout/pending-component";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 
 const INVITE_STATUS_MESSAGES: Record<string, { title: string; body: string }> =
@@ -25,13 +24,11 @@ const INVITE_STATUS_MESSAGES: Record<string, { title: string; body: string }> =
   };
 
 const JoinScreen = () => {
+  const router = useRouter();
   const params = useLocalSearchParams<{ token?: string }>();
-  const paramToken =
+  const token =
     typeof params.token === "string" ? params.token.trim().toUpperCase() : "";
-  const [enteredToken, setEnteredToken] = useState("");
   const [requested, setRequested] = useState(false);
-
-  const token = paramToken || enteredToken.trim().toUpperCase();
 
   const previewQuery = useQuery(
     trpc.invite.preview.queryOptions({ token }, { enabled: token.length > 0 }),
@@ -40,7 +37,21 @@ const JoinScreen = () => {
   const preview = previewQuery.data;
   const inviteIssue = preview && INVITE_STATUS_MESSAGES[preview.inviteStatus];
 
-  if (!token) return <KoshJoinCodeInput />;
+  if (!token)
+    return (
+      <KoshInvitationCodeError
+        title="Could not load invite"
+        cancelButtonText={"Try again"}
+        onConfirm={(code) => {
+          router.setParams({
+            token: code,
+          });
+          previewQuery.refetch();
+        }}
+        onRetry={() => router.replace("/kosh")}
+        message={"Something went wrong loading this invite. Try again."}
+      />
+    );
 
   if (requested) return <RequestedToJoin />;
 
@@ -52,7 +63,9 @@ const JoinScreen = () => {
         title="Could not load invite"
         cancelButtonText={"Try again"}
         onConfirm={(code) => {
-          setEnteredToken(code);
+          router.setParams({
+            token: code,
+          });
           previewQuery.refetch();
         }}
         onRetry={() => previewQuery.refetch()}
@@ -69,7 +82,9 @@ const JoinScreen = () => {
       <KoshInvitationCodeError
         title={inviteIssue.title}
         onConfirm={(code) => {
-          setEnteredToken(code);
+          router.setParams({
+            token: code,
+          });
           previewQuery.refetch();
         }}
         onRetry={() => previewQuery.refetch()}
@@ -81,10 +96,12 @@ const JoinScreen = () => {
       <KoshInvitationCodeError
         title={"You're already a member"}
         onConfirm={(code) => {
-          setEnteredToken(code);
+          router.setParams({
+            token: code,
+          });
           previewQuery.refetch();
         }}
-        onRetry={() => previewQuery.refetch()}
+        onRetry={() => router.replace("/kosh")}
         message={
           preview.kosh.name
             ? `You're already part of "${preview.kosh.name}".`
@@ -97,10 +114,12 @@ const JoinScreen = () => {
       <KoshInvitationCodeError
         title="Request pending"
         onConfirm={(code) => {
-          setEnteredToken(code);
+          router.setParams({
+            token: code,
+          });
           previewQuery.refetch();
         }}
-        onRetry={() => previewQuery.refetch()}
+        onRetry={() => router.replace("/kosh")}
         message={
           "You already have a pending request to join this kosh. The Adhyaksh hasn't reviewed it yet."
         }
