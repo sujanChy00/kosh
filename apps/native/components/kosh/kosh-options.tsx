@@ -103,7 +103,7 @@ export const KoshOptions = ({ koshId, role }: KoshOptionsProps) => {
         break;
       case "update-transaction-pin":
         router.push({
-          pathname: "/kosh/[id]/update-transaction-pin",
+          pathname: "/kosh/[id]/transaction-pin/update",
           params: {
             id: koshId,
           },

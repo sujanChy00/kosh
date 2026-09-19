@@ -1,4 +1,5 @@
 import { db } from "@kosh-app/db";
+import { auth } from "@kosh-app/auth";
 import { user } from "@kosh-app/db/schema/auth";
 import { contribution } from "@kosh-app/db/schema/contributions";
 import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
@@ -162,6 +163,22 @@ const updateKoshSchema = z.object({
 });
 
 export type UpdateKoshInput = z.infer<typeof updateKoshSchema>;
+
+const updateTransactionPinSchema = z
+  .object({
+    koshId: z.string().uuid(),
+    oldPin: z.string().regex(/^\d{6}$/, "Old PIN must be 6 digits"),
+    newPin: z.string().regex(/^\d{6}$/, "New PIN must be 6 digits"),
+    password: z.string().min(1, "Password is required"),
+  })
+  .refine((data) => data.oldPin !== data.newPin, {
+    message: "New PIN must be different from the old PIN",
+    path: ["newPin"],
+  });
+
+export type UpdateTransactionPinInput = z.infer<
+  typeof updateTransactionPinSchema
+>;
 
 export const koshRouter = router({
   /** The kosh the current user is an active member of, newest first. */
@@ -671,6 +688,85 @@ export const koshRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to update kosh",
+          cause: error,
+        });
+      }
+    }),
+
+  updateTransactionPin: protectedProcedure
+    .input(updateTransactionPinSchema)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      // Only an active adhyaksh or koshadhyaksh can change the transaction PIN.
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and, eq: q }) =>
+          and(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+        columns: { role: true },
+      });
+      if (
+        membership?.role !== "adhyaksh" &&
+        membership?.role !== "koshadhyaksh"
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Only an adhyaksh or koshadhyaksh can update the transaction PIN",
+        });
+      }
+
+      const [current] = await db
+        .select({ transactionPin: kosh.transactionPin })
+        .from(kosh)
+        .where(eq(kosh.id, input.koshId))
+        .limit(1);
+      if (!current) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Kosh not found" });
+      }
+
+      if (current.transactionPin !== input.oldPin) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The current transaction PIN is incorrect",
+        });
+      }
+
+      // Re-confirm the account holder's password before applying the change.
+      try {
+        await auth.api.verifyPassword({
+          body: { password: input.password },
+          headers: ctx.headers,
+        });
+      } catch {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The password is incorrect",
+        });
+      }
+
+      try {
+        const [updated] = await db
+          .update(kosh)
+          .set({ transactionPin: input.newPin })
+          .where(eq(kosh.id, input.koshId))
+          .returning({ id: kosh.id });
+
+        if (!updated) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Kosh not found",
+          });
+        }
+        return updated;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to update transaction PIN",
           cause: error,
         });
       }

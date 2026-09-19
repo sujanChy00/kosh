@@ -1,0 +1,180 @@
+import { TransactionPinPasswordDialog } from "@/components/kosh/transaction-pin/transaction-pin-password-dialog";
+import { ThemedText } from "@/components/themed-text";
+import { AnimatedSpacer } from "@/components/ui/animated-spacer";
+import { useAppTheme } from "@/contexts/app-theme-context";
+import {
+  TRANSACTION_PIN_FORM_VALUES,
+  transactionPinSchema,
+} from "@/form/kosh/transaction-pin-schema";
+import { useForm } from "@/hooks/use-form";
+import { useHaptics } from "@/hooks/use-haptics";
+import { errorToast, successToast } from "@/utils/toast";
+import { queryClient, trpc } from "@/utils/trpc";
+import { Icon } from "@expo/ui";
+import { useMutation } from "@tanstack/react-query";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState } from "react";
+import { ScrollView, TouchableOpacity, View } from "react-native";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
+const VISIBLITY_ON = Icon.select({
+  ios: "eye",
+  android: require("@expo/material-symbols/visibility.xml"),
+});
+const VISIBLITY_OFF = Icon.select({
+  ios: "eye.slash",
+  android: require("@expo/material-symbols/visibility_off.xml"),
+});
+
+const UpdateTransactionPinScreen = () => {
+  const haptics = useHaptics();
+  const router = useRouter();
+  const { colors } = useAppTheme();
+  const params = useLocalSearchParams<{ id: string }>();
+  const koshId = params.id;
+  const [updateTransactionVisible, setUpdateTransactionVisible] =
+    useState(false);
+  const [forgotTransactionPinVisible, setForgotTransactionPinVisible] =
+    useState(false);
+  const form = useForm({
+    defaultValues: {
+      newPin: "",
+      oldPin: "",
+      confirmPin: "",
+    } satisfies TRANSACTION_PIN_FORM_VALUES,
+    validators: {
+      onSubmit: transactionPinSchema,
+    },
+
+    onSubmit: () => {
+      setUpdateTransactionVisible(true);
+    },
+    onSubmitInvalid: () => {
+      haptics("error");
+    },
+  });
+
+  const { updateMutation, handleUpdate } = (() => {
+    const updateMutation = useMutation(
+      trpc.kosh.updateTransactionPin.mutationOptions({
+        onSuccess: () => {
+          haptics("success");
+          successToast({ title: "Transaction PIN updated" });
+          queryClient.invalidateQueries({
+            queryKey: trpc.kosh.getById.queryKey({ koshId }),
+          });
+          router.back();
+        },
+        onError: (error) => {
+          haptics("error");
+          errorToast({ title: error.message || "Failed to update PIN" });
+        },
+      }),
+    );
+
+    const handleUpdate = (password: string) => {
+      const { oldPin, newPin } = form.store.state.values;
+      updateMutation.mutate({
+        koshId,
+        oldPin,
+        newPin,
+        password,
+      });
+    };
+    return { updateMutation, handleUpdate };
+  })();
+
+  return (
+    <form.AppForm>
+      <TransactionPinPasswordDialog
+        onConfirm={handleUpdate}
+        confirmButtonText={updateMutation.isPending ? "Updating…" : "Update"}
+        isVisible={updateTransactionVisible}
+        setIsVisible={setUpdateTransactionVisible}
+      />
+      <TransactionPinPasswordDialog
+        onConfirm={(password) => {}}
+        isVisible={forgotTransactionPinVisible}
+        setIsVisible={setForgotTransactionPinVisible}
+      />
+
+      <ScrollView
+        contentContainerClassName="p-4 pt-safe-offset-20 gap-y-10"
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        <ThemedText className="text-2xl font-mono-semibold">
+          Update Transaction Pin
+        </ThemedText>
+        <View className="gap-y-6">
+          <form.AppField
+            name="oldPin"
+            children={(field) => (
+              <field.PasswordField
+                label="Old Pin"
+                keyboardOptions={{
+                  keyboardType: "numberPassword",
+                }}
+                maxLength={6}
+              />
+            )}
+          />
+          <form.AppField
+            name="newPin"
+            children={(field) => (
+              <field.PasswordField
+                label="New Pin"
+                keyboardOptions={{
+                  keyboardType: "numberPassword",
+                }}
+                maxLength={6}
+              />
+            )}
+          />
+          <form.AppField
+            name="confirmPin"
+            children={(field) => (
+              <field.PasswordField
+                label="Confirm Pin"
+                keyboardOptions={{
+                  keyboardType: "numberPassword",
+                }}
+                maxLength={6}
+              />
+            )}
+          />
+        </View>
+        <AnimatedSpacer height={400} />
+      </ScrollView>
+      <KeyboardStickyView
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 12,
+          backgroundColor: colors.background,
+        }}
+        offset={{
+          closed: -20,
+          opened: -10,
+        }}
+      >
+        <TouchableOpacity
+          className="py-3"
+          onPress={() => {
+            setForgotTransactionPinVisible(true);
+          }}
+        >
+          <ThemedText className="text-center">Forgot Pin?</ThemedText>
+        </TouchableOpacity>
+        <form.SubmitButton>
+          <ThemedText className="text-primary-foreground">
+            {updateMutation.isPending ? "Submitting…" : "Submit"}
+          </ThemedText>
+        </form.SubmitButton>
+      </KeyboardStickyView>
+    </form.AppForm>
+  );
+};
+
+export default UpdateTransactionPinScreen;

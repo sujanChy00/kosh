@@ -62,7 +62,7 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="kosh/[id]/update-transaction-pin"
+        name="kosh/[id]/transaction-pin/update"
         options={{
           headerShown: false,
         }}
