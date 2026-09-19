@@ -1,12 +1,5 @@
-import { AddKoshForm } from "@/form/kosh/add-kosh-form";
-import { View } from "react-native";
+import { KoshForm } from "@/form/kosh/kosh-form";
 
-const KoshAddScreen = () => {
-  return (
-    <View className="flex-1">
-      <AddKoshForm />
-    </View>
-  );
-};
+const KoshAddScreen = () => <KoshForm />;
 
 export default KoshAddScreen;

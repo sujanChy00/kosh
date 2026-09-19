@@ -1,21 +1,16 @@
 import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
-import { PrimaryButton, DangerButton } from "@/components/ui/button";
+import { DangerButton, PrimaryButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { useHaptics } from "@/hooks/use-haptics";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient, trpc } from "@/utils/trpc";
 import type { KoshListItem } from "@kosh-app/api/routers/kosh";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  View,
-} from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 
 const MANAGER_ROLES: KoshListItem["role"][] = ["adhyaksh", "koshadhyaksh"];
 
@@ -50,9 +45,19 @@ const JoinRequestsScreen = () => {
     paramKoshId,
   );
 
-  const koshesQuery = useQuery(trpc.kosh.list.queryOptions({ limit: 100 }));
+  const koshesQuery = useInfiniteQuery(
+    trpc.kosh.list.infiniteQueryOptions(
+      { limit: 10 },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    ),
+  );
+
+  const koshList = useMemo(() => {
+    return koshesQuery?.data?.pages.flatMap((page) => page.items) ?? [];
+  }, [koshesQuery?.data]);
+
   const managedKoshes =
-    koshesQuery.data?.items.filter((k) => MANAGER_ROLES.includes(k.role)) ?? [];
+    koshList.filter((k) => MANAGER_ROLES.includes(k.role)) ?? [];
 
   const activeKoshId = selectedKoshId ?? managedKoshes[0]?.id;
 
@@ -270,7 +275,9 @@ const JoinRequestsScreen = () => {
                     </View>
                     <Chip
                       variant="soft"
-                      color={request.status === "approved" ? "success" : "danger"}
+                      color={
+                        request.status === "approved" ? "success" : "danger"
+                      }
                       size="md"
                     >
                       <Chip.Label>{request.status}</Chip.Label>

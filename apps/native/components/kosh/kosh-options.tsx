@@ -6,13 +6,20 @@ import EDIT_ICON from "@expo/material-symbols/edit.xml";
 import INVITE_ICON from "@expo/material-symbols/group_add.xml";
 import JOIN_REQUEST_ICON from "@expo/material-symbols/how_to_reg.xml";
 import { MenuView } from "@expo/ui/community/menu";
+import { KoshListItem } from "@kosh-app/api/routers/kosh";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
+import { View } from "react-native";
 import { FullScreenSpinner } from "../layout/full-screen-spinner";
 import { StyledSymbolView } from "../styled-symbol-view";
 
-export const KoshOptions = ({ koshId }: { koshId: string }) => {
+interface KoshOptionsProps {
+  koshId: string;
+  role: KoshListItem["role"];
+}
+
+export const KoshOptions = ({ koshId, role }: KoshOptionsProps) => {
   const router = useRouter();
   const haptics = useHaptics();
 
@@ -85,6 +92,7 @@ export const KoshOptions = ({ koshId }: { koshId: string }) => {
           pathname: "/kosh/[id]/join-request",
           params: {
             id: koshId,
+            role,
           },
         });
         break;
@@ -98,14 +106,19 @@ export const KoshOptions = ({ koshId }: { koshId: string }) => {
         }}
         actions={options}
       >
-        <StyledSymbolView
-          tintColorClassName="accent-primary-foreground"
+        <View
           hitSlop={20}
-          name={{
-            android: "more_vert",
-            ios: "ellipsis",
-          }}
-        />
+          className="size-10 items-center justify-center rounded-full"
+        >
+          <StyledSymbolView
+            tintColorClassName="accent-primary-foreground"
+
+            name={{
+              android: "more_vert",
+              ios: "ellipsis",
+            }}
+          />
+        </View>
       </MenuView>
       <FullScreenSpinner isVisible={isPending} />
     </>

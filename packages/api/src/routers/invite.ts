@@ -29,6 +29,24 @@ export type InvitePreview = {
   yourMembership: string;
 };
 
+export type JoinRequest = {
+  id: string;
+  inviteId: string;
+  koshId: string;
+  userId: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: string;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  } | null;
+};
+
 // Ambiguity-free alphabet for shareable invite codes (no 0/O, 1/I, L).
 const TOKEN_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 

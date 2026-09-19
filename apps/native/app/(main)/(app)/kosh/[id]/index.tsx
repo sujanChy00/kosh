@@ -7,7 +7,6 @@ import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { PrimaryButton } from "@/components/ui/button";
-import { useAppTheme } from "@/contexts/app-theme-context";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocalSearchParams } from "expo-router";
@@ -15,8 +14,6 @@ import { ScrollView, View } from "react-native";
 import { SlideInDown } from "react-native-reanimated";
 
 const KoshDetailScreen = () => {
-  const { colors } = useAppTheme();
-
   const params = useLocalSearchParams<{
     id: string;
   }>();

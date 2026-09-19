@@ -62,9 +62,9 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="join"
+        name="kosh/[id]/join-request"
         options={{
-          headerTitle: "Join kosh",
+          headerTitle: "Join requests",
         }}
       />
       <Stack.Screen

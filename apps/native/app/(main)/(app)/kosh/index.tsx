@@ -1,8 +1,9 @@
 import { KoshJoinDialog } from "@/components/kosh/kosh-join-dialog";
 import { KoshList } from "@/components/kosh/kosh-list";
-import PLUST_ICON from "@expo/material-symbols/add.xml";
+import ADD_ICON from "@expo/material-symbols/add.xml";
 import RECORD_ICON from "@expo/material-symbols/edit_square.xml";
 import JOIN_ICON from "@expo/material-symbols/group_add.xml";
+import MORE_HORIZ_ICON from "@expo/material-symbols/more_horiz.xml";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
@@ -25,40 +26,40 @@ const KoshScreen = () => {
       />
       <Stack.Title>My Kosh</Stack.Title>
       <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button
-          onPress={() => {
-            setIsVisible(true);
-          }}
-          variant="prominent"
-        >
-          <Stack.Toolbar.Icon
-            sf="person.crop.circle.badge.plus"
-            src={JOIN_ICON}
-          />
-        </Stack.Toolbar.Button>
-        <Stack.Toolbar.Button
-          variant="prominent"
-          onPress={() => {
-            router.push({
-              pathname: "/contribution",
-            });
-          }}
-        >
-          <Stack.Toolbar.Icon
-            sf="pencil.and.list.clipboard"
-            src={RECORD_ICON}
-          />
-        </Stack.Toolbar.Button>
-        <Stack.Toolbar.Button
-          variant="prominent"
-          onPress={() => {
-            router.push({
-              pathname: "/kosh/add",
-            });
-          }}
-        >
-          <Stack.Toolbar.Icon sf="plus" src={PLUST_ICON} />
-        </Stack.Toolbar.Button>
+        <Stack.Toolbar.Menu>
+          <Stack.Toolbar.Icon sf="ellipsis.circle" src={MORE_HORIZ_ICON} />
+
+          <Stack.Toolbar.MenuAction
+            icon={JOIN_ICON}
+            onPress={() => {
+              router.push({
+                pathname: "/join-requests",
+              });
+            }}
+          >
+            Join Requests
+          </Stack.Toolbar.MenuAction>
+          <Stack.Toolbar.MenuAction
+            icon={RECORD_ICON}
+            onPress={() => {
+              router.push({
+                pathname: "/contribution",
+              });
+            }}
+          >
+            Contribution
+          </Stack.Toolbar.MenuAction>
+          <Stack.Toolbar.MenuAction
+            icon={ADD_ICON}
+            onPress={() => {
+              router.push({
+                pathname: "/kosh/add",
+              });
+            }}
+          >
+            Add
+          </Stack.Toolbar.MenuAction>
+        </Stack.Toolbar.Menu>
       </Stack.Toolbar>
       <KoshList />
     </View>

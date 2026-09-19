@@ -37,7 +37,7 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
                 </Chip>
               </View>
             </View>
-            <KoshOptions koshId={kosh.id} />
+            <KoshOptions koshId={kosh.id} role={kosh.role} />
           </View>
           {kosh.description && (
             <ThemedText className="text-gray-300-foreground text-xs">

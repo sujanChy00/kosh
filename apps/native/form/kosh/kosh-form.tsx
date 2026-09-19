@@ -17,7 +17,7 @@ import CLOCK_ICON from "@expo/material-symbols/schedule.xml";
 import TIMER_ICON from "@expo/material-symbols/timer.xml";
 import WARNING_ICON from "@expo/material-symbols/warning.xml";
 import { Icon } from "@expo/ui/jetpack-compose";
-import type { CreateKoshInput } from "@kosh-app/api/routers/kosh";
+import type { CreateKoshInput, KoshDetail } from "@kosh-app/api/routers/kosh";
 import { DUE_DAY_OPTIONS } from "@kosh-app/utils/constants/data";
 import { dateFormatterWithSeparator } from "@kosh-app/utils/date";
 import { useSelector } from "@tanstack/react-form";
@@ -35,11 +35,11 @@ const SectionTitle = ({ children }: { children: string }) => (
   </View>
 );
 
-export const AddKoshForm = () => {
+export const KoshForm = ({ data }: { data?: KoshDetail }) => {
   const router = useRouter();
   const haptics = useHaptics();
 
-  const mutation = useMutation(
+  const createMutation = useMutation(
     trpc.kosh.create.mutationOptions({
       onSuccess: () => {
         haptics("success");
@@ -55,23 +55,39 @@ export const AddKoshForm = () => {
       },
     }),
   );
+  const updateMutation = useMutation(
+    trpc.kosh.update.mutationOptions({
+      onSuccess: () => {
+        haptics("success");
+        successToast({ title: "Kosh updated successfully" });
+        queryClient.invalidateQueries({
+          queryKey: trpc.kosh.list.queryKey(),
+        });
+        router.back();
+      },
+      onError: (error) => {
+        haptics("error");
+        errorToast({ title: error.message || "Failed to update kosh" });
+      },
+    }),
+  );
 
   const defaultValues: ADD_KOSH_FORM_VALUE = {
-    name: "",
-    description: "",
+    name: data?.name ?? "",
+    description: data?.description ?? "",
     transaction_pin: "",
-    icon_url: "",
-    monthly_amount: "",
-    due_day: "",
-    member_interest_rate: "2",
-    non_member_interest_rate: "5",
-    loan_cap: "",
-    late_penalty_amount: "",
-    apply_penalty: false,
-    penalty_grace_days: "",
-    start_date: undefined,
-    duration_months: "",
-    max_members: "",
+    icon_url: data?.iconUrl ?? "",
+    monthly_amount: data?.monthlyAmount ?? "",
+    due_day: String(data?.dueDay ?? ""),
+    member_interest_rate: data?.memberInterestRate ?? "2",
+    non_member_interest_rate: data?.nonMemberInterestRate ?? "5",
+    loan_cap: data?.loanCap ?? "",
+    late_penalty_amount: data?.latePenaltyAmount ?? "",
+    apply_penalty: data?.applyPenalty ?? false,
+    penalty_grace_days: String(data?.penaltyGraceDays ?? ""),
+    start_date: data?.startDate ? new Date(data.startDate) : undefined,
+    duration_months: String(data?.durationMonths ?? ""),
+    max_members: String(data?.maxMembers ?? ""),
   };
 
   const form = useForm({
@@ -118,7 +134,7 @@ export const AddKoshForm = () => {
         durationMonths: Number(value.duration_months),
         maxMembers: value.max_members ? Number(value.max_members) : undefined,
       };
-      mutation.mutate(input);
+      createMutation.mutate(input);
     },
   });
 
@@ -209,6 +225,7 @@ export const AddKoshForm = () => {
               name="start_date"
               children={(field) => (
                 <field.DateField
+                  isDisabled={!!data}
                   prefix={<Icon source={CALENDAR_ICON} size={18} />}
                   label="Start date"
                   placeholder="Select a start date"
@@ -334,26 +351,28 @@ export const AddKoshForm = () => {
             />
           </View>
 
-          <View className="mb-2 gap-y-4">
-            <SectionTitle>Security</SectionTitle>
-            <form.AppField
-              name="transaction_pin"
-              children={(field) => (
-                <field.PasswordField
-                  label="Transaction PIN"
-                  placeholder="6 digits"
-                  keyboardOptions={{
-                    keyboardType: "numberPassword",
-                  }}
-                  maxLength={6}
-                />
-              )}
-            />
-          </View>
+          {!data && (
+            <View className="mb-2 gap-y-4">
+              <SectionTitle>Security</SectionTitle>
+              <form.AppField
+                name="transaction_pin"
+                children={(field) => (
+                  <field.PasswordField
+                    label="Transaction PIN"
+                    placeholder="6 digits"
+                    keyboardOptions={{
+                      keyboardType: "numberPassword",
+                    }}
+                    maxLength={6}
+                  />
+                )}
+              />
+            </View>
+          )}
 
           <form.SubmitButton>
             <ThemedText className="font-notosans-medium text-primary-foreground">
-              Create Kosh
+              {data ? "Save Changes" : "Create Kosh"}
             </ThemedText>
           </form.SubmitButton>
         </View>
