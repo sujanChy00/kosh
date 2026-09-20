@@ -1,81 +1,89 @@
 import type { KoshListItem } from "@kosh-app/api/routers/kosh";
 import { formatAmount } from "@kosh-app/utils";
+import { formatShortDate } from "@kosh-app/utils/date";
 import { Link } from "expo-router";
 import { memo } from "react";
 import { TouchableOpacity, View } from "react-native";
+import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
-import { Card } from "../ui/card";
-import { Chip } from "../ui/chip";
 import { Separator } from "../ui/separator";
+import { KoshRoleChip } from "./kosh-role-chip";
 
-export const KoshCard = memo(({ kosh }: { kosh: KoshListItem }) => {
-  return (
-    <Link
-      asChild
-      href={{
-        pathname: "/kosh/[id]",
-        params: {
-          id: String(kosh.id),
-        },
-      }}
-    >
-      <TouchableOpacity>
-        <Card className={"w-full gap-y-4"}>
-          <View>
-            <Card.Header className={"flex-row items-center gap-2 pb-4"}>
-              <Avatar className="size-12 rounded-2xl">
-                <Avatar.Image source={kosh.iconUrl} alt={kosh.name} />
-                <Avatar.Fallback fallback={kosh.name} source={kosh.iconUrl} />
-              </Avatar>
-              <View>
-                <Card.Title className="capitalize">{kosh.name}</Card.Title>
-                <View className="flex-row items-center gap-2">
-                  <Chip variant="soft">
-                    <Chip.Label className="uppercase text-xs font-mono-medium">
-                      {kosh.role}
-                    </Chip.Label>
-                  </Chip>
-                  <Card.Description className="text-xs font-mono-medium">
-                    {kosh.memberCount} members
-                  </Card.Description>
+interface Props {
+  kosh: KoshListItem;
+  className?: string;
+  withSeparator?: boolean;
+  isLast?: boolean;
+}
+
+export const KoshCard = memo(
+  ({ kosh, className, withSeparator = false, isLast }: Props) => {
+    return (
+      <Link
+        asChild
+        href={{
+          pathname: "/kosh/[id]",
+          params: {
+            id: String(kosh.id),
+          },
+        }}
+      >
+        <TouchableOpacity activeOpacity={0.7}>
+          <View className={className}>
+            <View className="flex-row items-center justify-between gap-3 p-3">
+              <View className="flex-row items-center gap-3 flex-1 shrink">
+                <Avatar>
+                  <Avatar.Image source={kosh.iconUrl} alt={kosh.name} />
+                  <Avatar.Fallback fallback={kosh.name} source={kosh.iconUrl} />
+                </Avatar>
+                <View className="flex-1 shrink">
+                  <ThemedText
+                    numberOfLines={1}
+                    className="font-notosans-semibold text-sm capitalize flex-1 shrink"
+                  >
+                    {kosh.name}
+                  </ThemedText>
+                  <View className="flex-row items-center gap-1">
+                    <ThemedText className="text-sm text-muted-foreground">
+                      {kosh.memberCount}
+                    </ThemedText>
+                    <StyledSymbolView
+                      size={16}
+                      tintColorClassName="accent-muted-foreground"
+                      name={{
+                        android: "group",
+                      }}
+                    />
+                    <ThemedText className="text-xs text-muted-foreground">
+                      ·
+                    </ThemedText>
+                    <KoshRoleChip role={kosh.role} />
+                  </View>
                 </View>
               </View>
-            </Card.Header>
-            {!!kosh.description && (
-              <ThemedText className="text-xs text-muted-foreground">
-                {kosh.description}
+              <View>
+                <ThemedText className="font-mono-semibold text-sm text-primary">
+                  रु {formatAmount(kosh.monthlyAmount)}
+                </ThemedText>
+                <ThemedText className="text-xs text-muted font-mono-regular shrink-0">
+                  {formatShortDate(new Date(kosh.startDate))}
+                </ThemedText>
+              </View>
+            </View>
+            <Separator />
+            <View className="flex-row items-center justify-between gap-3 bg-surface-secondary py-3 px-2">
+              <ThemedText className="font-mono-medium text-muted-foreground">
+                Collected : रु {formatAmount(kosh.totalCollected)}
               </ThemedText>
-            )}
+              <ThemedText className="font-mono-medium">
+                In Kosh : रु {formatAmount(kosh.totalRemaining)}
+              </ThemedText>
+            </View>
+            {!isLast && withSeparator && <Separator />}
           </View>
-          <Separator />
-          <Card.Body className={"gap-y-3"}>
-            <View className="flex-row items-center justify-between gap-3">
-              <ThemedText className="text-muted-foreground">In Kosh</ThemedText>
-              <ThemedText className="text-xl font-mono-semibold">
-                रु {formatAmount(kosh.totalRemaining)}
-              </ThemedText>
-            </View>
-            <View className="flex-row items-center justify-between gap-3">
-              <ThemedText className="text-muted-foreground">
-                Collected
-              </ThemedText>
-              <ThemedText className="text-base font-mono-regular text-muted-foreground">
-                रु {formatAmount(kosh.totalCollected)}
-              </ThemedText>
-            </View>
-          </Card.Body>
-          <Separator />
-          <Card.Footer className="flex-row items-center gap-3 justify-between">
-            <ThemedText className="text-muted-foreground text-xs">
-              Monthly Contribution
-            </ThemedText>
-            <ThemedText className="font-mono-medium">
-              रु {formatAmount(kosh.monthlyAmount)}
-            </ThemedText>
-          </Card.Footer>
-        </Card>
-      </TouchableOpacity>
-    </Link>
-  );
-});
+        </TouchableOpacity>
+      </Link>
+    );
+  },
+);

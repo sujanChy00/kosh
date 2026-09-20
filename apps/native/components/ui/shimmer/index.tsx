@@ -2,11 +2,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Easing,
   View,
   type LayoutChangeEvent,
   type LayoutRectangle,
 } from "react-native";
-import { Easing } from "react-native-reanimated";
 import { SHIMMER_PRESETS } from "./const";
 import type { IShimmerEffect, IShimmerGroup } from "./shimmer.types";
 
@@ -125,7 +125,7 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
           return {
             transform: [
               {
-                translateX: shimmerAnim.interpolate<number>({
+                translateX: shimmerAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [-waveWidth, layout.width + waveWidth],
                 }),
@@ -147,7 +147,7 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
           return {
             transform: [
               {
-                translateY: shimmerAnim.interpolate<number>({
+                translateY: shimmerAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [-waveWidth, layout.height + waveWidth],
                 }),
@@ -158,7 +158,7 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
           return {
             transform: [
               {
-                translateY: shimmerAnim.interpolate<number>({
+                translateY: shimmerAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [layout.height + waveWidth, -waveWidth],
                 }),
@@ -298,6 +298,7 @@ export const ShimmerGroup: React.FC<IShimmerGroup> &
     return <>{propagateProps(children)}</>;
   },
 );
+
 export const Shimmer: React.FC<IShimmerEffect> &
   React.FunctionComponent<IShimmerEffect> = memo<IShimmerEffect>(
   (

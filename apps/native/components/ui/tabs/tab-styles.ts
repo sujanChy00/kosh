@@ -6,10 +6,10 @@ export const root = tv({
 });
 
 export const list = tv({
-  base: "self-start flex-row items-center gap-1",
+  base: "w-full flex-row items-center gap-1",
   variants: {
     variant: {
-      primary: "p-[3px] rounded-3xl bg-default",
+      primary: "p-[3px] rounded-2xl bg-default",
       secondary: "p-0 border-b border-border",
     },
   },
@@ -39,7 +39,7 @@ export const scrollViewContentContainer = tv({
 });
 
 export const trigger = tv({
-  base: "flex-row items-center justify-center px-3 py-1.5 gap-1.5",
+  base: "flex-row items-center justify-center px-3 py-2 gap-1.5",
   variants: {
     isDisabled: {
       true: "opacity-50 pointer-events-none",
@@ -53,7 +53,7 @@ export const label = tv({
   base: "text-base font-notosans-medium",
   variants: {
     isSelected: {
-      true: "text-foreground",
+      true: "text-primary",
       false: "text-muted",
     },
   },
@@ -63,7 +63,7 @@ export const indicator = tv({
   base: "absolute left-0",
   variants: {
     variant: {
-      primary: "rounded-3xl shadow-sm shadow-black/10 bg-surface",
+      primary: "rounded-2xl shadow-sm shadow-black/10 bg-primary/15",
       secondary: "bottom-0 border-b-2 border-primary",
     },
     isScrollView: { true: "", false: "" },

@@ -5,8 +5,8 @@ import { TouchableOpacity, View } from "react-native";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
-import { Chip } from "../ui/chip";
 import { KoshInviteButton } from "./kosh-invite-button";
+import { KoshRoleChip } from "./kosh-role-chip";
 
 export const KoshMembersList = ({ kosh }: { kosh: KoshDetail }) => {
   return (
@@ -46,23 +46,7 @@ export const KoshMembersList = ({ kosh }: { kosh: KoshDetail }) => {
                   </ThemedText>
                   <View className="flex-row items-center gap-1">
                     {item.role === "adhyaksh" ? (
-                      <Chip
-                        size="sm"
-                        variant="soft"
-                        color="warning"
-                        className="shrink-0"
-                      >
-                        <StyledSymbolView
-                          tintColorClassName="accent-warning"
-                          size={14}
-                          name={{
-                            android: "crown",
-                          }}
-                        />
-                        <Chip.Label className="capitalize shrink">
-                          {item.role}
-                        </Chip.Label>
-                      </Chip>
+                      <KoshRoleChip role={item.role} />
                     ) : (
                       <ThemedText className="font-mono-regular text-muted capitalize text-xs">
                         {item.role} ·

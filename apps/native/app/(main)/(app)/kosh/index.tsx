@@ -1,8 +1,9 @@
-import { KoshJoinDialog } from "@/components/kosh/kosh-join-dialog";
+import { JoinNewKoshDialog } from "@/components/kosh/join-new-kosh-dialog";
 import { KoshList } from "@/components/kosh/kosh-list";
 import ADD_ICON from "@expo/material-symbols/add.xml";
 import RECORD_ICON from "@expo/material-symbols/edit_square.xml";
 import JOIN_ICON from "@expo/material-symbols/group_add.xml";
+import HOW_TO_REG_ICON from "@expo/material-symbols/how_to_reg.xml";
 import MORE_HORIZ_ICON from "@expo/material-symbols/more_horiz.xml";
 import { Stack, useRouter } from "expo-router";
 import { useState } from "react";
@@ -14,7 +15,7 @@ const KoshScreen = () => {
 
   return (
     <View className="flex-1">
-      <KoshJoinDialog
+      <JoinNewKoshDialog
         isVisible={isVisible}
         setIsVisible={setIsVisible}
         onConfirm={(token) => {
@@ -30,7 +31,7 @@ const KoshScreen = () => {
           <Stack.Toolbar.Icon sf="ellipsis.circle" src={MORE_HORIZ_ICON} />
 
           <Stack.Toolbar.MenuAction
-            icon={JOIN_ICON}
+            icon={HOW_TO_REG_ICON}
             onPress={() => {
               router.push({
                 pathname: "/join-requests",
@@ -38,6 +39,15 @@ const KoshScreen = () => {
             }}
           >
             Join Requests
+          </Stack.Toolbar.MenuAction>
+
+          <Stack.Toolbar.MenuAction
+            icon={JOIN_ICON}
+            onPress={() => {
+              setIsVisible(true);
+            }}
+          >
+            Join New Kosh
           </Stack.Toolbar.MenuAction>
           <Stack.Toolbar.MenuAction
             icon={RECORD_ICON}

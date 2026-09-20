@@ -5,45 +5,34 @@ import { CurvedBackground } from "../layout/curved-background";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
-import { Chip } from "../ui/chip";
 import { KoshOptions } from "./kosh-options";
+import { KoshRoleChip } from "./kosh-role-chip";
 
 export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
   return (
     <CurvedBackground height={270}>
       <View className="gap-y-6 px-4 pt-safe-offset-14">
-        <View className="gap-y-1 w-full">
-          <View className="flex-row gap-2 items-center w-full">
-            <Avatar className="size-16">
-              <Avatar.Image source={kosh.iconUrl} alt={kosh.name} />
-              <Avatar.Fallback source={kosh.iconUrl} fallback={kosh.name} />
-            </Avatar>
-            <View className="flex-1 shrink">
-              <ThemedText
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                className="text-2xl font-notosans-semibold capitalize text-primary-foreground"
-              >
-                {kosh.name}
-              </ThemedText>
-              <View className="flex-row items-center gap-1">
-                <ThemedText className="text-gray-300">
-                  {kosh.memberCount} members ·
-                </ThemedText>
-                <Chip variant="soft" color="warning" size="sm">
-                  <Chip.Label className="uppercase font-mono-medium">
-                    {kosh.role}
-                  </Chip.Label>
-                </Chip>
-              </View>
-            </View>
-            <KoshOptions koshId={kosh.id} role={kosh.role} />
-          </View>
-          {kosh.description && (
-            <ThemedText className="text-gray-300 text-xs">
-              {kosh.description}
+        <View className="flex-row gap-2 items-center w-full">
+          <Avatar className="size-16">
+            <Avatar.Image source={kosh.iconUrl} alt={kosh.name} />
+            <Avatar.Fallback source={kosh.iconUrl} fallback={kosh.name} />
+          </Avatar>
+          <View className="flex-1 shrink">
+            <ThemedText
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className="text-2xl font-notosans-semibold capitalize text-primary-foreground"
+            >
+              {kosh.name}
             </ThemedText>
-          )}
+            <View className="flex-row items-center gap-1">
+              <ThemedText className="text-gray-300">
+                {kosh.memberCount} members ·
+              </ThemedText>
+              <KoshRoleChip role={kosh.role} />
+            </View>
+          </View>
+          <KoshOptions koshId={kosh.id} role={kosh.role} />
         </View>
         <View className="flex-row items-center gap-3">
           <View className="flex-row items-center gap-1.5 bg-black/20 p-3 pr-5 rounded-3xl">

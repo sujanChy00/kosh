@@ -1,6 +1,6 @@
 import { db } from "@kosh-app/db";
 import { contribution } from "@kosh-app/db/schema/contributions";
-import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
+import { koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
 import { and, eq, lt } from "drizzle-orm";
@@ -335,7 +335,6 @@ async function applyMemberEntry(input: {
   // member who pays the full amount late still owes it. The adhyaksh can
   // collect up to the assessed amount but never more (`min` cap); partial
   // penalty payments are allowed.
-  const outstanding = round2(expected - contributionAmount);
   const computedAssessed =
     isPenaltyDue && koshRow.latePenaltyAmount != null
       ? parseFloat(koshRow.latePenaltyAmount)

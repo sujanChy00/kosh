@@ -1,6 +1,6 @@
 import { db } from "@kosh-app/db";
 import { koshMembership, koshRoleRequest } from "@kosh-app/db/schema/kosh";
-import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
+import { loanRepayment } from "@kosh-app/db/schema/loans";
 import { notification } from "@kosh-app/db/schema/notifications";
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
@@ -151,7 +151,7 @@ export const membershipRouter = router({
   respondTreasurerInvite: protectedProcedure
     .input(
       z.object({
-        requestId: z.string().uuid(),
+        requestId: z.uuid(),
         accept: z.boolean(),
         reason: z.string().trim().max(300).optional(),
       }),
@@ -409,10 +409,7 @@ export const membershipRouter = router({
 
       const activeLoan = await db.query.loan.findFirst({
         where: (l, { and: a, eq: q }) =>
-          a(
-            q(l.koshId, input.koshId),
-            q(l.borrowerId, input.userId),
-          ),
+          a(q(l.koshId, input.koshId), q(l.borrowerId, input.userId)),
         orderBy: (l, { desc: d }) => [d(l.createdAt)],
       });
 
@@ -660,5 +657,3 @@ export type MemberDetailData = {
 };
 
 export type MemberContributionItem = MemberDetailData["contributions"][number];
-
-

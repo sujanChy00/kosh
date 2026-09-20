@@ -12,9 +12,7 @@ export default function SignInForm({
 }: {
   onSwitchToSignUp: () => void;
 }) {
-  const navigate = useNavigate({
-    from: "/",
-  });
+  const navigate = useNavigate();
   const { isPending } = authClient.useSession();
 
   const form = useForm({
@@ -39,6 +37,9 @@ export default function SignInForm({
             toast.error(error.error.message || error.error.statusText);
             if (error.error.code === "EMAIL_NOT_VERIFIED") {
               console.log("redirect user to verify their email");
+              navigate({
+                to: "/verify-email",
+              });
             }
           },
         },

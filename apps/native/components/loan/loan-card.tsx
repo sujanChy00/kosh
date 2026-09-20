@@ -1,0 +1,143 @@
+import { StyledSymbolView } from "@/components/styled-symbol-view";
+import { ThemedText } from "@/components/themed-text";
+import { Avatar } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { Separator } from "@/components/ui/separator";
+import { loanStatusColor } from "@/lib/loan-status-color";
+import type { MyLoanItem } from "@kosh-app/api/routers/loan";
+import { formatAmount } from "@kosh-app/utils";
+import { formatShortDate } from "@kosh-app/utils/date";
+import { View } from "react-native";
+
+function progressPercent(principal: string, remaining: string) {
+  const p = parseFloat(principal);
+  const r = parseFloat(remaining);
+  if (!p || p <= 0) return 100;
+  return Math.round(((p - r) / p) * 100);
+}
+
+export const LoanCard = ({ item }: { item: MyLoanItem }) => {
+  const pct = progressPercent(item.principal, item.amountRemaining);
+  const isPaidOff = item.status === "paid_off";
+  const isDefaulted = item.status === "defaulted";
+
+  return (
+    <Card className="p-4 gap-y-3">
+      {/* Header Row */}
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2 flex-1 shrink">
+          <Avatar className="size-9 rounded-2xl">
+            <Avatar.Image source={item.koshIconUrl} alt={item.koshName} />
+            <Avatar.Fallback
+              source={item.koshIconUrl}
+              fallback={item.koshName}
+            />
+          </Avatar>
+          <View className="flex-1 shrink">
+            <ThemedText
+              numberOfLines={1}
+              className="font-notosans-semibold text-base"
+            >
+              {item.koshName}
+            </ThemedText>
+            <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+              Issued {formatShortDate(new Date(`${item.issueDate}T00:00:00`))}
+            </ThemedText>
+          </View>
+        </View>
+
+        <Chip variant="soft" color={loanStatusColor(item.status)} size="sm">
+          <Chip.Label className="uppercase font-mono-semibold">
+            {item.status === "paid_off"
+              ? "Paid Off"
+              : item.status === "defaulted"
+                ? "Defaulted"
+                : "Active"}
+          </Chip.Label>
+        </Chip>
+      </View>
+
+      <Separator />
+
+      {/* Amount Rows */}
+      <View className="gap-y-2">
+        <View className="flex-row justify-between items-center">
+          <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+            Principal
+          </ThemedText>
+          <ThemedText className="font-mono-semibold text-sm">
+            रु {formatAmount(item.principal)}
+          </ThemedText>
+        </View>
+
+        {!isPaidOff && (
+          <View className="flex-row justify-between items-center">
+            <ThemedText
+              className={`text-xs font-mono-regular ${isDefaulted ? "text-danger" : "text-muted-foreground"}`}
+            >
+              Remaining
+            </ThemedText>
+            <ThemedText
+              className={`font-mono-semibold text-sm ${isDefaulted ? "text-danger" : ""}`}
+            >
+              रु {formatAmount(item.amountRemaining)}
+            </ThemedText>
+          </View>
+        )}
+
+        <View className="flex-row justify-between items-center">
+          <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+            Repaid
+          </ThemedText>
+          <ThemedText className="font-mono-semibold text-sm text-success">
+            रु {formatAmount(item.totalRepaid)}
+          </ThemedText>
+        </View>
+
+        {Number(item.totalInterestPaid) > 0 && (
+          <View className="flex-row justify-between items-center">
+            <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+              Interest Paid
+            </ThemedText>
+            <ThemedText className="font-mono-regular text-xs text-muted-foreground">
+              रु {formatAmount(item.totalInterestPaid)}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+
+      {/* Progress bar – only meaningful on active/defaulted loans */}
+      {/*{!isPaidOff && (
+        <View className="gap-y-1">
+          <LoanProgressBar
+            principal={item.principal}
+            remaining={item.amountRemaining}
+          />
+          <ThemedText className="text-xs text-muted-foreground font-mono-regular text-right">
+            {pct}% repaid
+          </ThemedText>
+        </View>
+      )}*/}
+
+      {/* Footer: interest rate + due date */}
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-1.5">
+          <StyledSymbolView
+            size={12}
+            tintColorClassName="accent-muted"
+            name={{ android: "percent" }}
+          />
+          <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+            {item.interestRate}% / year
+          </ThemedText>
+        </View>
+        {item.dueDate && !isPaidOff && (
+          <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+            Due {formatShortDate(new Date(`${item.dueDate}T00:00:00`))}
+          </ThemedText>
+        )}
+      </View>
+    </Card>
+  );
+};

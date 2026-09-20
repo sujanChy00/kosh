@@ -87,37 +87,29 @@ const MyContributionsScreen = () => {
               showsHorizontalScrollIndicator={false}
               contentContainerClassName="gap-x-2 py-1"
             >
-              <TouchableOpacity
+              <Chip
                 onPress={() => setSelectedKoshId(undefined)}
-                activeOpacity={0.7}
+                variant={selectedKoshId === undefined ? "primary" : "soft"}
+                color={selectedKoshId === undefined ? "primary" : "default"}
+                size="md"
               >
+                <Chip.Label className="font-mono-semibold">
+                  All Koshes ({koshes.length})
+                </Chip.Label>
+              </Chip>
+
+              {koshes.map((kosh) => (
                 <Chip
-                  variant={selectedKoshId === undefined ? "primary" : "soft"}
-                  color={selectedKoshId === undefined ? "primary" : "default"}
+                  key={kosh.id}
+                  onPress={() => setSelectedKoshId(kosh.id)}
+                  variant={selectedKoshId === kosh.id ? "primary" : "soft"}
+                  color={selectedKoshId === kosh.id ? "primary" : "default"}
                   size="md"
                 >
                   <Chip.Label className="font-mono-semibold">
-                    All Koshes ({koshes.length})
+                    {kosh.name}
                   </Chip.Label>
                 </Chip>
-              </TouchableOpacity>
-
-              {koshes.map((kosh) => (
-                <TouchableOpacity
-                  key={kosh.id}
-                  onPress={() => setSelectedKoshId(kosh.id)}
-                  activeOpacity={0.7}
-                >
-                  <Chip
-                    variant={selectedKoshId === kosh.id ? "primary" : "soft"}
-                    color={selectedKoshId === kosh.id ? "primary" : "default"}
-                    size="md"
-                  >
-                    <Chip.Label className="font-mono-semibold">
-                      {kosh.name}
-                    </Chip.Label>
-                  </Chip>
-                </TouchableOpacity>
               ))}
             </ScrollView>
           </AnimatedView>

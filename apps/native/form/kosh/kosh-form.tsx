@@ -102,7 +102,7 @@ export const KoshForm = ({ data, ...rest }: KoshFormProps) => {
     late_penalty_amount: data?.latePenaltyAmount ?? "",
     apply_penalty: data?.applyPenalty ?? false,
     penalty_grace_days: String(data?.penaltyGraceDays ?? ""),
-    start_date: data?.startDate ? new Date(data.startDate) : undefined,
+    start_date: data?.startDate ? new Date(data.startDate) : new Date(),
     duration_months: String(data?.durationMonths ?? ""),
     max_members: String(data?.maxMembers ?? ""),
   };
