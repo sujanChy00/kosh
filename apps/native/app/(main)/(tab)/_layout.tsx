@@ -3,7 +3,7 @@ import { NativeTabs } from "expo-router/unstable-native-tabs";
 const TabLayout = () => {
   return (
     <NativeTabs
-      labelVisibilityMode="labeled"
+      labelVisibilityMode="selected"
       tintColor={"#0e5250"}
       indicatorColor={"#0e52504d"}
     >
@@ -29,11 +29,11 @@ const TabLayout = () => {
           md={{ default: "chat_bubble", selected: "chat_bubble" }}
         />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="member">
-        <NativeTabs.Trigger.Label>Members</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="my-contribution">
+        <NativeTabs.Trigger.Label>Contributions</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
-          sf={{ default: "person.2", selected: "person.2.fill" }}
-          md={{ default: "group", selected: "group" }}
+          sf={{ default: "receipt", selected: "receipt.fill" }}
+          md={{ default: "receipt_long", selected: "receipt_long" }}
         />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="setting">
