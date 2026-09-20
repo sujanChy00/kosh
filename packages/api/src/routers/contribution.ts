@@ -1,6 +1,6 @@
 import { db } from "@kosh-app/db";
 import { contribution } from "@kosh-app/db/schema/contributions";
-import { koshPeriod } from "@kosh-app/db/schema/kosh";
+import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
 import { and, eq, lt } from "drizzle-orm";
@@ -756,6 +756,131 @@ export const contributionRouter = router({
         ctx.session.user.id,
       );
     }),
+
+  /**
+   * All contributions for the current user across their active koshes
+   * (optionally filtered by a single koshId).
+   */
+  myContributions: protectedProcedure
+    .input(
+      z
+        .object({
+          koshId: koshIdSchema.optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const userMemberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.userId, userId), q(m.status, "active")),
+        with: {
+          kosh: {
+            columns: {
+              id: true,
+              name: true,
+              iconUrl: true,
+              monthlyAmount: true,
+              currency: true,
+              dueDay: true,
+            },
+          },
+        },
+      });
+
+      const koshes = userMemberships.map((m) => m.kosh);
+      const koshIds = input?.koshId
+        ? [input.koshId]
+        : koshes.map((k) => k.id);
+
+      if (koshIds.length === 0) {
+        return {
+          koshes: [],
+          stats: {
+            totalPaid: "0",
+            totalPenaltiesPaid: "0",
+            unpaidDues: "0",
+            paidPeriodsCount: 0,
+            pendingPeriodsCount: 0,
+            latePeriodsCount: 0,
+          },
+          items: [],
+        };
+      }
+
+      const records = await db.query.contribution.findMany({
+        where: (c, { and: a, eq: q, inArray: inArr }) =>
+          a(q(c.memberId, userId), inArr(c.koshId, koshIds)),
+        with: {
+          kosh: {
+            columns: { id: true, name: true, iconUrl: true, currency: true },
+          },
+        },
+        orderBy: (c, { desc: d }) => [d(c.period)],
+      });
+
+      let totalPaid = 0;
+      let totalPenaltiesPaid = 0;
+      let unpaidDues = 0;
+      let paidPeriodsCount = 0;
+      let pendingPeriodsCount = 0;
+      let latePeriodsCount = 0;
+
+      const items = records.map((r) => {
+        const cAmount = parseFloat(r.contributionAmount ?? "0");
+        const pPaid = parseFloat(r.penaltyPaid ?? "0");
+        const pAssessed = parseFloat(r.penaltyAssessed ?? "0");
+        const expected = parseFloat(r.expectedAmount ?? "0");
+
+        totalPaid += cAmount;
+        totalPenaltiesPaid += pPaid;
+
+        if (r.status === "paid") {
+          paidPeriodsCount++;
+        } else if (r.status === "late") {
+          paidPeriodsCount++;
+          latePeriodsCount++;
+        } else {
+          pendingPeriodsCount++;
+          if (r.status === "partial") {
+            unpaidDues += Math.max(0, expected - cAmount);
+          } else {
+            unpaidDues += expected;
+          }
+        }
+
+        unpaidDues += Math.max(0, pAssessed - pPaid);
+
+        return {
+          id: r.id,
+          koshId: r.koshId,
+          koshName: r.kosh.name,
+          koshIconUrl: r.kosh.iconUrl,
+          period: r.period,
+          periodLabel: periodLabel(r.period),
+          expectedAmount: r.expectedAmount,
+          contributionAmount: r.contributionAmount,
+          penaltyAssessed: r.penaltyAssessed,
+          penaltyPaid: r.penaltyPaid,
+          status: r.status,
+          datePaid: r.datePaid ? r.datePaid.toISOString() : null,
+        };
+      });
+
+      return {
+        koshes,
+        stats: {
+          totalPaid: String(totalPaid),
+          totalPenaltiesPaid: String(totalPenaltiesPaid),
+          unpaidDues: String(unpaidDues),
+          paidPeriodsCount,
+          pendingPeriodsCount,
+          latePeriodsCount,
+        },
+        items,
+      };
+    }),
 });
 
 export type ContributionMemberData = {
@@ -823,3 +948,38 @@ export type RecordEntryResult = {
     remainingBalanceAfter: string;
   } | null;
 };
+
+export type MyContributionsData = {
+  koshes: {
+    id: string;
+    name: string;
+    iconUrl: string | null;
+    monthlyAmount: string;
+    currency: string;
+    dueDay: number;
+  }[];
+  stats: {
+    totalPaid: string;
+    totalPenaltiesPaid: string;
+    unpaidDues: string;
+    paidPeriodsCount: number;
+    pendingPeriodsCount: number;
+    latePeriodsCount: number;
+  };
+  items: {
+    id: string;
+    koshId: string;
+    koshName: string;
+    koshIconUrl: string | null;
+    period: string;
+    periodLabel: string;
+    expectedAmount: string;
+    contributionAmount: string;
+    penaltyAssessed: string;
+    penaltyPaid: string;
+    status: "pending" | "paid" | "partial" | "late";
+    datePaid: string | null;
+  }[];
+};
+
+export type MyContributionItem = MyContributionsData["items"][number];

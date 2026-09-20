@@ -86,6 +86,12 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
+        name="kosh/[id]/[userId]/index"
+        options={{
+          headerTitle: "Member details",
+        }}
+      />
+      <Stack.Screen
         name="join-requests"
         options={{
           headerTitle: "Join requests",

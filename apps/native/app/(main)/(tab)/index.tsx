@@ -1,42 +1,57 @@
-import { useQuery } from "@tanstack/react-query";
-import { Button, ScrollView } from "react-native";
-
 import { HomeHeader } from "@/components/home/home-header";
-import { SelectInput } from "@/components/ui/select-input";
-import { trpc } from "@/utils/trpc";
-import { Shapes } from "@expo/ui/jetpack-compose/modifiers";
+import { KoshList } from "@/components/kosh/kosh-list";
+import { StyledSymbolView } from "@/components/styled-symbol-view";
+import { ThemedText } from "@/components/themed-text";
+import { PrimaryButton, SecondaryButton } from "@/components/ui/button";
 import { Link } from "expo-router";
-import { useState } from "react";
-
-const LANGUAGES = [
-  { label: "Java", value: "java" },
-  { label: "JavaScript", value: "js" },
-  { label: "TypeScript", value: "ts" },
-];
+import { View } from "react-native";
 
 export default function Home() {
-  const [language, setLanguage] = useState("java");
-  const [expanded, setExpanded] = useState(false);
-  const healthCheck = useQuery(trpc.healthCheck.queryOptions());
-  const privateData = useQuery(trpc.privateData.queryOptions());
-  const isConnected = healthCheck?.data === "OK";
-  const isLoading = healthCheck?.isLoading;
-  const shape = Shapes.RoundedCorner(16);
-
   return (
-    <ScrollView contentContainerClassName="px-4 pt-safe-offset-14">
-      <HomeHeader />
-      <SelectInput
-        options={LANGUAGES}
-        value={language}
-        onValueChange={(v) => {
-          setLanguage(v);
-          console.log(v);
-        }}
-      />
-      <Link asChild href="/kosh/join">
-        <Button title="Join" />
-      </Link>
-    </ScrollView>
+    <View className="flex-1 bg-background">
+      {/* Header Container */}
+      <View className="px-4 pt-safe pb-4 gap-y-4 bg-surface border-b border-border shadow-sm">
+        <HomeHeader />
+
+        {/* Quick Actions */}
+        <View className="flex-row items-center gap-3">
+          <Link href="/kosh/add" asChild>
+            <PrimaryButton wrapperClassName="flex-1">
+              <StyledSymbolView
+                tintColorClassName="accent-primary-foreground"
+                size={18}
+                name={{ android: "add_circle", ios: "plus.circle" }}
+              />
+              <PrimaryButton.Label className="text-xs font-mono-semibold">
+                New Kosh
+              </PrimaryButton.Label>
+            </PrimaryButton>
+          </Link>
+
+          <Link href="/kosh/join" asChild>
+            <SecondaryButton wrapperClassName="flex-1">
+              <StyledSymbolView
+                tintColorClassName="accent-primary"
+                size={18}
+                name={{ android: "group_add", ios: "person.badge.plus" }}
+              />
+              <SecondaryButton.Label className="text-xs font-mono-semibold">
+                Join Kosh
+              </SecondaryButton.Label>
+            </SecondaryButton>
+          </Link>
+        </View>
+      </View>
+
+      {/* Koshes List */}
+      <View className="flex-1 px-2 pt-3">
+        <View className="flex-row items-center justify-between px-2 pb-2">
+          <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
+            My Koshes
+          </ThemedText>
+        </View>
+        <KoshList />
+      </View>
+    </View>
   );
 }
