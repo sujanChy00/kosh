@@ -84,17 +84,6 @@ export const ContributionHistoryTabs = ({
           />
         </View>
       </Tabs.Content>
-      <Tabs.Content value="late">
-        <View className="gap-y-3">
-          <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
-            Contribution History ({filteredItems.length})
-          </ThemedText>
-          <MyContributionHistoryList
-            filter={statusFilter}
-            items={filteredItems}
-          />
-        </View>
-      </Tabs.Content>
     </Tabs>
   );
 };

@@ -124,6 +124,10 @@ export const loanRouter = router({
         }
 
         const koshInfo = koshMap.get(l.koshId)!;
+        const monthlyRate = parseFloat(l.interestRate);
+        const yearlyRate = monthlyRate * 12;
+        const monthlyInterestAmount =
+          Math.round(principal * (monthlyRate / 100) * 100) / 100;
 
         return {
           id: l.id,
@@ -133,6 +137,9 @@ export const loanRouter = router({
           currency: koshInfo.currency,
           principal: l.principal,
           interestRate: l.interestRate,
+          monthlyInterestRate: String(monthlyRate),
+          yearlyInterestRate: String(yearlyRate),
+          monthlyInterestAmount: String(monthlyInterestAmount),
           issueDate: l.issueDate,
           dueDate: l.dueDate,
           status: l.status,
@@ -189,6 +196,9 @@ export type MyLoanItem = {
   currency: string;
   principal: string;
   interestRate: string;
+  monthlyInterestRate: string;
+  yearlyInterestRate: string;
+  monthlyInterestAmount: string;
   issueDate: string;
   dueDate: string | null;
   status: "active" | "paid_off" | "defaulted";

@@ -1,6 +1,6 @@
 import type { LoanStatusFilter, MyLoanItem } from "@kosh-app/api/routers/loan";
 import { Tabs } from "../ui/tabs";
-import { LoanList } from "./loan-list";
+import { LoanHistoryList } from "./loan-history-list";
 
 interface Props {
   tabValue: LoanStatusFilter;
@@ -39,16 +39,16 @@ export const LoanHistoryTabs = ({
         </Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="all">
-        <LoanList loanItems={loanItems} statusFilter="all" />
+        <LoanHistoryList loanItems={loanItems} statusFilter="all" />
       </Tabs.Content>
       <Tabs.Content value="active">
-        <LoanList loanItems={filteredItems} statusFilter="active" />
+        <LoanHistoryList loanItems={filteredItems} statusFilter="active" />
       </Tabs.Content>
       <Tabs.Content value="paid_off">
-        <LoanList loanItems={filteredItems} statusFilter="paid_off" />
+        <LoanHistoryList loanItems={filteredItems} statusFilter="paid_off" />
       </Tabs.Content>
       <Tabs.Content value="defaulted">
-        <LoanList loanItems={filteredItems} statusFilter="defaulted" />
+        <LoanHistoryList loanItems={filteredItems} statusFilter="defaulted" />
       </Tabs.Content>
     </Tabs>
   );

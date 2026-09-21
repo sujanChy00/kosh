@@ -63,7 +63,10 @@ export const KoshList = () => {
 
   if (isLoading)
     return (
-      <KoshCardSkeleton className="bg-surface rounded-3xl shadow overflow-hidden" />
+      <KoshCardSkeleton
+        className="bg-surface rounded-3xl shadow overflow-hidden"
+        wrapperClassName="p-2"
+      />
     );
 
   if (isError)

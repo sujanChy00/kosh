@@ -12,7 +12,7 @@ interface Props {
   statusFilter: LoanStatusFilter;
 }
 
-export const LoanList = ({ loanItems, statusFilter }: Props) => {
+export const LoanHistoryList = ({ loanItems, statusFilter }: Props) => {
   if (!loanItems || loanItems.length === 0)
     return (
       <AnimatedView entering={FadeInUp.duration(300)}>

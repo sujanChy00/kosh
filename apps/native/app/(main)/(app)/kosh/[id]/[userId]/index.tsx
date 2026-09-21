@@ -398,7 +398,8 @@ const KoshMembershipScreen = () => {
 
               <View className="flex-row justify-between items-center text-xs pt-1">
                 <ThemedText className="text-muted-foreground text-xs font-mono-regular">
-                  Interest Rate: {activeLoan.interestRate}% / yr
+                  Interest Rate: {activeLoan.interestRate}% / mo (
+                  {Number(activeLoan.interestRate) * 12}% / yr)
                 </ThemedText>
                 <ThemedText className="text-muted-foreground text-xs font-mono-regular">
                   Issued: {formatShortDate(new Date(activeLoan.issueDate))}

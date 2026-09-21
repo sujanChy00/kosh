@@ -78,6 +78,17 @@ export const LoanCard = ({ item }: { item: MyLoanItem }) => {
 
         {!isPaidOff && (
           <View className="flex-row justify-between items-center">
+            <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+              Monthly Interest
+            </ThemedText>
+            <ThemedText className="font-mono-semibold text-sm">
+              रु {formatAmount(item.monthlyInterestAmount)} / mo
+            </ThemedText>
+          </View>
+        )}
+
+        {!isPaidOff && (
+          <View className="flex-row justify-between items-center">
             <ThemedText
               className={`text-xs font-mono-regular ${isDefaulted ? "text-danger" : "text-muted-foreground"}`}
             >
@@ -126,7 +137,7 @@ export const LoanCard = ({ item }: { item: MyLoanItem }) => {
 
       <View className="flex-row items-center justify-between">
         <ThemedText className="text-xs text-muted-foreground font-mono-regular">
-          {item.interestRate}% / month
+          {item.monthlyInterestRate}% / mo ({item.yearlyInterestRate}% / yr)
         </ThemedText>
         {item.dueDate && !isPaidOff && (
           <ThemedText className="text-xs text-muted-foreground font-mono-regular">
