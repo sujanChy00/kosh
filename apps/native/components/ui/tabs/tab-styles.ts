@@ -63,7 +63,7 @@ export const indicator = tv({
   base: "absolute left-0",
   variants: {
     variant: {
-      primary: "rounded-2xl shadow-sm shadow-black/10 bg-primary/15",
+      primary: "rounded-2xl shadow-sm shadow-black/10 bg-primary/20",
       secondary: "bottom-0 border-b-2 border-primary",
     },
     isScrollView: { true: "", false: "" },

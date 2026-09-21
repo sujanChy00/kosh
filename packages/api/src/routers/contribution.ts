@@ -104,11 +104,7 @@ function defaultPeriodFor(dueDay: number, today = new Date()) {
     // This month's due date already passed. If the next occurrence (next
     // month) is more than 5 days away we stay on this month — the period
     // whose due date just passed; otherwise we jump ahead to it.
-    const nextDue = new Date(
-      today.getFullYear(),
-      today.getMonth() + 1,
-      dueDay,
-    );
+    const nextDue = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
     offset = daysUntil(nextDue, today) > LATE_THRESHOLD_DAYS ? 0 : 1;
   } else {
     // This month's due date is still ahead. More than 5 days out → default
@@ -116,10 +112,7 @@ function defaultPeriodFor(dueDay: number, today = new Date()) {
     offset = daysUntil(thisDue, today) > LATE_THRESHOLD_DAYS ? -1 : 0;
   }
 
-  return periodFromParts(
-    today.getFullYear(),
-    today.getMonth() + 1 + offset,
-  );
+  return periodFromParts(today.getFullYear(), today.getMonth() + 1 + offset);
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -253,7 +246,10 @@ function computeRepaymentSplit(
   const principal = parseFloat(loanRow.principal);
   const rate = parseFloat(loanRow.interestRate); // % per year
   const remaining = parseFloat(loanRow.amountRemaining);
-  const days = Math.max(0, daysBetween(new Date(`${loanRow.issueDate}T00:00:00`)));
+  const days = Math.max(
+    0,
+    daysBetween(new Date(`${loanRow.issueDate}T00:00:00`)),
+  );
   const accrued = principal * (rate / 100) * (days / 365);
   const interestOwed = round2(Math.max(0, accrued - paidInterest));
   const maxPayment = round2(remaining + interestOwed);
@@ -310,7 +306,11 @@ async function applyMemberEntry(input: {
   // ── Contribution write ─────────────────────────────────────────────────
   const existing = await db.query.contribution.findFirst({
     where: (c, { and: a, eq: q }) =>
-      a(q(c.koshId, koshRow.id), q(c.memberId, entry.memberId), q(c.period, period)),
+      a(
+        q(c.koshId, koshRow.id),
+        q(c.memberId, entry.memberId),
+        q(c.period, period),
+      ),
   });
 
   const expected = existing
@@ -345,9 +345,7 @@ async function applyMemberEntry(input: {
       0,
     ),
   );
-  const effectivePenaltyPaid = round2(
-    Math.min(penaltyPaid, penaltyAssessed),
-  );
+  const effectivePenaltyPaid = round2(Math.min(penaltyPaid, penaltyAssessed));
 
   let status: "paid" | "late" | "partial" | "pending";
   if (contributionAmount >= expected) status = "paid";
@@ -396,14 +394,12 @@ async function applyMemberEntry(input: {
   }
 
   // ── Loan repayment write (independent of the contribution above) ─────
-  let repayment:
-    | {
-        id: string;
-        principalPortion: string;
-        interestPortion: string;
-        remainingBalanceAfter: string;
-      }
-    | null = null;
+  let repayment: {
+    id: string;
+    principalPortion: string;
+    interestPortion: string;
+    remainingBalanceAfter: string;
+  } | null = null;
 
   const repaymentAmount = entry.repaymentAmount ?? 0;
   if (repaymentAmount > 0) {
@@ -495,11 +491,7 @@ async function runBulk(
   actorId: string,
 ) {
   const { koshRow } = await requireAdhyaksh(koshId, actorId);
-  const periodConfig = await resolvePeriodConfig(
-    koshRow.id,
-    period,
-    koshRow,
-  );
+  const periodConfig = await resolvePeriodConfig(koshRow.id, period, koshRow);
   const dueDate = dueDateFor(period, periodConfig.dueDay);
   const isPastDue = startOfDay(new Date()).getTime() > dueDate.getTime();
   const isPenaltyDue = isPenaltyDueFor(periodConfig, dueDate);
@@ -572,8 +564,7 @@ export const contributionRouter = router({
         periodConfig.applyPenalty && periodConfig.latePenaltyAmount != null
           ? toDateString(
               new Date(
-                dueDate.getTime() +
-                  penaltyGraceDaysFor(periodConfig) * DAY_MS,
+                dueDate.getTime() + penaltyGraceDaysFor(periodConfig) * DAY_MS,
               ),
             )
           : null;
@@ -636,10 +627,16 @@ export const contributionRouter = router({
           penalty: 0,
         };
         owed.contribution += round2(
-          Math.max(0, parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount)),
+          Math.max(
+            0,
+            parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount),
+          ),
         );
         owed.penalty += round2(
-          Math.max(0, parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid)),
+          Math.max(
+            0,
+            parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid),
+          ),
         );
         priorByMember.set(r.memberId, owed);
       }
@@ -650,7 +647,8 @@ export const contributionRouter = router({
           ? parseFloat(row.expectedAmount)
           : parseFloat(periodConfig.monthlyAmount);
         const paid = row ? parseFloat(row.contributionAmount) : 0;
-        const recordedLate = overdueDays > LATE_THRESHOLD_DAYS && paid < expected;
+        const recordedLate =
+          overdueDays > LATE_THRESHOLD_DAYS && paid < expected;
 
         const showPenalty = row ? true : isPenaltyDue;
         const penaltyPrefill = row
@@ -789,9 +787,7 @@ export const contributionRouter = router({
       });
 
       const koshes = userMemberships.map((m) => m.kosh);
-      const koshIds = input?.koshId
-        ? [input.koshId]
-        : koshes.map((k) => k.id);
+      const koshIds = input?.koshId ? [input.koshId] : koshes.map((k) => k.id);
 
       if (koshIds.length === 0) {
         return {
@@ -982,3 +978,5 @@ export type MyContributionsData = {
 };
 
 export type MyContributionItem = MyContributionsData["items"][number];
+export type MyContributionStats = MyContributionsData["stats"];
+export type ContributionStatusFilter = "all" | "paid" | "pending" | "late";

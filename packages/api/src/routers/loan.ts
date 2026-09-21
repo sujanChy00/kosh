@@ -197,3 +197,11 @@ export type MyLoanItem = {
   totalInterestPaid: string;
   createdAt: string;
 };
+
+export type LoanStatusFilter = "all" | "active" | "paid_off" | "defaulted";
+export type LoanStats = {
+  activeLoanCount: number;
+  totalBorrowed: string;
+  totalRemaining: string;
+  totalRepaid: string;
+};

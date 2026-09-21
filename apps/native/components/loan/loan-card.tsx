@@ -1,23 +1,28 @@
-import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Separator } from "@/components/ui/separator";
 import { loanStatusColor } from "@/lib/loan-status-color";
+import { LinearProgressIndicator } from "@expo/ui/jetpack-compose";
 import type { MyLoanItem } from "@kosh-app/api/routers/loan";
 import { formatAmount } from "@kosh-app/utils";
 import { formatShortDate } from "@kosh-app/utils/date";
 import { View } from "react-native";
+import { useCSSVariable } from "uniwind";
+import { Host } from "../layout/host";
 
 function progressPercent(principal: string, remaining: string) {
   const p = parseFloat(principal);
   const r = parseFloat(remaining);
-  if (!p || p <= 0) return 100;
-  return Math.round(((p - r) / p) * 100);
+
+  if (!p || p <= 0) return 0;
+
+  return Math.min(1, Math.max(0, (p - r) / p));
 }
 
 export const LoanCard = ({ item }: { item: MyLoanItem }) => {
+  const successColor = useCSSVariable("--color-success") as string;
   const pct = progressPercent(item.principal, item.amountRemaining);
   const isPaidOff = item.status === "paid_off";
   const isDefaulted = item.status === "defaulted";
@@ -106,32 +111,23 @@ export const LoanCard = ({ item }: { item: MyLoanItem }) => {
           </View>
         )}
       </View>
-
-      {/* Progress bar – only meaningful on active/defaulted loans */}
-      {/*{!isPaidOff && (
-        <View className="gap-y-1">
-          <LoanProgressBar
-            principal={item.principal}
-            remaining={item.amountRemaining}
+      {!isPaidOff && (
+        <Host matchContents={{ vertical: true }}>
+          <LinearProgressIndicator
+            progress={pct}
+            color={successColor}
+            gapSize={0}
+            drawStopIndicator={{
+              stopSize: 0,
+            }}
           />
-          <ThemedText className="text-xs text-muted-foreground font-mono-regular text-right">
-            {pct}% repaid
-          </ThemedText>
-        </View>
-      )}*/}
+        </Host>
+      )}
 
-      {/* Footer: interest rate + due date */}
       <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center gap-1.5">
-          <StyledSymbolView
-            size={12}
-            tintColorClassName="accent-muted"
-            name={{ android: "percent" }}
-          />
-          <ThemedText className="text-xs text-muted-foreground font-mono-regular">
-            {item.interestRate}% / year
-          </ThemedText>
-        </View>
+        <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+          {item.interestRate}% / month
+        </ThemedText>
         {item.dueDate && !isPaidOff && (
           <ThemedText className="text-xs text-muted-foreground font-mono-regular">
             Due {formatShortDate(new Date(`${item.dueDate}T00:00:00`))}

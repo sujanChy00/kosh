@@ -1,0 +1,55 @@
+import type { LoanStatusFilter, MyLoanItem } from "@kosh-app/api/routers/loan";
+import { Tabs } from "../ui/tabs";
+import { LoanList } from "./loan-list";
+
+interface Props {
+  tabValue: LoanStatusFilter;
+  setTabValue: (value: LoanStatusFilter) => void;
+  loanItems: MyLoanItem[];
+}
+
+export const LoanHistoryTabs = ({
+  tabValue,
+  setTabValue,
+  loanItems,
+}: Props) => {
+  const filteredItems = loanItems.filter((item) => item.status === tabValue);
+  return (
+    <Tabs
+      value={tabValue}
+      onValueChange={(value) => setTabValue(value as LoanStatusFilter)}
+    >
+      <Tabs.List>
+        <Tabs.Indicator />
+        <Tabs.Trigger className="flex-1 px-0" value="all">
+          <Tabs.Label className="text-xs font-mono-semibold">All</Tabs.Label>
+        </Tabs.Trigger>
+        <Tabs.Trigger className="flex-1 px-0" value="active">
+          <Tabs.Label className="text-xs font-mono-semibold">Active</Tabs.Label>
+        </Tabs.Trigger>
+        <Tabs.Trigger className="flex-1 px-0" value="paid_off">
+          <Tabs.Label className="text-xs font-mono-semibold">
+            Paid Off
+          </Tabs.Label>
+        </Tabs.Trigger>
+        <Tabs.Trigger className="flex-1 px-0" value="defaulted">
+          <Tabs.Label className="text-xs font-mono-semibold">
+            Defaulted
+          </Tabs.Label>
+        </Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Content value="all">
+        <LoanList loanItems={loanItems} statusFilter="all" />
+      </Tabs.Content>
+      <Tabs.Content value="active">
+        <LoanList loanItems={filteredItems} statusFilter="active" />
+      </Tabs.Content>
+      <Tabs.Content value="paid_off">
+        <LoanList loanItems={filteredItems} statusFilter="paid_off" />
+      </Tabs.Content>
+      <Tabs.Content value="defaulted">
+        <LoanList loanItems={filteredItems} statusFilter="defaulted" />
+      </Tabs.Content>
+    </Tabs>
+  );
+};
