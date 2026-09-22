@@ -257,7 +257,7 @@ function computeRepaymentSplit(
   if (payment - maxPayment > 0.005) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Repayment amount exceeds the outstanding balance",
+      message: `Repayment amount (${payment}) exceeds the outstanding loan balance of ${maxPayment}`,
     });
   }
 
@@ -322,6 +322,21 @@ async function applyMemberEntry(input: {
       : existing
         ? parseFloat(existing.contributionAmount)
         : 0;
+
+  if (contributionAmount < 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Contribution amount cannot be negative",
+    });
+  }
+
+  if (contributionAmount > expected) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Contribution amount (${contributionAmount}) cannot exceed expected monthly amount of ${expected}`,
+    });
+  }
+
   const penaltyPaid =
     entry.penaltyPaid != null
       ? round2(entry.penaltyPaid)
@@ -329,12 +344,18 @@ async function applyMemberEntry(input: {
         ? parseFloat(existing.penaltyPaid)
         : 0;
 
+  if (penaltyPaid < 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Penalty paid cannot be negative",
+    });
+  }
+
   // Penalty charged: a stored assessment is never recomputed (history is
   // preserved), otherwise the kosh's late penalty applies once this period is
   // past its grace window (`isPenaltyDue`) — late itself is the trigger, so a
   // member who pays the full amount late still owes it. The adhyaksh can
-  // collect up to the assessed amount but never more (`min` cap); partial
-  // penalty payments are allowed.
+  // collect up to the assessed amount but never more; partial penalty payments are allowed.
   const computedAssessed =
     isPenaltyDue && koshRow.latePenaltyAmount != null
       ? parseFloat(koshRow.latePenaltyAmount)
@@ -345,7 +366,15 @@ async function applyMemberEntry(input: {
       0,
     ),
   );
-  const effectivePenaltyPaid = round2(Math.min(penaltyPaid, penaltyAssessed));
+
+  if (penaltyPaid > penaltyAssessed) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Penalty paid (${penaltyPaid}) cannot exceed assessed penalty of ${penaltyAssessed}`,
+    });
+  }
+
+  const effectivePenaltyPaid = penaltyPaid;
 
   let status: "paid" | "late" | "partial" | "pending";
   if (contributionAmount >= expected) status = "paid";
@@ -402,6 +431,13 @@ async function applyMemberEntry(input: {
   } | null = null;
 
   const repaymentAmount = entry.repaymentAmount ?? 0;
+  if (repaymentAmount < 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Loan repayment amount cannot be negative",
+    });
+  }
+
   if (repaymentAmount > 0) {
     const activeLoan = await db.query.loan.findFirst({
       where: (l, { and: a, eq: q }) =>

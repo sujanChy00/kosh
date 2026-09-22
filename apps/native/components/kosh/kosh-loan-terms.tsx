@@ -18,7 +18,7 @@ export const KoshLoanTerms = ({ kosh }: { kosh: KoshDetail }) => {
             }}
           />
         </Chip>
-        <ThemedText className="text-xs text-muted-foreground">
+        <ThemedText className="text-xs dark:text-muted-foreground text-gray-800">
           Loan cap
         </ThemedText>
         <ThemedText className="font-mono-medium">
@@ -36,7 +36,7 @@ export const KoshLoanTerms = ({ kosh }: { kosh: KoshDetail }) => {
             }}
           />
         </Chip>
-        <ThemedText className="text-xs text-muted-foreground">
+        <ThemedText className="text-xs dark:text-muted-foreground text-gray-800">
           Member interest rate
         </ThemedText>
         <ThemedText className="font-mono-medium">
@@ -54,33 +54,13 @@ export const KoshLoanTerms = ({ kosh }: { kosh: KoshDetail }) => {
             }}
           />
         </Chip>
-        <ThemedText className="text-xs text-muted-foreground">
+        <ThemedText className="text-xs dark:text-muted-foreground text-gray-800">
           Non-member interest
         </ThemedText>
         <ThemedText className="font-mono-medium">
           {kosh.nonMemberInterestRate}%
         </ThemedText>
       </View>
-      {/*<View className="flex-row items-center justify-between gap-3">
-        <ThemedText>Loan cap</ThemedText>
-        <ThemedText className="font-mono-medium">
-          रु {formatAmount(kosh.loanCap)}
-        </ThemedText>
-      </View>
-      <Separator />
-      <View className="flex-row items-center justify-between gap-3">
-        <ThemedText>Member interest rate</ThemedText>
-        <ThemedText className="font-mono-medium">
-          {formatAmount(kosh.memberInterestRate)}%
-        </ThemedText>
-      </View>
-      <Separator />
-      <View className="flex-row items-center justify-between gap-3">
-        <ThemedText>Non-member interest</ThemedText>
-        <ThemedText className="font-mono-medium">
-          {formatAmount(kosh.nonMemberInterestRate)}%
-        </ThemedText>
-      </View>*/}
     </View>
   );
 };

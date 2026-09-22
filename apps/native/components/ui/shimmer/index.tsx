@@ -1,5 +1,13 @@
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Easing,
@@ -20,17 +28,22 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
     style,
     variant = "shimmer",
     direction = "leftToRight",
-    preset = "dark",
+    preset,
     opacity = 1,
     children,
   }: IShimmerEffect):
     (React.ReactNode & React.JSX.Element & React.ReactElement) | null => {
+    const { isDark } = useAppTheme();
     const [layout, setLayout] = useState<LayoutRectangle | null>(null);
     const shimmerAnim = useRef<Animated.Value>(new Animated.Value(0)).current;
     const pulseAnim = useRef<Animated.Value>(new Animated.Value(0.3)).current;
     const fadeAnim = useRef<Animated.Value>(new Animated.Value(0)).current;
 
-    const theme = SHIMMER_PRESETS[preset] ?? SHIMMER_PRESETS.dark;
+    const theme = useMemo(() => {
+      if (preset) return SHIMMER_PRESETS[preset] ?? SHIMMER_PRESETS.dark;
+      if (isDark) return SHIMMER_PRESETS["dark"];
+      return SHIMMER_PRESETS["neutral"];
+    }, [SHIMMER_PRESETS, preset, isDark]);
 
     const themeColors =
       shimmerColors && shimmerColors.length >= 2 ? shimmerColors : theme.colors;
@@ -259,7 +272,7 @@ export const ShimmerGroup: React.FC<IShimmerGroup> &
   ({
     isLoading = true,
     children,
-    preset = "dark",
+    preset,
     shimmerColors,
     duration = 1500,
     direction = "leftToRight",

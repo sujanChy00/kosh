@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView } from "react-native";
+import { ScrollView, TouchableOpacity } from "react-native";
 import { Chip } from "../ui/chip";
 
 interface Props {
@@ -22,27 +22,35 @@ export const HorizontalKoshSelector = ({ koshList, className }: Props) => {
       showsHorizontalScrollIndicator={false}
       contentContainerClassName="gap-x-2 py-1"
     >
-      <Chip
+      <TouchableOpacity
         onPress={() => onSelectKosh(undefined)}
-        variant={selectedKosh === undefined ? "primary" : "soft"}
-        color={selectedKosh === undefined ? "primary" : "default"}
-        size="md"
+        activeOpacity={0.7}
       >
-        <Chip.Label className="font-mono-semibold">
-          All Koshes ({koshList.length})
-        </Chip.Label>
-      </Chip>
-
-      {koshList.map((kosh) => (
         <Chip
-          key={kosh.id}
-          onPress={() => onSelectKosh(kosh.id)}
-          variant={selectedKosh === kosh.id ? "primary" : "soft"}
-          color={selectedKosh === kosh.id ? "primary" : "default"}
+          variant={selectedKosh === undefined ? "primary" : "soft"}
+          color={selectedKosh === undefined ? "primary" : "default"}
           size="md"
         >
-          <Chip.Label className="font-mono-semibold">{kosh.name}</Chip.Label>
+          <Chip.Label className="font-mono-semibold">
+            All Koshes ({koshList.length})
+          </Chip.Label>
         </Chip>
+      </TouchableOpacity>
+
+      {koshList.map((kosh) => (
+        <TouchableOpacity
+          key={kosh.id}
+          onPress={() => onSelectKosh(kosh.id)}
+          activeOpacity={0.7}
+        >
+          <Chip
+            variant={selectedKosh === kosh.id ? "primary" : "soft"}
+            color={selectedKosh === kosh.id ? "primary" : "default"}
+            size="md"
+          >
+            <Chip.Label className="font-mono-semibold">{kosh.name}</Chip.Label>
+          </Chip>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );

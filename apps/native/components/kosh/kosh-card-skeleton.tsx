@@ -1,3 +1,4 @@
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { cn } from "@kosh-app/utils";
 import { View } from "react-native";
 import { Separator } from "../ui/separator";
@@ -16,6 +17,7 @@ export const KoshCardSkeleton = ({
   length = 6,
   wrapperClassName,
 }: Props) => {
+  const { isDark } = useAppTheme();
   return (
     <View className={cn("gap-y-2", wrapperClassName)}>
       {Array.from({ length }).map((_, index) => (

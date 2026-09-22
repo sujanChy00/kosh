@@ -65,8 +65,8 @@ export const KoshOptions = ({ koshId, role }: KoshOptionsProps) => {
         image: JOIN_REQUEST_ICON,
       },
       {
-        title: "Update transaction pin",
-        id: "update-transaction-pin",
+        title: "Update pin",
+        id: "update-pin",
         image: UPDATE_TRANSACTION_PIN_ICON,
       },
       {
@@ -101,7 +101,7 @@ export const KoshOptions = ({ koshId, role }: KoshOptionsProps) => {
           },
         });
         break;
-      case "update-transaction-pin":
+      case "update-pin":
         router.push({
           pathname: "/kosh/[id]/transaction-pin/update",
           params: {

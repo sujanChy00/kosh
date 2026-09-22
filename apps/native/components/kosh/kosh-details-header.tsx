@@ -1,5 +1,5 @@
 import { KoshDetail } from "@kosh-app/api/routers/kosh";
-import { formatAmount } from "@kosh-app/utils";
+import { formatAmountCompact } from "@kosh-app/utils";
 import { View } from "react-native";
 import { CurvedBackground } from "../layout/curved-background";
 import { StyledSymbolView } from "../styled-symbol-view";
@@ -35,30 +35,32 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
           <KoshOptions koshId={kosh.id} role={kosh.role} />
         </View>
         <View className="flex-row items-center gap-3">
-          <View className="flex-row items-center gap-1.5 bg-black/20 p-3 pr-5 rounded-3xl">
-            <View className="size-10 rounded-full items-center justify-center bg-primary/40">
+          <View className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl">
+            <View className="size-10 rounded-full items-center justify-center bg-primary/40 shrink-0">
               <StyledSymbolView
                 tintColorClassName="accent-warning"
                 size={18}
-                name={{
-                  android: "database",
-                }}
+                name={{ android: "database" }}
               />
             </View>
-            <View>
+            <View className="flex-1 min-w-0">
               <ThemedText className="text-xs text-gray-300">
                 COLLECTED
               </ThemedText>
-              <ThemedText className="text-base">
-                रु {""}
-                <ThemedText className="font-mono-semibold text-2xl">
-                  {formatAmount(kosh.totalCollected)}
+              <ThemedText
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                className="text-base text-primary-foreground"
+              >
+                रु{" "}
+                <ThemedText className="font-mono-semibold text-2xl text-primary-foreground">
+                  {formatAmountCompact(kosh.totalCollected)}
                 </ThemedText>
               </ThemedText>
             </View>
           </View>
 
-          <View className="flex-row items-center gap-1.5 bg-black/20 p-3 pr-6 rounded-3xl">
+          <View className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl">
             <View className="size-10 rounded-full items-center justify-center bg-primary/40">
               <StyledSymbolView
                 tintColorClassName="accent-warning"
@@ -70,10 +72,10 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
             </View>
             <View>
               <ThemedText className="text-xs text-gray-300">IN KOSH</ThemedText>
-              <ThemedText className="text-base">
+              <ThemedText className="text-base text-primary-foreground">
                 रु {""}
-                <ThemedText className="font-mono-semibold text-2xl">
-                  {formatAmount(kosh.totalRemaining)}
+                <ThemedText className="font-mono-semibold text-2xl text-primary-foreground">
+                  {formatAmountCompact(kosh.totalRemaining)}
                 </ThemedText>
               </ThemedText>
             </View>

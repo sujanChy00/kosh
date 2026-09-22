@@ -64,7 +64,7 @@ const KoshDetailScreen = () => {
         <Link
           asChild
           href={{
-            pathname: "/kosh/[id]/invite",
+            pathname: "/kosh/[id]/contribute",
             params: {
               id: koshData.id,
             },
