@@ -10,8 +10,7 @@ import { PrimaryButton } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocalSearchParams } from "expo-router";
-import { ScrollView, View } from "react-native";
-import { RefreshControl } from "react-native-gesture-handler";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { SlideInDown } from "react-native-reanimated";
 
 const KoshDetailScreen = () => {
@@ -45,7 +44,14 @@ const KoshDetailScreen = () => {
   return (
     <View className="flex-1">
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isRefetching} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              refetch();
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="gap-y-6 pb-safe-offset-36"

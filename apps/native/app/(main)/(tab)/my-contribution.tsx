@@ -38,7 +38,12 @@ const MyContributionsScreen = () => {
   return (
     <ScrollView
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={() => {
+            refetch();
+          }}
+        />
       }
       showsVerticalScrollIndicator={false}
       contentContainerClassName="px-4 gap-y-5 pt-safe-offset-16 pb-safe-offset-24"

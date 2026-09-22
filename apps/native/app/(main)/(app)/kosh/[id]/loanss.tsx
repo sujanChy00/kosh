@@ -85,7 +85,12 @@ const KoshLoanScreen = () => {
       <Stack.Title>{data.kosh.name} Loans</Stack.Title>
       <ScrollView
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              refetch();
+            }}
+          />
         }
         showsVerticalScrollIndicator={false}
         contentContainerClassName="px-4 gap-y-4 pt-safe-offset-4 pb-safe-offset-20"

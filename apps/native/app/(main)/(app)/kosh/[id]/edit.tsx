@@ -38,7 +38,12 @@ const EditKosh = () => {
     <KoshForm
       data={koshData}
       refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={() => {
+            refetch();
+          }}
+        />
       }
     />
   );

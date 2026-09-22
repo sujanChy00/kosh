@@ -44,7 +44,9 @@ export default function Home() {
       refreshControl={
         <RefreshControl
           refreshing={isRefetchingKoshList || isRefetchingRecentActivity}
-          onRefresh={handleRefresh}
+          onRefresh={() => {
+            handleRefresh();
+          }}
         />
       }
       contentContainerClassName="px-4 pt-safe-offset-16 gap-y-4 pb-safe-offset-10"
