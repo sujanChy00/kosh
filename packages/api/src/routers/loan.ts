@@ -453,6 +453,7 @@ export const loanRouter = router({
             totalBorrowed: "0",
             totalRemaining: "0",
             totalRepaid: "0",
+            totalInterestPaid: "0",
           },
           items: [],
         };
@@ -500,14 +501,17 @@ export const loanRouter = router({
       let totalBorrowed = 0;
       let totalRemaining = 0;
       let totalRepaid = 0;
+      let totalInterestPaid = 0;
 
       const items = loans.map((l) => {
         const principal = parseFloat(l.principal);
         const remaining = parseFloat(l.amountRemaining);
         const repaid = parseFloat(l.totalRepaid);
+        const interestPaid = parseFloat(l.totalInterestPaid);
 
         totalBorrowed += principal;
         totalRepaid += repaid;
+        totalInterestPaid += interestPaid;
 
         if (l.status === "active") {
           activeLoanCount++;
@@ -555,6 +559,7 @@ export const loanRouter = router({
           totalBorrowed: String(totalBorrowed),
           totalRemaining: String(totalRemaining),
           totalRepaid: String(totalRepaid),
+          totalInterestPaid: String(totalInterestPaid),
         },
         items,
       };
@@ -766,6 +771,7 @@ export type MyLoansData = {
     totalBorrowed: string;
     totalRemaining: string;
     totalRepaid: string;
+    totalInterestPaid: string;
   };
   items: MyLoanItem[];
 };
@@ -831,4 +837,5 @@ export type LoanStats = {
   totalBorrowed: string;
   totalRemaining: string;
   totalRepaid: string;
+  totalInterestPaid: string;
 };

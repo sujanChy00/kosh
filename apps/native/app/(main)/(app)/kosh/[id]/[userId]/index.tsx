@@ -358,7 +358,7 @@ const KoshMembershipScreen = () => {
                   size="sm"
                 >
                   <Chip.Label className="uppercase font-mono-semibold">
-                    {activeLoan.status}
+                    {activeLoan.status.replaceAll("_", " ")}
                   </Chip.Label>
                 </Chip>
               </View>
@@ -367,7 +367,7 @@ const KoshMembershipScreen = () => {
 
               <View className="flex-row justify-between items-center">
                 <View>
-                  <ThemedText className="text-xs text-muted-foreground">
+                  <ThemedText className="text-xs">
                     Remaining Principal
                   </ThemedText>
                   <ThemedText className="text-xl font-mono-semibold text-primary">
@@ -375,21 +375,36 @@ const KoshMembershipScreen = () => {
                   </ThemedText>
                 </View>
                 <View className="items-end">
-                  <ThemedText className="text-xs text-muted-foreground">
-                    Original Loan
-                  </ThemedText>
+                  <ThemedText className="text-xs">Original Loan</ThemedText>
                   <ThemedText className="text-base font-mono-regular">
                     रु {formatAmount(activeLoan.principal)}
                   </ThemedText>
                 </View>
               </View>
 
-              <View className="flex-row justify-between items-center text-xs pt-1">
-                <ThemedText className="text-muted-foreground text-xs font-mono-regular">
+              <Separator />
+
+              <View className="flex-row justify-between items-center">
+                <View>
+                  <ThemedText className="text-xs">Total Repaid</ThemedText>
+                  <ThemedText className="font-mono-semibold text-success">
+                    रु {formatAmount(activeLoan.totalRepaid)}
+                  </ThemedText>
+                </View>
+                <View className="items-end">
+                  <ThemedText className="text-xs">Interest Paid</ThemedText>
+                  <ThemedText className="font-mono-medium">
+                    रु {formatAmount(activeLoan.totalInterestPaid)}
+                  </ThemedText>
+                </View>
+              </View>
+
+              <View className="pt-1 gap-y-1">
+                <ThemedText className="text-xs font-mono-medium">
                   Interest Rate: {activeLoan.interestRate}% / mo (
                   {Number(activeLoan.interestRate) * 12}% / yr)
                 </ThemedText>
-                <ThemedText className="text-muted-foreground text-xs font-mono-regular">
+                <ThemedText className="text-xs font-mono-medium">
                   Issued: {formatShortDate(new Date(activeLoan.issueDate))}
                 </ThemedText>
               </View>

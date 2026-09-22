@@ -88,6 +88,24 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
           </ThemedText>
         </View>
       </View>
+
+      <View className="flex-row flex-wrap gap-3">
+        <View className="flex-1 bg-surface p-4 rounded-2xl gap-y-1">
+          <View className="flex-row items-center gap-2">
+            <StyledSymbolView
+              tintColorClassName="accent-warning"
+              size={16}
+              name={{ android: "percent" }}
+            />
+            <ThemedText className="text-xs text-muted-foreground uppercase font-mono-regular">
+              Total Interest Paid
+            </ThemedText>
+          </View>
+          <ThemedText className="text-lg font-mono-semibold">
+            रु {formatAmount(stats.totalInterestPaid)}
+          </ThemedText>
+        </View>
+      </View>
     </View>
   );
 };

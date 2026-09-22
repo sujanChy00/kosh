@@ -415,9 +415,10 @@ export const membershipRouter = router({
 
       let loanData = null;
       if (activeLoan) {
-        const repayments = await db
+        const [repaymentAgg] = await db
           .select({
-            totalRepaid: sql<string>`coalesce(sum(${loanRepayment.principalPortion}), 0)`,
+            totalRepaid: sql<string>`coalesce(sum(${loanRepayment.principalPortion} + ${loanRepayment.interestPortion}), 0)`,
+            totalInterestPaid: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
           })
           .from(loanRepayment)
           .where(eq(loanRepayment.loanId, activeLoan.id));
@@ -429,7 +430,8 @@ export const membershipRouter = router({
           issueDate: activeLoan.issueDate,
           amountRemaining: activeLoan.amountRemaining,
           status: activeLoan.status,
-          totalRepaid: repayments[0]?.totalRepaid ?? "0",
+          totalRepaid: repaymentAgg?.totalRepaid ?? "0",
+          totalInterestPaid: repaymentAgg?.totalInterestPaid ?? "0",
         };
       }
 
@@ -639,6 +641,7 @@ export type MemberDetailData = {
     amountRemaining: string;
     status: "active" | "paid_off" | "defaulted";
     totalRepaid: string;
+    totalInterestPaid: string;
   } | null;
   contributions: {
     id: string;
