@@ -1,74 +1,98 @@
+import { AnimatedView } from "@/components/animated-view";
 import { EmptyComponent } from "@/components/layout/empty-component";
 import { ErrorComponent } from "@/components/layout/error-component";
-import { ListSeparatorComponent } from "@/components/layout/list-separator-component";
 import { PendingComponent } from "@/components/layout/pending-component";
-import { KoshLoanCard } from "@/components/loan/kosh-loan-card";
-import { KoshPendingRequestCard } from "@/components/loan/kosh-pending-request-card";
+import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
+import { KoshLoanList } from "@/components/loan/kosh-loan-list";
+import { Card } from "@/components/ui/card";
+import { DateInput } from "@/components/ui/date-input";
+import { SelectInput } from "@/components/ui/select-input";
 import { trpc } from "@/utils/trpc";
-import type {
-  KoshLoanItem,
-  KoshPendingLoanRequestItem,
-} from "@kosh-app/api/routers/loan";
-import { SectionList } from "@legendapp/list/section-list";
-import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { View } from "react-native";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useGlobalSearchParams } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, View } from "react-native";
+import { FadeInUp } from "react-native-reanimated";
 
-type LoanItem = KoshLoanItem | KoshPendingLoanRequestItem;
-
-type LoanSection = {
-  title: string;
-  data: LoanItem[];
-};
+const PAGE_SIZE = 10;
 
 const AllLoanScreen = () => {
-  const { id: koshId } = useLocalSearchParams<{ id: string }>();
-  const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
-    ...trpc.loan.byKosh.queryOptions({
-      koshId,
-      status: "all",
-    }),
-  });
+  const { id: koshId } = useGlobalSearchParams<{ id: string }>();
 
-  const sections = useMemo<LoanSection[]>(() => {
-    if (!data) return [];
-    return [
-      { title: "Pending Requests", data: data.pendingRequests },
-      { title: "Active Loans", data: data.activeLoans },
-      { title: "Cleared Loans", data: data.clearedLoans },
-    ].filter((section) => section.data.length > 0);
-  }, [data]);
+  const [selectedMemberId, setSelectedMemberId] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const renderItem = useCallback(
-    ({ item }: { item: LoanItem }) =>
-      item.type === "request" ? (
-        <KoshPendingRequestCard item={item} />
-      ) : (
-        <KoshLoanCard item={item} />
-      ),
-    [],
+  const dateFromStr = useMemo(
+    () => (dateFrom ? dateFrom.toISOString().split("T")[0] : undefined),
+    [dateFrom],
   );
-  const renderSectionHeader = useCallback(
-    ({ section }: { section: LoanSection }) => (
-      <View className="flex-row items-center justify-between bg-background py-2">
-        <ThemedText className="font-notosans-semibold text-base">
-          {section.title} ({section.data.length})
-        </ThemedText>
-      </View>
+  const dateToStr = useMemo(
+    () => (dateTo ? dateTo.toISOString().split("T")[0] : undefined),
+    [dateTo],
+  );
+
+  const {
+    data,
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+    isRefetching,
+    refetch,
+    isLoading,
+    error,
+    isError,
+  } = useInfiniteQuery(
+    trpc.loan.allLoansByKosh.infiniteQueryOptions(
+      {
+        koshId,
+        status: "all",
+        memberId: selectedMemberId === "all" ? undefined : selectedMemberId,
+        dateFrom: dateFromStr,
+        dateTo: dateToStr,
+        limit: PAGE_SIZE,
+      },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
     ),
-    [],
   );
-  const keyExtractor = useCallback(
-    ({ id, type }: LoanItem) => `${type}-${id}`,
-    [],
+
+  const items = useMemo(
+    () => data?.pages.flatMap((page) => page.items) ?? [],
+    [data],
   );
-  const ListSeparator = useCallback(() => <ListSeparatorComponent />, []);
 
-  if (isPending) return <PendingComponent />;
+  const memberOptions = useMemo(
+    () => [
+      { label: "All Members", value: "all" },
+      ...(data?.pages[0]?.members ?? [])
+        .filter((m) => m.id !== "all")
+        .map((m) => ({ label: m.label, value: m.id })),
+    ],
+    [data],
+  );
 
-  if (isError || !data) {
+  const isFiltered =
+    selectedMemberId !== "all" ||
+    dateFrom !== undefined ||
+    dateTo !== undefined;
+
+  const handleResetFilters = () => {
+    setSelectedMemberId("all");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  if (isLoading) return <PendingComponent />;
+
+  if (isError) {
     return (
       <ErrorComponent
         refetch={refetch}
@@ -77,35 +101,105 @@ const AllLoanScreen = () => {
     );
   }
 
-  if (sections.length === 0) {
-    return (
-      <EmptyComponent
-        message="No loans or requests found"
-        description="Loans and pending requests for this kosh will appear here."
-      />
-    );
-  }
+  const filterHeader = (
+    <View className="px-2 pt-2 pb-4">
+      <Pressable
+        onPress={() => setShowFilters((prev) => !prev)}
+        className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl border ${
+          isFiltered || showFilters
+            ? "bg-primary/10 border-primary"
+            : "bg-card border-border"
+        }`}
+      >
+        <StyledSymbolView
+          size={18}
+          tintColorClassName={
+            isFiltered || showFilters
+              ? "accent-primary"
+              : "accent-muted-foreground"
+          }
+          name={{ android: "filter_list" }}
+        />
+        <ThemedText
+          className={`text-xs font-mono-semibold ${
+            isFiltered || showFilters ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          Filters{isFiltered ? " (Active)" : ""}
+        </ThemedText>
+      </Pressable>
+
+      {showFilters && (
+        <AnimatedView entering={FadeInUp.duration(200)} className="mt-3">
+          <Card className="p-4 gap-y-3 bg-muted/20">
+            <View className="flex-row items-center justify-between">
+              <ThemedText className="text-xs font-notosans-semibold uppercase text-muted-foreground">
+                Filter Loans
+              </ThemedText>
+              {isFiltered && (
+                <Pressable onPress={handleResetFilters}>
+                  <ThemedText className="text-xs font-mono-semibold text-primary">
+                    Reset
+                  </ThemedText>
+                </Pressable>
+              )}
+            </View>
+
+            <SelectInput
+              label="Member"
+              options={memberOptions}
+              value={selectedMemberId}
+              onValueChange={setSelectedMemberId}
+              placeholder="Select member"
+            />
+
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <DateInput
+                  label="From Date"
+                  placeholder="Select start"
+                  value={dateFrom}
+                  onChange={setDateFrom}
+                />
+              </View>
+              <View className="flex-1">
+                <DateInput
+                  label="To Date"
+                  placeholder="Select end"
+                  value={dateTo}
+                  onChange={setDateTo}
+                />
+              </View>
+            </View>
+          </Card>
+        </AnimatedView>
+      )}
+    </View>
+  );
 
   return (
-    <SectionList
-      stickySectionHeadersEnabled
-      recycleItems
-      contentContainerClassName="px-2 pb-20"
-      showsVerticalScrollIndicator={false}
-      sections={sections}
-      renderSectionHeader={renderSectionHeader}
-      keyExtractor={keyExtractor}
+    <KoshLoanList
+      items={items}
+      isFetchingNextPage={isFetchingNextPage}
+      hasNextPage={hasNextPage}
+      loadMore={loadMore}
       refreshing={isRefetching}
       onRefresh={refetch}
-      ItemSeparatorComponent={ListSeparator}
-      drawDistance={500}
-      onEndReachedThreshold={0.5}
-      renderItem={renderItem}
-      experimental_adaptiveRender={{
-        enterVelocity: 6,
-        exitVelocity: 3,
-        exitDelay: 250,
-      }}
+      ListHeaderComponent={filterHeader}
+      ListEmptyComponent={
+        <EmptyComponent
+          message={
+            isFiltered
+              ? "No loans match your filters"
+              : "No loans or requests found"
+          }
+          description={
+            isFiltered
+              ? "Try adjusting or resetting the filters."
+              : "Loans and pending requests for this kosh will appear here."
+          }
+        />
+      }
     />
   );
 };

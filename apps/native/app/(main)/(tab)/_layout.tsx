@@ -15,7 +15,7 @@ const TabLayout = () => {
         />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="loan">
+      <NativeTabs.Trigger name="my-loans">
         <NativeTabs.Trigger.Label>Loans</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon
           sf={{ default: "banknote", selected: "banknote.fill" }}
