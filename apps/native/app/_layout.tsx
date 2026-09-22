@@ -31,6 +31,13 @@ function StackLayout() {
   if (!hasCheckedSession && isPending && session == null) {
     return <PendingComponent />;
   }
+
+  const currentRoute = !isOnboardingCompleted
+    ? "/(onboarding)/step1"
+    : !isAuthenticated
+      ? "/(auth)/sign-in"
+      : "/(main)/(tab)";
+
   return (
     <ThemeProvider value={NAV_THEME[currentTheme || "light"]}>
       <StatusBar
@@ -38,36 +45,29 @@ function StackLayout() {
         animated
         key={`root-status-bar-${isDark ? "light" : "dark"}`}
       />
-      <Stack
-        screenOptions={{
-          headerBackButtonDisplayMode: "minimal",
-        }}
-      >
-        <Stack.Protected guard={!isOnboardingCompleted}>
-          <Stack.Screen
-            name="(onboarding)"
-            options={{
-              headerShown: false,
-            }}
-          />
+      <Stack screenOptions={{ headerBackButtonDisplayMode: "minimal" }}>
+        {/* Show onboarding if not completed */}
+        <Stack.Protected
+          guard={!isOnboardingCompleted}
+          redirectTo={currentRoute}
+        >
+          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
         </Stack.Protected>
 
-        <Stack.Protected guard={isOnboardingCompleted && !isAuthenticated}>
-          <Stack.Screen
-            name="(auth)"
-            options={{
-              headerShown: false,
-            }}
-          />
+        {/* Show auth screens if onboarding done but not logged in */}
+        <Stack.Protected
+          guard={isOnboardingCompleted && !isAuthenticated}
+          redirectTo={currentRoute}
+        >
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         </Stack.Protected>
 
-        <Stack.Protected guard={isOnboardingCompleted && isAuthenticated}>
-          <Stack.Screen
-            name="(main)"
-            options={{
-              headerShown: false,
-            }}
-          />
+        {/* Show main app if onboarding done and logged in */}
+        <Stack.Protected
+          guard={isOnboardingCompleted && isAuthenticated}
+          redirectTo={currentRoute}
+        >
+          <Stack.Screen name="(main)" options={{ headerShown: false }} />
         </Stack.Protected>
       </Stack>
     </ThemeProvider>
