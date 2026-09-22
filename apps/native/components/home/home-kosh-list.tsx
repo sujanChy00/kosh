@@ -18,6 +18,7 @@ export const HomeKoshList = ({ koshList, isPending }: HomeKoshListProps) => {
     return (
       <Wrapper>
         <KoshCardSkeleton
+          length={3}
           withSeparator
           className="overflow-hidden"
           wrapperClassName="bg-surface rounded-3xl overflow-hidden"

@@ -1,3 +1,9 @@
+import { ThemedText } from "@/components/themed-text";
+import { PrimaryButton } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useHaptics } from "@/hooks/use-haptics";
+import { errorToast, successToast } from "@/utils/toast";
+import { queryClient, trpc } from "@/utils/trpc";
 import type {
   ContributionMemberData,
   RecordEntryResult,
@@ -5,39 +11,40 @@ import type {
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { ContributionActions } from "./contribution-actions";
 import {
   ContributionMemberRow,
   getMemberRowErrors,
   parseAmount,
   type MemberRowState,
 } from "./contribution-member-row";
-import { ContributionPeriodNav, formatAmountStr } from "./contribution-period-nav";
-import { ContributionActions } from "./contribution-actions";
-import { ThemedText } from "@/components/themed-text";
-import { PrimaryButton } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { useHaptics } from "@/hooks/use-haptics";
-import { errorToast, successToast } from "@/utils/toast";
-import { queryClient, trpc } from "@/utils/trpc";
+import {
+  ContributionPeriodNav,
+  formatAmountStr,
+} from "./contribution-period-nav";
 
 const rowsFromMembers = (
   members: ContributionMemberData[],
 ): Record<string, MemberRowState> =>
   Object.fromEntries(
     members.map((m) => {
+      const maxContrib =
+        parseFloat(m.maxContributionAllowed || m.expectedAmount) || 0;
       const recorded =
         m.existing && parseFloat(m.existing.contributionAmount) > 0
           ? parseFloat(m.existing.contributionAmount)
-          : parseFloat(m.contributionPrefill || "0");
+          : maxContrib;
       const pref = recorded || 0;
       return [
         m.userId,
         {
           contribution: pref > 0 ? String(pref) : "",
           penalty:
-            m.penaltyPrefill && parseFloat(m.penaltyPrefill) > 0
-              ? m.penaltyPrefill
-              : "",
+            m.maxPenaltyAllowed && parseFloat(m.maxPenaltyAllowed) > 0
+              ? m.maxPenaltyAllowed
+              : m.penaltyPrefill && parseFloat(m.penaltyPrefill) > 0
+                ? m.penaltyPrefill
+                : "",
           repayment: "",
         },
       ];
@@ -150,7 +157,8 @@ export const ContributionRecordingForm = ({
   const expectedTotal = useMemo(
     () =>
       members.reduce(
-        (sum, m) => sum + (parseFloat(m.expectedAmount) || 0),
+        (sum, m) =>
+          sum + (parseFloat(m.maxContributionAllowed || m.expectedAmount) || 0),
         0,
       ),
     [members],
@@ -202,6 +210,7 @@ export const ContributionRecordingForm = ({
     (userId: string) => {
       const member = members.find((m) => m.userId === userId);
       if (!member) return;
+      const maxContrib = member.maxContributionAllowed || member.expectedAmount;
       setRows((prev) => ({
         ...prev,
         [userId]: {
@@ -210,7 +219,7 @@ export const ContributionRecordingForm = ({
             penalty: "",
             repayment: "",
           }),
-          contribution: member.expectedAmount,
+          contribution: maxContrib,
         },
       }));
       haptics("tick");
@@ -222,12 +231,14 @@ export const ContributionRecordingForm = ({
     if (!data) return;
     const next: Record<string, MemberRowState> = {};
     for (const m of data.members) {
+      const maxContrib = m.maxContributionAllowed || m.expectedAmount;
+      const maxPenalty = m.maxPenaltyAllowed || m.penaltyPrefill || "";
       next[m.userId] = {
-        contribution: m.expectedAmount,
+        contribution: maxContrib,
         penalty:
-          m.penaltyPrefill && parseFloat(m.penaltyPrefill) > 0
-            ? m.penaltyPrefill
-            : rows[m.userId]?.penalty ?? "",
+          maxPenalty && parseFloat(maxPenalty) > 0
+            ? maxPenalty
+            : (rows[m.userId]?.penalty ?? ""),
         repayment: rows[m.userId]?.repayment ?? "",
       };
     }

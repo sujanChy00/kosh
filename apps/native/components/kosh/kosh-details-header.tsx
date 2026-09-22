@@ -1,6 +1,6 @@
 import { KoshDetail } from "@kosh-app/api/routers/kosh";
 import { formatAmountCompact } from "@kosh-app/utils";
-import { View } from "react-native";
+import { Alert, Pressable, View } from "react-native";
 import { CurvedBackground } from "../layout/curved-background";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
@@ -9,6 +9,10 @@ import { KoshOptions } from "./kosh-options";
 import { KoshRoleChip } from "./kosh-role-chip";
 
 export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
+  const onShowAmount = (title: string, amount: string) => {
+    Alert.alert(title, `₹ ${amount}`);
+  };
+
   return (
     <CurvedBackground height={270}>
       <View className="gap-y-6 px-4 pt-safe-offset-14">
@@ -32,10 +36,15 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
               <KoshRoleChip role={kosh.role} />
             </View>
           </View>
-          <KoshOptions koshId={kosh.id} role={kosh.role} />
+          <KoshOptions koshId={kosh.id} role={kosh.role} koshName={kosh.name} />
         </View>
         <View className="flex-row items-center gap-3">
-          <View className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl">
+          <Pressable
+            onPress={() => {
+              onShowAmount("Total Collected", kosh.totalCollected);
+            }}
+            className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl"
+          >
             <View className="size-10 rounded-full items-center justify-center bg-primary/40 shrink-0">
               <StyledSymbolView
                 tintColorClassName="accent-warning"
@@ -50,17 +59,22 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
               <ThemedText
                 numberOfLines={1}
                 adjustsFontSizeToFit
-                className="text-base text-primary-foreground"
+                className="text-sm text-primary-foreground"
               >
                 रु{" "}
-                <ThemedText className="font-mono-semibold text-2xl text-primary-foreground">
+                <ThemedText className="font-mono-semibold text-lg text-primary-foreground">
                   {formatAmountCompact(kosh.totalCollected)}
                 </ThemedText>
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
 
-          <View className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl">
+          <Pressable
+            onPress={() => {
+              onShowAmount("In Kosh", kosh.totalRemaining);
+            }}
+            className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl"
+          >
             <View className="size-10 rounded-full items-center justify-center bg-primary/40">
               <StyledSymbolView
                 tintColorClassName="accent-warning"
@@ -72,14 +86,14 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
             </View>
             <View>
               <ThemedText className="text-xs text-gray-300">IN KOSH</ThemedText>
-              <ThemedText className="text-base text-primary-foreground">
+              <ThemedText className="text-xs text-primary-foreground">
                 रु {""}
-                <ThemedText className="font-mono-semibold text-2xl text-primary-foreground">
+                <ThemedText className="font-mono-semibold text-lg text-primary-foreground">
                   {formatAmountCompact(kosh.totalRemaining)}
                 </ThemedText>
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
         </View>
       </View>
     </CurvedBackground>

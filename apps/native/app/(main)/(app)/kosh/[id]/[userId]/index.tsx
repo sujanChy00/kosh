@@ -1,5 +1,4 @@
 import { KoshMemberContributionDetails } from "@/components/kosh/membership/kosh-member-contribution-details";
-import { AnimatedView } from "@/components/animated-view";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
@@ -17,16 +16,6 @@ import { formatShortDate } from "@kosh-app/utils/date";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, RefreshControl, ScrollView, View } from "react-native";
-import { FadeInUp } from "react-native-reanimated";
-
-function formatPeriodName(periodStr: string) {
-  const [yearStr, monthStr] = periodStr.split("-");
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  if (!year || !month) return periodStr;
-  const date = new Date(year, month - 1, 1);
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-}
 
 const KoshMembershipScreen = () => {
   const { id: koshId, userId } = useLocalSearchParams<{
@@ -182,7 +171,7 @@ const KoshMembershipScreen = () => {
         contentContainerClassName="p-4 gap-y-6 pb-safe-offset-20"
       >
         {/* Profile Card */}
-        <AnimatedView entering={FadeInUp.duration(300)}>
+        <View>
           <Card className="items-center text-center p-5 gap-y-3">
             <Avatar className="size-20">
               <Avatar.Image source={member.image} alt={member.name ?? ""} />
@@ -246,13 +235,10 @@ const KoshMembershipScreen = () => {
               )}
             </View>
           </Card>
-        </AnimatedView>
+        </View>
 
         {/* Stats Grid */}
-        <AnimatedView
-          entering={FadeInUp.duration(400).delay(100)}
-          className="gap-y-2"
-        >
+        <View className="gap-y-2">
           <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
             Financial Summary
           </ThemedText>
@@ -335,14 +321,11 @@ const KoshMembershipScreen = () => {
               </View>
             </View>
           </View>
-        </AnimatedView>
+        </View>
 
         {/* Active Loan Details */}
         {activeLoan && (
-          <AnimatedView
-            entering={FadeInUp.duration(400).delay(200)}
-            className="gap-y-2"
-          >
+          <View className="gap-y-2">
             <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
               Loan Overview
             </ThemedText>
@@ -406,7 +389,7 @@ const KoshMembershipScreen = () => {
                 </ThemedText>
               </View>
             </Card>
-          </AnimatedView>
+          </View>
         )}
 
         {/* Admin / Treasurer Actions */}
@@ -414,10 +397,7 @@ const KoshMembershipScreen = () => {
           canDemoteTreasurer ||
           canRemoveMember ||
           pendingTreasurerInvite) && (
-          <AnimatedView
-            entering={FadeInUp.duration(400).delay(300)}
-            className="gap-y-2"
-          >
+          <View className="gap-y-2">
             <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
               Management Actions
             </ThemedText>
@@ -489,22 +469,18 @@ const KoshMembershipScreen = () => {
                 </DangerSoftButton>
               )}
             </View>
-          </AnimatedView>
+          </View>
         )}
 
         {/* Contribution History */}
-        <AnimatedView
-          entering={FadeInUp.duration(400).delay(400)}
-          className="gap-y-2"
-        >
-          <View className="flex-row items-center justify-between">
-            <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
-              Contribution History ({contributions.length})
-            </ThemedText>
-          </View>
 
-          <KoshMemberContributionDetails contributions={contributions} />
-        </AnimatedView>
+        <View className="flex-row items-center justify-between">
+          <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
+            Contribution History ({contributions.length})
+          </ThemedText>
+        </View>
+
+        <KoshMemberContributionDetails contributions={contributions} />
       </ScrollView>
     </View>
   );

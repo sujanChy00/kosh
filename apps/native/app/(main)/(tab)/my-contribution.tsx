@@ -35,16 +35,6 @@ const MyContributionsScreen = () => {
 
   const { koshes, stats, items } = data;
 
-  const filteredItems = items.filter((item) => {
-    if (statusFilter === "all") return true;
-    if (statusFilter === "paid")
-      return item.status === "paid" || item.status === "late";
-    if (statusFilter === "pending")
-      return item.status === "pending" || item.status === "partial";
-    if (statusFilter === "late") return item.status === "late";
-    return true;
-  });
-
   return (
     <ScrollView
       refreshControl={

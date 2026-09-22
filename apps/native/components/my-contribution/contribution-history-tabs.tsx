@@ -18,7 +18,16 @@ export const ContributionHistoryTabs = ({
   onStatusFilterChange,
   items,
 }: Props) => {
-  const filteredItems = items.filter((item) => item.status === statusFilter);
+  const filteredItems = items.filter((item) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "paid")
+      return item.status === "paid" || item.status === "late";
+    if (statusFilter === "pending")
+      return item.status === "pending" || item.status === "partial";
+    if (statusFilter === "late") return item.status === "late";
+    return true;
+  });
+
   return (
     <Tabs
       value={statusFilter}
@@ -46,9 +55,12 @@ export const ContributionHistoryTabs = ({
       <Tabs.Content value="all">
         <View className="gap-y-3">
           <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
-            Contribution History ({items.length})
+            Contribution History ({filteredItems.length})
           </ThemedText>
-          <MyContributionHistoryList filter={statusFilter} items={items} />
+          <MyContributionHistoryList
+            filter={statusFilter}
+            items={filteredItems}
+          />
         </View>
       </Tabs.Content>
       <Tabs.Content value="paid">

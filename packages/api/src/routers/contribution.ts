@@ -313,9 +313,38 @@ async function applyMemberEntry(input: {
       ),
   });
 
+  const priorRows = await db
+    .select()
+    .from(contribution)
+    .where(
+      and(
+        eq(contribution.koshId, koshRow.id),
+        eq(contribution.memberId, entry.memberId),
+        lt(contribution.period, period),
+      ),
+    );
+
+  let priorContributionArrears = 0;
+  let priorPenaltyArrears = 0;
+  for (const r of priorRows) {
+    priorContributionArrears += round2(
+      Math.max(
+        0,
+        parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount),
+      ),
+    );
+    priorPenaltyArrears += round2(
+      Math.max(
+        0,
+        parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid),
+      ),
+    );
+  }
+
   const expected = existing
     ? parseFloat(existing.expectedAmount)
     : parseFloat(koshRow.monthlyAmount);
+
   const contributionAmount =
     entry.contributionAmount != null
       ? round2(entry.contributionAmount)
@@ -330,10 +359,12 @@ async function applyMemberEntry(input: {
     });
   }
 
-  if (contributionAmount > expected) {
+  const maxContributionAllowed = round2(expected + priorContributionArrears);
+
+  if (contributionAmount > maxContributionAllowed) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: `Contribution amount (${contributionAmount}) cannot exceed expected monthly amount of ${expected}`,
+      message: `Contribution amount (${contributionAmount}) cannot exceed total contribution due of ${maxContributionAllowed}`,
     });
   }
 
@@ -351,11 +382,6 @@ async function applyMemberEntry(input: {
     });
   }
 
-  // Penalty charged: a stored assessment is never recomputed (history is
-  // preserved), otherwise the kosh's late penalty applies once this period is
-  // past its grace window (`isPenaltyDue`) — late itself is the trigger, so a
-  // member who pays the full amount late still owes it. The adhyaksh can
-  // collect up to the assessed amount but never more; partial penalty payments are allowed.
   const computedAssessed =
     isPenaltyDue && koshRow.latePenaltyAmount != null
       ? parseFloat(koshRow.latePenaltyAmount)
@@ -367,10 +393,12 @@ async function applyMemberEntry(input: {
     ),
   );
 
-  if (penaltyPaid > penaltyAssessed) {
+  const maxPenaltyAllowed = round2(penaltyAssessed + priorPenaltyArrears);
+
+  if (penaltyPaid > maxPenaltyAllowed) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: `Penalty paid (${penaltyPaid}) cannot exceed assessed penalty of ${penaltyAssessed}`,
+      message: `Penalty paid (${penaltyPaid}) cannot exceed total penalty due of ${maxPenaltyAllowed}`,
     });
   }
 
@@ -605,7 +633,7 @@ export const contributionRouter = router({
             )
           : null;
 
-      const [memberships, existingRows, activeLoans, priorRows] =
+      const [memberships, existingRows, activeLoans, priorRows, loanRepayments] =
         await Promise.all([
           db.query.koshMembership.findMany({
             where: (m, { and: a, eq: q }) =>
@@ -628,6 +656,9 @@ export const contributionRouter = router({
             .select({
               id: loan.id,
               borrowerId: loan.borrowerId,
+              principal: loan.principal,
+              interestRate: loan.interestRate,
+              issueDate: loan.issueDate,
               amountRemaining: loan.amountRemaining,
             })
             .from(loan)
@@ -643,12 +674,28 @@ export const contributionRouter = router({
                 lt(contribution.period, period),
               ),
             ),
+          db
+            .select({
+              loanId: loanRepayment.loanId,
+              interestPortion: loanRepayment.interestPortion,
+            })
+            .from(loanRepayment),
         ]);
 
       const rowByMember = new Map(existingRows.map((r) => [r.memberId, r]));
       const loanByMember = new Map(
         activeLoans.filter((l) => l.borrowerId).map((l) => [l.borrowerId, l]),
       );
+
+      const paidInterestByLoan = new Map<string, number>();
+      for (const r of loanRepayments) {
+        if (!r.loanId) continue;
+        const current = paidInterestByLoan.get(r.loanId) ?? 0;
+        paidInterestByLoan.set(
+          r.loanId,
+          current + parseFloat(r.interestPortion ?? "0"),
+        );
+      }
 
       // Carried-over arrears from periods before the one being viewed: how much
       // contribution and penalty the member still owes from earlier cycles.
@@ -699,16 +746,45 @@ export const contributionRouter = router({
           penalty: 0,
         };
 
+        const maxContributionAllowed = round2(expected + prior.contribution);
+        const penaltyAssessedVal = parseFloat(penaltyPrefill ?? "0");
+        const maxPenaltyAllowed = round2(penaltyAssessedVal + prior.penalty);
+
+        let activeLoanInfo = null;
+        if (loanRow) {
+          const principal = parseFloat(loanRow.principal);
+          const rate = parseFloat(loanRow.interestRate);
+          const remaining = parseFloat(loanRow.amountRemaining);
+          const days = Math.max(
+            0,
+            daysBetween(new Date(`${loanRow.issueDate}T00:00:00`)),
+          );
+          const accrued = principal * (rate / 100) * (days / 365);
+          const paidInterest = paidInterestByLoan.get(loanRow.id) ?? 0;
+          const interestOwed = round2(Math.max(0, accrued - paidInterest));
+          const totalPayoff = round2(remaining + interestOwed);
+
+          activeLoanInfo = {
+            id: loanRow.id,
+            remainingPrincipal: String(remaining),
+            interestOwed: String(interestOwed),
+            totalPayoff: String(totalPayoff),
+          };
+        }
+
         return {
           userId: m.userId,
           name: m.user.name,
           image: m.user.image,
           role: m.role,
           expectedAmount: String(expected),
+          maxContributionAllowed: String(maxContributionAllowed),
           contributionPrefill: String(expected),
           penaltyPrefill,
+          maxPenaltyAllowed: String(maxPenaltyAllowed),
           hasActiveLoan: Boolean(loanRow),
           loanRemaining: loanRow ? loanRow.amountRemaining : null,
+          activeLoan: activeLoanInfo,
           recordedLate,
           existing: row
             ? {
@@ -920,10 +996,18 @@ export type ContributionMemberData = {
   image: string | null;
   role: string;
   expectedAmount: string;
+  maxContributionAllowed: string;
   contributionPrefill: string;
   penaltyPrefill: string | null;
+  maxPenaltyAllowed: string;
   hasActiveLoan: boolean;
   loanRemaining: string | null;
+  activeLoan: {
+    id: string;
+    remainingPrincipal: string;
+    interestOwed: string;
+    totalPayoff: string;
+  } | null;
   recordedLate: boolean;
   existing: {
     status: string;

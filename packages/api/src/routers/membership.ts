@@ -124,7 +124,7 @@ export const membershipRouter = router({
           })
           .returning();
 
-        if (!row) throw new Error("Invitation insert returned no row");
+        if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create invitation. Please try again." });
 
         await tx.insert(notification).values({
           userId: input.userId,
@@ -216,7 +216,7 @@ export const membershipRouter = router({
             .returning();
 
           if (!updated || !resolved) {
-            throw new Error("Failed to accept invitation");
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation is no longer active or could not be accepted." });
           }
           return resolved;
         }
@@ -231,7 +231,7 @@ export const membershipRouter = router({
           .where(eq(koshRoleRequest.id, input.requestId))
           .returning();
 
-        if (!resolved) throw new Error("Failed to reject invitation");
+        if (!resolved) throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation is no longer active or could not be rejected." });
         return resolved;
       });
 

@@ -7,7 +7,7 @@ interface RecentActivityCardSkeletonProps {
 }
 
 export const RecentActivityCardSkeleton = ({
-  length = 6,
+  length = 3,
 }: RecentActivityCardSkeletonProps) => {
   return Array.from({ length }).map((_, index) => (
     <View className="gap-y-2" key={index}>

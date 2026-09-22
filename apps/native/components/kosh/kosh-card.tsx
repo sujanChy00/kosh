@@ -1,5 +1,5 @@
 import type { KoshListItem } from "@kosh-app/api/routers/kosh";
-import { formatAmount } from "@kosh-app/utils";
+import { formatAmount, formatAmountCompact } from "@kosh-app/utils";
 import { formatShortDate } from "@kosh-app/utils/date";
 import { Link } from "expo-router";
 import { memo } from "react";
@@ -74,10 +74,12 @@ export const KoshCard = memo(
             <Separator />
             <View className="flex-row items-center justify-between gap-3 bg-surface-secondary py-3 px-2">
               <ThemedText className="font-mono-medium text-muted-foreground">
-                Collected : रु {formatAmount(kosh.totalCollected)}
+                Collected: <ThemedText className="text-xs">रु</ThemedText>{" "}
+                {formatAmountCompact(kosh.totalCollected)}
               </ThemedText>
               <ThemedText className="font-mono-medium">
-                In Kosh : रु {formatAmount(kosh.totalRemaining)}
+                In Kosh: <ThemedText className="text-xs">रु</ThemedText>{" "}
+                {formatAmountCompact(kosh.totalRemaining)}
               </ThemedText>
             </View>
             {!isLast && withSeparator && <Separator />}

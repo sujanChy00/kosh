@@ -174,7 +174,7 @@ export const inviteRouter = router({
               maxUses: input.maxUses,
             })
             .returning();
-          if (!row) throw new Error("Invite insert returned no row");
+          if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create invite. Please try again." });
           return row;
         } catch (error) {
           const isCollision =
@@ -232,7 +232,7 @@ export const inviteRouter = router({
         .set({ status: "revoked" })
         .where(eq(invite.id, input.inviteId))
         .returning();
-      if (!updated) throw new Error("Failed to revoke invite");
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found or already revoked." });
       return updated;
     }),
 
@@ -381,7 +381,7 @@ export const inviteRouter = router({
             status: "pending",
           })
           .returning();
-        if (!request) throw new Error("Join request insert returned no row");
+        if (!request) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create join request. Please try again." });
 
         await tx
           .update(invite)
@@ -515,7 +515,7 @@ export const inviteRouter = router({
             })
             .where(eq(joinRequest.id, input.requestId))
             .returning();
-          if (!updated) throw new Error("Failed to approve join request");
+          if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Join request was not found or has already been processed." });
           return updated;
         }
 
@@ -529,7 +529,7 @@ export const inviteRouter = router({
           })
           .where(eq(joinRequest.id, input.requestId))
           .returning();
-        if (!updated) throw new Error("Failed to reject join request");
+        if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Join request was not found or has already been processed." });
 
         // Delete the pending membership so the (kosh, user) slot is free again.
         await tx

@@ -520,7 +520,10 @@ export const koshRouter = router({
             .returning();
 
           if (!row) {
-            throw new Error("Kosh insert returned no row");
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create Kosh. Please try again.",
+            });
           }
 
           await tx.insert(koshMembership).values({
@@ -1034,6 +1037,44 @@ export const koshRouter = router({
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
       return items.slice(0, limit);
+    }),
+
+  /** Delete a kosh. Only the Adhyaksh (creator/owner) can delete a kosh. */
+  delete: protectedProcedure
+    .input(z.object({ koshId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: a, eq: q }) =>
+          a(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+        columns: { role: true },
+      });
+
+      if (!membership || membership.role !== "adhyaksh") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the Adhyaksh can delete this kosh",
+        });
+      }
+
+      const [deleted] = await db
+        .delete(kosh)
+        .where(eq(kosh.id, input.koshId))
+        .returning({ id: kosh.id });
+
+      if (!deleted) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Kosh not found",
+        });
+      }
+
+      return { success: true, id: deleted.id };
     }),
 });
 

@@ -54,33 +54,37 @@ export const getMemberRowErrors = (
     repayment?: string;
   } = {};
 
-  const expectedAmountNum = parseFloat(member.expectedAmount) || 0;
+  const maxContribAllowedNum =
+    parseFloat(member.maxContributionAllowed || member.expectedAmount) || 0;
   const contribNum = parseAmount(row.contribution);
   if (contribNum !== undefined) {
     if (contribNum < 0) {
       errors.contribution = "Contribution amount cannot be negative";
-    } else if (contribNum > expectedAmountNum) {
-      errors.contribution = `Cannot exceed expected amount (${currency} ${formatAmountStr(expectedAmountNum)})`;
+    } else if (contribNum > maxContribAllowedNum) {
+      errors.contribution = `Cannot exceed total contribution due (${currency} ${formatAmountStr(maxContribAllowedNum)})`;
     }
   }
 
-  const maxPenaltyNum = parseFloat(member.penaltyPrefill || "0");
+  const maxPenaltyNum =
+    parseFloat(member.maxPenaltyAllowed || member.penaltyPrefill || "0") || 0;
   const penaltyNum = parseAmount(row.penalty);
   if (penaltyNum !== undefined) {
     if (penaltyNum < 0) {
       errors.penalty = "Penalty amount cannot be negative";
     } else if (penaltyNum > maxPenaltyNum) {
-      errors.penalty = `Cannot exceed assessed penalty (${currency} ${formatAmountStr(maxPenaltyNum)})`;
+      errors.penalty = `Cannot exceed total penalty due (${currency} ${formatAmountStr(maxPenaltyNum)})`;
     }
   }
 
-  const maxLoanNum = parseFloat(member.loanRemaining || "0");
+  const maxLoanPayoffNum = member.activeLoan
+    ? parseFloat(member.activeLoan.totalPayoff || "0")
+    : parseFloat(member.loanRemaining || "0");
   const repaymentNum = parseAmount(row.repayment);
   if (repaymentNum !== undefined && member.hasActiveLoan) {
     if (repaymentNum < 0) {
       errors.repayment = "Loan repayment amount cannot be negative";
-    } else if (repaymentNum > maxLoanNum) {
-      errors.repayment = `Cannot exceed loan balance (${currency} ${formatAmountStr(maxLoanNum)})`;
+    } else if (repaymentNum > maxLoanPayoffNum) {
+      errors.repayment = `Cannot exceed total loan payoff (${currency} ${formatAmountStr(maxLoanPayoffNum)})`;
     }
   }
 
@@ -118,10 +122,12 @@ export const ContributionMemberRow = ({
     parseFloat(member.arrears.penalty) > 0 ||
     parseFloat(member.arrears.contribution) > 0;
 
+  const maxContributionNum =
+    parseFloat(member.maxContributionAllowed || member.expectedAmount) || 0;
+
   const isFilled =
-    parseFloat(row.contribution || "0") >=
-      (parseFloat(member.expectedAmount) || 0) &&
-    (parseFloat(member.expectedAmount) || 0) > 0;
+    parseFloat(row.contribution || "0") >= maxContributionNum &&
+    maxContributionNum > 0;
 
   const errors = getMemberRowErrors(member, row, currency);
 
@@ -156,7 +162,7 @@ export const ContributionMemberRow = ({
               </Chip>
             </View>
             <ThemedText className="text-xs text-muted">
-              Expected {currency} {formatAmountStr(member.expectedAmount)}
+              Monthly Expected: {currency} {formatAmountStr(member.expectedAmount)}
               {member.existing ? `  ·  ${member.existing.status}` : ""}
             </ThemedText>
           </View>
@@ -181,13 +187,46 @@ export const ContributionMemberRow = ({
             </ThemedText>
             <ThemedText className="text-xs text-muted mt-0.5">
               {parseFloat(member.arrears.contribution) > 0
-                ? `Contribution ${currency} ${formatAmountStr(member.arrears.contribution)}`
+                ? `Contribution Arrears: ${currency} ${formatAmountStr(member.arrears.contribution)}`
                 : "Contribution fully paid"}
               {"  ·  "}
               {parseFloat(member.arrears.penalty) > 0
-                ? `Penalty ${currency} ${formatAmountStr(member.arrears.penalty)}`
+                ? `Penalty Arrears: ${currency} ${formatAmountStr(member.arrears.penalty)}`
                 : "Penalty cleared"}
             </ThemedText>
+          </View>
+        )}
+
+        {/* Active Loan Details Breakdown */}
+        {hasLoan && member.activeLoan && (
+          <View className="rounded-lg bg-primary/10 p-2.5 gap-1 border border-primary/20">
+            <ThemedText className="text-xs font-semibold text-primary">
+              Active Loan Breakdown
+            </ThemedText>
+            <View className="flex-row items-center justify-between">
+              <ThemedText className="text-xs text-muted">
+                Principal Remaining:
+              </ThemedText>
+              <ThemedText className="text-xs font-medium">
+                {currency} {formatAmountStr(member.activeLoan.remainingPrincipal)}
+              </ThemedText>
+            </View>
+            <View className="flex-row items-center justify-between">
+              <ThemedText className="text-xs text-muted">
+                Accrued Interest Due:
+              </ThemedText>
+              <ThemedText className="text-xs font-medium text-amber-600">
+                {currency} {formatAmountStr(member.activeLoan.interestOwed)}
+              </ThemedText>
+            </View>
+            <View className="flex-row items-center justify-between pt-1 border-t border-primary/20 mt-0.5">
+              <ThemedText className="text-xs font-semibold">
+                Total Loan Payoff Cap:
+              </ThemedText>
+              <ThemedText className="text-xs font-bold text-primary">
+                {currency} {formatAmountStr(member.activeLoan.totalPayoff)}
+              </ThemedText>
+            </View>
           </View>
         )}
 
@@ -202,7 +241,7 @@ export const ContributionMemberRow = ({
                 className="active:opacity-70"
               >
                 <ThemedText className="text-xs text-primary font-medium">
-                  Fill {formatAmountStr(member.expectedAmount)}
+                  Fill {formatAmountStr(maxContributionNum)}
                 </ThemedText>
               </Pressable>
             )}
@@ -219,7 +258,7 @@ export const ContributionMemberRow = ({
             </InputGroup.Prefix>
             <InputGroup.Input
               keyboardType="decimal-pad"
-              placeholder={member.contributionPrefill}
+              placeholder={String(maxContributionNum)}
               value={row.contribution}
               onChangeText={(text) =>
                 onChangeField(member.userId, "contribution", text)
@@ -227,10 +266,16 @@ export const ContributionMemberRow = ({
               editable={!isSaving}
             />
           </InputGroup>
-          {errors.contribution && (
+          {errors.contribution ? (
             <ThemedText className="text-xs text-danger font-medium mt-1">
               {errors.contribution}
             </ThemedText>
+          ) : (
+            parseFloat(member.arrears.contribution) > 0 && (
+              <FieldDescription className="text-xs text-muted mt-0.5">
+                Includes {currency} {formatAmountStr(member.arrears.contribution)} arrears
+              </FieldDescription>
+            )
           )}
         </Field>
 
@@ -240,7 +285,7 @@ export const ContributionMemberRow = ({
             <FieldLabel>Late penalty ({currency})</FieldLabel>
             <FieldDescription>
               Assessed {currency}{" "}
-              {formatAmountStr(member.penaltyPrefill ?? "0")}
+              {formatAmountStr(member.maxPenaltyAllowed || member.penaltyPrefill || "0")}
             </FieldDescription>
             <InputGroup
               className={
@@ -254,7 +299,7 @@ export const ContributionMemberRow = ({
               </InputGroup.Prefix>
               <InputGroup.Input
                 keyboardType="decimal-pad"
-                placeholder={member.penaltyPrefill ?? "0"}
+                placeholder={member.maxPenaltyAllowed || member.penaltyPrefill || "0"}
                 value={row.penalty}
                 onChangeText={(text) =>
                   onChangeField(member.userId, "penalty", text)
@@ -275,8 +320,8 @@ export const ContributionMemberRow = ({
           <Field>
             <FieldLabel>Loan repayment ({currency})</FieldLabel>
             <FieldDescription>
-              Remaining {currency}{" "}
-              {formatAmountStr(member.loanRemaining ?? "0")} · interest-first
+              Interest-first split (Interest: {currency}{" "}
+              {formatAmountStr(member.activeLoan?.interestOwed ?? "0")})
             </FieldDescription>
             <InputGroup
               className={
