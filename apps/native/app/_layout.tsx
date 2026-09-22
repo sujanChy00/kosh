@@ -13,10 +13,6 @@ import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
-export const unstable_settings = {
-  initialRouteName: "(main)",
-};
-
 function StackLayout() {
   const { isDark, currentTheme } = useAppTheme();
   const { data: session, isPending } = authClient.useSession();
