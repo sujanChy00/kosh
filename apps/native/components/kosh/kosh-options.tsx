@@ -123,7 +123,7 @@ export const KoshOptions = ({ koshId, role, koshName }: KoshOptionsProps) => {
           break;
         case "loans":
           router.push({
-            pathname: "/kosh/[id]/loanss",
+            pathname: "/kosh/[id]/all-loans",
             params: {
               id: koshId,
             },
