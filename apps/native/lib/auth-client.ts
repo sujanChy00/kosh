@@ -2,9 +2,12 @@ import { expoClient } from "@better-auth/expo/client";
 import { env } from "@kosh-app/env/native";
 import { createAuthClient } from "better-auth/react";
 import { emailOTPClient, inferAdditionalFields } from "better-auth/client/plugins";
+import { passkeyClient } from "@better-auth/passkey/client";
 import { expoPasskeyClient } from "expo-better-auth-passkey";
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
+
+import type { auth } from "@kosh-app/auth";
 
 export const authClient = createAuthClient({
   baseURL: env.EXPO_PUBLIC_SERVER_URL,
@@ -16,13 +19,7 @@ export const authClient = createAuthClient({
       storage: SecureStore,
     }),
     emailOTPClient(),
-    inferAdditionalFields({
-      user: {
-        biometricEnabled: { type: "boolean", required: false },
-        preferredLang: { type: "string", required: false },
-        selectedKoshId: { type: "string", required: false },
-      },
-    }),
-    expoPasskeyClient(),
+    inferAdditionalFields<typeof auth>(),
+    expoPasskeyClient() as unknown as ReturnType<typeof passkeyClient>,
   ],
 });
