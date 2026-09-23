@@ -15,7 +15,7 @@ import { protectedProcedure, router } from "../index";
 const myLoansSchema = z
   .object({
     koshId: z.uuid().optional(),
-    status: z.enum(["all", "active", "paid_off", "defaulted"]).default("all"),
+    status: z.enum(["all", "active", "pending", "cleared"]).default("all"),
   })
   .optional();
 
@@ -459,91 +459,156 @@ export const loanRouter = router({
         };
       }
 
-      const statusFilter =
-        input?.status && input.status !== "all"
-          ? [input.status]
-          : (["active", "paid_off", "defaulted"] as const);
+      const statusInput = input?.status ?? "all";
+      const fetchLoans =
+        statusInput === "all" ||
+        statusInput === "active" ||
+        statusInput === "cleared";
+      const fetchPending =
+        statusInput === "all" || statusInput === "pending";
 
-      const loans = await db
-        .select({
-          id: loan.id,
-          koshId: loan.koshId,
-          principal: loan.principal,
-          interestRate: loan.interestRate,
-          issueDate: loan.issueDate,
-          dueDate: loan.dueDate,
-          status: loan.status,
-          amountRemaining: loan.amountRemaining,
-          createdAt: loan.createdAt,
-          totalRepaid: sql<string>`coalesce((
-            select sum(${loanRepayment.principalPortion} + ${loanRepayment.interestPortion})
-            from ${loanRepayment}
-            where ${loanRepayment.loanId} = ${loan.id}
-          ), 0)`,
-          totalInterestPaid: sql<string>`coalesce((
-            select sum(${loanRepayment.interestPortion})
-            from ${loanRepayment}
-            where ${loanRepayment.loanId} = ${loan.id}
-          ), 0)`,
-        })
-        .from(loan)
-        .where(
-          and(
-            eq(loan.borrowerId, userId),
-            inArray(loan.koshId, koshIds),
-            inArray(loan.status, statusFilter),
-          ),
-        )
-        .orderBy(desc(loan.createdAt));
+      let loansList: MyLoanItem[] = [];
+      if (fetchLoans) {
+        const loanStatuses =
+          statusInput === "active"
+            ? (["active"] as const)
+            : statusInput === "cleared"
+              ? CLEARED_LOAN_STATUSES
+              : (["active", "paid_off", "defaulted"] as const);
 
-      // Aggregate stats across all fetched loans.
-      let activeLoanCount = 0;
+        const rawLoans = await db
+          .select({
+            id: loan.id,
+            koshId: loan.koshId,
+            principal: loan.principal,
+            interestRate: loan.interestRate,
+            issueDate: loan.issueDate,
+            dueDate: loan.dueDate,
+            status: loan.status,
+            amountRemaining: loan.amountRemaining,
+            createdAt: loan.createdAt,
+            totalRepaid: sql<string>`coalesce((
+              select sum(${loanRepayment.principalPortion} + ${loanRepayment.interestPortion})
+              from ${loanRepayment}
+              where ${loanRepayment.loanId} = ${loan.id}
+            ), 0)`,
+            totalInterestPaid: sql<string>`coalesce((
+              select sum(${loanRepayment.interestPortion})
+              from ${loanRepayment}
+              where ${loanRepayment.loanId} = ${loan.id}
+            ), 0)`,
+          })
+          .from(loan)
+          .where(
+            and(
+              eq(loan.borrowerId, userId),
+              inArray(loan.koshId, koshIds),
+              inArray(loan.status, loanStatuses),
+            ),
+          )
+          .orderBy(desc(loan.createdAt));
+
+        loansList = rawLoans.map((l) => {
+          const principal = parseFloat(l.principal);
+          const koshInfo = koshMap.get(l.koshId)!;
+          const monthlyRate = parseFloat(l.interestRate);
+          const yearlyRate = monthlyRate * 12;
+          const monthlyInterestAmount =
+            Math.round(principal * (monthlyRate / 100) * 100) / 100;
+
+          return {
+            id: l.id,
+            koshId: l.koshId,
+            koshName: koshInfo.name,
+            koshIconUrl: koshInfo.iconUrl,
+            currency: koshInfo.currency,
+            principal: l.principal,
+            interestRate: l.interestRate,
+            monthlyInterestRate: String(monthlyRate),
+            yearlyInterestRate: String(yearlyRate),
+            monthlyInterestAmount: String(monthlyInterestAmount),
+            issueDate: l.issueDate,
+            dueDate: l.dueDate,
+            status: l.status,
+            amountRemaining: l.amountRemaining,
+            totalRepaid: l.totalRepaid,
+            totalInterestPaid: l.totalInterestPaid,
+            createdAt: l.createdAt.toISOString(),
+            amountRequested: null,
+            note: null,
+          };
+        });
+      }
+
+      let pendingList: MyLoanItem[] = [];
+      if (fetchPending) {
+        const rawRequests = await db
+          .select({
+            id: loanRequest.id,
+            koshId: loanRequest.koshId,
+            amountRequested: loanRequest.amountRequested,
+            note: loanRequest.note,
+            status: loanRequest.status,
+            createdAt: loanRequest.createdAt,
+          })
+          .from(loanRequest)
+          .where(
+            and(
+              eq(loanRequest.requestedBy, userId),
+              inArray(loanRequest.koshId, koshIds),
+              inArray(loanRequest.status, PENDING_REQUEST_STATUSES),
+            ),
+          )
+          .orderBy(desc(loanRequest.createdAt));
+
+        pendingList = rawRequests.map((r) => {
+          const koshInfo = koshMap.get(r.koshId)!;
+          const createdIso = r.createdAt.toISOString();
+          return {
+            id: r.id,
+            koshId: r.koshId,
+            koshName: koshInfo.name,
+            koshIconUrl: koshInfo.iconUrl,
+            currency: koshInfo.currency,
+            principal: r.amountRequested,
+            interestRate: "0",
+            monthlyInterestRate: "0",
+            yearlyInterestRate: "0",
+            monthlyInterestAmount: "0",
+            issueDate: createdIso.split("T")[0] || "",
+            dueDate: null,
+            status: r.status as "pending_adhyaksh" | "pending_koshadhyaksh",
+            amountRemaining: r.amountRequested,
+            totalRepaid: "0",
+            totalInterestPaid: "0",
+            createdAt: createdIso,
+            amountRequested: r.amountRequested,
+            note: r.note,
+          };
+        });
+      }
+
+      const allItems = [...pendingList, ...loansList].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+
+      // Aggregate stats across all user loans & requests
+      const activeLoans = loansList.filter((l) => l.status === "active");
+
       let totalBorrowed = 0;
       let totalRemaining = 0;
       let totalRepaid = 0;
       let totalInterestPaid = 0;
 
-      const items = loans.map((l) => {
-        const principal = parseFloat(l.principal);
-        const remaining = parseFloat(l.amountRemaining);
-        const repaid = parseFloat(l.totalRepaid);
-        const interestPaid = parseFloat(l.totalInterestPaid);
-
-        totalBorrowed += principal;
-        totalRepaid += repaid;
-        totalInterestPaid += interestPaid;
-
+      for (const l of loansList) {
+        totalBorrowed += parseFloat(l.principal);
+        totalRepaid += parseFloat(l.totalRepaid);
+        totalInterestPaid += parseFloat(l.totalInterestPaid);
         if (l.status === "active") {
-          activeLoanCount++;
-          totalRemaining += remaining;
+          totalRemaining += parseFloat(l.amountRemaining);
         }
-
-        const koshInfo = koshMap.get(l.koshId)!;
-        const monthlyRate = parseFloat(l.interestRate);
-        const yearlyRate = monthlyRate * 12;
-        const monthlyInterestAmount =
-          Math.round(principal * (monthlyRate / 100) * 100) / 100;
-
-        return {
-          id: l.id,
-          koshId: l.koshId,
-          koshName: koshInfo.name,
-          koshIconUrl: koshInfo.iconUrl,
-          currency: koshInfo.currency,
-          principal: l.principal,
-          interestRate: l.interestRate,
-          monthlyInterestRate: String(monthlyRate),
-          yearlyInterestRate: String(yearlyRate),
-          monthlyInterestAmount: String(monthlyInterestAmount),
-          issueDate: l.issueDate,
-          dueDate: l.dueDate,
-          status: l.status,
-          amountRemaining: l.amountRemaining,
-          totalRepaid: l.totalRepaid,
-          totalInterestPaid: l.totalInterestPaid,
-          createdAt: l.createdAt.toISOString(),
-        };
-      });
+      }
 
       const koshes = memberships.map((m) => ({
         id: m.kosh.id,
@@ -555,13 +620,13 @@ export const loanRouter = router({
       return {
         koshes,
         stats: {
-          activeLoanCount,
+          activeLoanCount: activeLoans.length,
           totalBorrowed: String(totalBorrowed),
           totalRemaining: String(totalRemaining),
           totalRepaid: String(totalRepaid),
           totalInterestPaid: String(totalInterestPaid),
         },
-        items,
+        items: allItems,
       };
     }),
 
@@ -789,11 +854,18 @@ export type MyLoanItem = {
   monthlyInterestAmount: string;
   issueDate: string;
   dueDate: string | null;
-  status: "active" | "paid_off" | "defaulted";
+  status:
+    | "pending_adhyaksh"
+    | "pending_koshadhyaksh"
+    | "active"
+    | "paid_off"
+    | "defaulted";
   amountRemaining: string;
   totalRepaid: string;
   totalInterestPaid: string;
   createdAt: string;
+  amountRequested?: string | null;
+  note?: string | null;
 };
 
 /**
@@ -830,7 +902,7 @@ export type KoshLoanItem = {
   note: string | null;
 };
 
-export type LoanStatusFilter = "all" | "active" | "paid_off" | "defaulted";
+export type LoanStatusFilter = "all" | "active" | "pending" | "cleared";
 export type KoshLoanTabFilter = "all" | "active" | "pending" | "cleared";
 export type LoanStats = {
   activeLoanCount: number;

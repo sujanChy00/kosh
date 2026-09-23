@@ -15,7 +15,15 @@ export const LoanHistoryTabs = ({
   loanItems,
   isPending,
 }: Props) => {
-  const filteredItems = loanItems.filter((item) => item.status === tabValue);
+  const activeItems = loanItems.filter((item) => item.status === "active");
+  const pendingItems = loanItems.filter(
+    (item) =>
+      item.status === "pending_adhyaksh" || item.status === "pending_koshadhyaksh",
+  );
+  const clearedItems = loanItems.filter(
+    (item) => item.status === "paid_off" || item.status === "defaulted",
+  );
+
   return (
     <Tabs
       value={tabValue}
@@ -27,16 +35,18 @@ export const LoanHistoryTabs = ({
           <Tabs.Label className="text-xs font-mono-semibold">All</Tabs.Label>
         </Tabs.Trigger>
         <Tabs.Trigger className="flex-1 px-0" value="active">
-          <Tabs.Label className="text-xs font-mono-semibold">Active</Tabs.Label>
-        </Tabs.Trigger>
-        <Tabs.Trigger className="flex-1 px-0" value="paid_off">
           <Tabs.Label className="text-xs font-mono-semibold">
-            Paid Off
+            Active ({activeItems.length})
           </Tabs.Label>
         </Tabs.Trigger>
-        <Tabs.Trigger className="flex-1 px-0" value="defaulted">
+        <Tabs.Trigger className="flex-1 px-0" value="pending">
           <Tabs.Label className="text-xs font-mono-semibold">
-            Defaulted
+            Pending ({pendingItems.length})
+          </Tabs.Label>
+        </Tabs.Trigger>
+        <Tabs.Trigger className="flex-1 px-0" value="cleared">
+          <Tabs.Label className="text-xs font-mono-semibold">
+            Cleared ({clearedItems.length})
           </Tabs.Label>
         </Tabs.Trigger>
       </Tabs.List>
@@ -49,22 +59,22 @@ export const LoanHistoryTabs = ({
       </Tabs.Content>
       <Tabs.Content value="active">
         <LoanHistoryList
-          loanItems={filteredItems}
+          loanItems={activeItems}
           statusFilter="active"
           isPending={isPending}
         />
       </Tabs.Content>
-      <Tabs.Content value="paid_off">
+      <Tabs.Content value="pending">
         <LoanHistoryList
-          loanItems={filteredItems}
-          statusFilter="paid_off"
+          loanItems={pendingItems}
+          statusFilter="pending"
           isPending={isPending}
         />
       </Tabs.Content>
-      <Tabs.Content value="defaulted">
+      <Tabs.Content value="cleared">
         <LoanHistoryList
-          loanItems={filteredItems}
-          statusFilter="defaulted"
+          loanItems={clearedItems}
+          statusFilter="cleared"
           isPending={isPending}
         />
       </Tabs.Content>

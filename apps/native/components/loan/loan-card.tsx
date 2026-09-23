@@ -23,9 +23,72 @@ function progressPercent(principal: string, remaining: string) {
 
 export const LoanCard = ({ item }: { item: MyLoanItem }) => {
   const successColor = useCSSVariable("--color-success") as string;
-  const pct = progressPercent(item.principal, item.amountRemaining);
+  const isPending =
+    item.status === "pending_adhyaksh" || item.status === "pending_koshadhyaksh";
   const isPaidOff = item.status === "paid_off";
   const isDefaulted = item.status === "defaulted";
+  const pct = progressPercent(item.principal, item.amountRemaining);
+
+  if (isPending) {
+    return (
+      <Card className="p-4 gap-y-3">
+        {/* Header Row */}
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center gap-2 flex-1 shrink">
+            <Avatar className="size-9 rounded-2xl">
+              <Avatar.Image source={item.koshIconUrl} alt={item.koshName} />
+              <Avatar.Fallback
+                source={item.koshIconUrl}
+                fallback={item.koshName}
+              />
+            </Avatar>
+            <View className="flex-1 shrink">
+              <ThemedText
+                numberOfLines={1}
+                className="font-notosans-semibold text-base"
+              >
+                {item.koshName}
+              </ThemedText>
+              <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+                Requested {formatShortDate(new Date(item.createdAt))}
+              </ThemedText>
+            </View>
+          </View>
+
+          <Chip variant="soft" color="warning" size="sm">
+            <Chip.Label className="uppercase font-mono-semibold">
+              Pending
+            </Chip.Label>
+          </Chip>
+        </View>
+
+        <Separator />
+
+        {/* Details */}
+        <View className="gap-y-2">
+          <View className="flex-row justify-between items-center">
+            <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+              Requested Amount
+            </ThemedText>
+            <ThemedText className="font-mono-semibold text-base text-warning">
+              रु {formatAmount(item.amountRequested ?? item.principal)}
+            </ThemedText>
+          </View>
+
+          {item.note && (
+            <View className="gap-y-1 mt-1 bg-muted/40 p-2.5 rounded-lg">
+              <ThemedText className="text-xs font-mono-semibold text-muted-foreground">
+                Note
+              </ThemedText>
+              <ThemedText className="text-xs font-notosans-regular">
+                {item.note}
+              </ThemedText>
+            </View>
+          )}
+        </View>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4 gap-y-3">
