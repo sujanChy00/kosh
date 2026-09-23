@@ -2,7 +2,7 @@ import type {
   ContributionStatusFilter,
   MyContributionItem,
 } from "@kosh-app/api/routers/contribution";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Card } from "../ui/card";
@@ -11,9 +11,21 @@ import { MyContributionCard } from "./my-contribution-card";
 interface Props {
   items: MyContributionItem[];
   filter: ContributionStatusFilter;
+  isPending: boolean;
 }
 
-export const MyContributionHistoryList = ({ items, filter }: Props) => {
+export const MyContributionHistoryList = ({
+  items,
+  filter,
+  isPending,
+}: Props) => {
+  if (isPending)
+    return (
+      <View className="flex-row justify-center items-center pt-3">
+        <ActivityIndicator />
+      </View>
+    );
+
   if (!items || items.length === 0)
     return (
       <Card className="p-8 items-center justify-center gap-y-2">

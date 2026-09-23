@@ -11,12 +11,14 @@ interface Props {
   statusFilter: ContributionStatusFilter;
   onStatusFilterChange: (filter: ContributionStatusFilter) => void;
   items: MyContributionItem[];
+  isPending: boolean;
 }
 
 export const ContributionHistoryTabs = ({
   statusFilter,
   onStatusFilterChange,
   items,
+  isPending,
 }: Props) => {
   const filteredItems = items.filter((item) => {
     if (statusFilter === "all") return true;
@@ -60,6 +62,7 @@ export const ContributionHistoryTabs = ({
           <MyContributionHistoryList
             filter={statusFilter}
             items={filteredItems}
+            isPending={isPending}
           />
         </View>
       </Tabs.Content>
@@ -71,6 +74,7 @@ export const ContributionHistoryTabs = ({
           <MyContributionHistoryList
             filter={statusFilter}
             items={filteredItems}
+            isPending={isPending}
           />
         </View>
       </Tabs.Content>
@@ -82,6 +86,7 @@ export const ContributionHistoryTabs = ({
           <MyContributionHistoryList
             filter={statusFilter}
             items={filteredItems}
+            isPending={isPending}
           />
         </View>
       </Tabs.Content>
@@ -93,6 +98,7 @@ export const ContributionHistoryTabs = ({
           <MyContributionHistoryList
             filter={statusFilter}
             items={filteredItems}
+            isPending={isPending}
           />
         </View>
       </Tabs.Content>

@@ -1,14 +1,17 @@
 import type { LoanStats as LoanStatsType } from "@kosh-app/api/routers/loan";
-import { formatAmount } from "@kosh-app/utils";
+import { cn, formatAmount } from "@kosh-app/utils";
 import { View } from "react-native";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 
 interface LoanStatsProps {
-  stats: LoanStatsType;
+  stats: LoanStatsType | undefined;
+  isPending: boolean;
 }
 
-export const LoanStats = ({ stats }: LoanStatsProps) => {
+export const LoanStats = ({ stats, isPending }: LoanStatsProps) => {
+  const activeLoanCount = stats?.activeLoanCount ?? 0;
+
   return (
     <View className="gap-3">
       <View className="flex-row flex-wrap gap-3">
@@ -16,7 +19,7 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
           <View className="flex-row items-center gap-2">
             <StyledSymbolView
               tintColorClassName={
-                stats.activeLoanCount > 0 ? "accent-warning" : "accent-muted"
+                activeLoanCount > 0 ? "accent-warning" : "accent-muted"
               }
               size={16}
               name={{ android: "payments" }}
@@ -26,9 +29,12 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText
-            className={`text-lg font-mono-semibold ${stats.activeLoanCount > 0 ? "text-warning" : ""}`}
+            className={cn(
+              "text-lg font-mono-semibold",
+              activeLoanCount > 0 ? "text-warning" : "",
+            )}
           >
-            {stats.activeLoanCount}
+            {isPending ? "..." : activeLoanCount}
           </ThemedText>
         </View>
 
@@ -36,7 +42,7 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
           <View className="flex-row items-center gap-2">
             <StyledSymbolView
               tintColorClassName={
-                Number(stats.totalRemaining) > 0
+                Number(stats?.totalRemaining) > 0
                   ? "accent-danger"
                   : "accent-muted"
               }
@@ -48,9 +54,11 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText
-            className={`text-lg font-mono-semibold ${Number(stats.totalRemaining) > 0 ? "text-danger" : ""}`}
+            className={`text-lg font-mono-semibold ${Number(stats?.totalRemaining) > 0 ? "text-danger" : ""}`}
           >
-            रु {formatAmount(stats.totalRemaining)}
+            {isPending
+              ? "..."
+              : ` रु ${formatAmount(stats?.totalRemaining ?? "0")}`}
           </ThemedText>
         </View>
       </View>
@@ -68,7 +76,9 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText className="text-lg font-mono-semibold">
-            रु {formatAmount(stats.totalBorrowed)}
+            {isPending
+              ? "..."
+              : `रु ${formatAmount(stats?.totalBorrowed ?? "0")}`}
           </ThemedText>
         </View>
 
@@ -84,7 +94,9 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText className="text-lg font-mono-semibold">
-            रु {formatAmount(stats.totalRepaid)}
+            {isPending
+              ? "..."
+              : `रु ${formatAmount(stats?.totalRepaid ?? "0")}`}
           </ThemedText>
         </View>
       </View>
@@ -102,7 +114,9 @@ export const LoanStats = ({ stats }: LoanStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText className="text-lg font-mono-semibold">
-            रु {formatAmount(stats.totalInterestPaid)}
+            {isPending
+              ? "..."
+              : `रु ${formatAmount(stats?.totalInterestPaid ?? "0")}`}
           </ThemedText>
         </View>
       </View>

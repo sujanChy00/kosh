@@ -1,5 +1,5 @@
 import type { LoanStatusFilter, MyLoanItem } from "@kosh-app/api/routers/loan";
-import { View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { FadeInUp } from "react-native-reanimated";
 import { AnimatedView } from "../animated-view";
 import { StyledSymbolView } from "../styled-symbol-view";
@@ -10,9 +10,21 @@ import { LoanCard } from "./loan-card";
 interface Props {
   loanItems: MyLoanItem[];
   statusFilter: LoanStatusFilter;
+  isPending: boolean;
 }
 
-export const LoanHistoryList = ({ loanItems, statusFilter }: Props) => {
+export const LoanHistoryList = ({
+  loanItems,
+  statusFilter,
+  isPending,
+}: Props) => {
+  if (isPending)
+    return (
+      <View className="flex-row justify-center items-center pt-3">
+        <ActivityIndicator />
+      </View>
+    );
+
   if (!loanItems || loanItems.length === 0)
     return (
       <AnimatedView entering={FadeInUp.duration(300)}>

@@ -1,18 +1,35 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, TouchableOpacity } from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import { Chip } from "../ui/chip";
+import { Shimmer, ShimmerGroup } from "../ui/shimmer";
 
 interface Props {
   koshList: { id: string; name: string }[];
   className?: string;
+  isPending: boolean;
 }
 
-export const HorizontalKoshSelector = ({ koshList, className }: Props) => {
+export const HorizontalKoshSelector = ({
+  koshList,
+  className,
+  isPending,
+}: Props) => {
   const router = useRouter();
   const { selectedKosh } = useLocalSearchParams<{ selectedKosh?: string }>();
   const onSelectKosh = (koshId: string | undefined) => {
     router.setParams({ selectedKosh: koshId });
   };
+
+  if (isPending)
+    return (
+      <ShimmerGroup>
+        <View className="flex-row items-center gap-3">
+          <Shimmer className="h-8 w-22 rounded-3xl" />
+          <Shimmer className="h-8 w-22 rounded-3xl" />
+          <Shimmer className="h-8 w-22 rounded-3xl" />
+        </View>
+      </ShimmerGroup>
+    );
 
   if (koshList.length === 0) return null;
 
@@ -31,9 +48,7 @@ export const HorizontalKoshSelector = ({ koshList, className }: Props) => {
           color={selectedKosh === undefined ? "primary" : "default"}
           size="md"
         >
-          <Chip.Label className="font-mono-semibold">
-            All Koshes ({koshList.length})
-          </Chip.Label>
+          <Chip.Label className="font-mono-semibold">All</Chip.Label>
         </Chip>
       </TouchableOpacity>
 

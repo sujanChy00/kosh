@@ -6,12 +6,14 @@ interface Props {
   tabValue: LoanStatusFilter;
   setTabValue: (value: LoanStatusFilter) => void;
   loanItems: MyLoanItem[];
+  isPending: boolean;
 }
 
 export const LoanHistoryTabs = ({
   tabValue,
   setTabValue,
   loanItems,
+  isPending,
 }: Props) => {
   const filteredItems = loanItems.filter((item) => item.status === tabValue);
   return (
@@ -39,16 +41,32 @@ export const LoanHistoryTabs = ({
         </Tabs.Trigger>
       </Tabs.List>
       <Tabs.Content value="all">
-        <LoanHistoryList loanItems={loanItems} statusFilter="all" />
+        <LoanHistoryList
+          loanItems={loanItems}
+          statusFilter="all"
+          isPending={isPending}
+        />
       </Tabs.Content>
       <Tabs.Content value="active">
-        <LoanHistoryList loanItems={filteredItems} statusFilter="active" />
+        <LoanHistoryList
+          loanItems={filteredItems}
+          statusFilter="active"
+          isPending={isPending}
+        />
       </Tabs.Content>
       <Tabs.Content value="paid_off">
-        <LoanHistoryList loanItems={filteredItems} statusFilter="paid_off" />
+        <LoanHistoryList
+          loanItems={filteredItems}
+          statusFilter="paid_off"
+          isPending={isPending}
+        />
       </Tabs.Content>
       <Tabs.Content value="defaulted">
-        <LoanHistoryList loanItems={filteredItems} statusFilter="defaulted" />
+        <LoanHistoryList
+          loanItems={filteredItems}
+          statusFilter="defaulted"
+          isPending={isPending}
+        />
       </Tabs.Content>
     </Tabs>
   );

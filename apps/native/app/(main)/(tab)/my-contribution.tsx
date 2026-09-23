@@ -1,6 +1,5 @@
 import { HorizontalKoshSelector } from "@/components/kosh/horizontal-kosh-selector";
 import { ErrorComponent } from "@/components/layout/error-component";
-import { PendingComponent } from "@/components/layout/pending-component";
 import { ContributionHistoryTabs } from "@/components/my-contribution/contribution-history-tabs";
 import { MyContributionStats } from "@/components/my-contribution/my-contribution-stats";
 import { ThemedText } from "@/components/themed-text";
@@ -16,15 +15,13 @@ const MyContributionsScreen = () => {
   const [statusFilter, setStatusFilter] =
     useState<ContributionStatusFilter>("all");
 
-  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
+  const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
     ...trpc.contribution.myContributions.queryOptions(
       selectedKosh ? { koshId: selectedKosh } : undefined,
     ),
   });
 
-  if (isLoading) return <PendingComponent />;
-
-  if (isError || !data) {
+  if (isError) {
     return (
       <ErrorComponent
         refetch={refetch}
@@ -32,8 +29,6 @@ const MyContributionsScreen = () => {
       />
     );
   }
-
-  const { koshes, stats, items } = data;
 
   return (
     <ScrollView
@@ -51,11 +46,15 @@ const MyContributionsScreen = () => {
       <ThemedText className="text-2xl font-notosans-semibold">
         My Contributions
       </ThemedText>
-      <HorizontalKoshSelector koshList={koshes} />
-      <MyContributionStats stats={stats} />
+      <HorizontalKoshSelector
+        koshList={data?.koshes ?? []}
+        isPending={isPending}
+      />
+      <MyContributionStats stats={data?.stats} isPending={isPending} />
       <ContributionHistoryTabs
+        isPending={isPending}
         statusFilter={statusFilter}
-        items={items ?? []}
+        items={data?.items ?? []}
         onStatusFilterChange={setStatusFilter}
       />
     </ScrollView>

@@ -1,6 +1,5 @@
 import { HorizontalKoshSelector } from "@/components/kosh/horizontal-kosh-selector";
 import { ErrorComponent } from "@/components/layout/error-component";
-import { PendingComponent } from "@/components/layout/pending-component";
 import { LoanHistoryTabs } from "@/components/loan/loan-history-tabs";
 import { LoanStats } from "@/components/loan/loan-stats";
 import { ThemedText } from "@/components/themed-text";
@@ -23,9 +22,7 @@ const LoanScreen = () => {
     ),
   });
 
-  if (isPending) return <PendingComponent />;
-
-  if (isError || !data) {
+  if (isError) {
     return (
       <ErrorComponent
         refetch={refetch}
@@ -33,8 +30,6 @@ const LoanScreen = () => {
       />
     );
   }
-
-  const { koshes, stats, items } = data;
 
   return (
     <ScrollView
@@ -52,12 +47,16 @@ const LoanScreen = () => {
       <ThemedText className="text-2xl font-notosans-semibold">
         My Loans
       </ThemedText>
-      <HorizontalKoshSelector koshList={koshes} />
-      <LoanStats stats={stats} />
+      <HorizontalKoshSelector
+        koshList={data?.koshes ?? []}
+        isPending={isPending}
+      />
+      <LoanStats stats={data?.stats} isPending={isPending} />
       <LoanHistoryTabs
+        isPending={isPending}
         tabValue={statusFilter}
         setTabValue={setStatusFilter}
-        loanItems={items}
+        loanItems={data?.items ?? []}
       />
     </ScrollView>
   );

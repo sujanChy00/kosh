@@ -5,10 +5,14 @@ import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 
 interface MyContributionStatsProps {
-  stats: MyContributionStatsType;
+  stats: MyContributionStatsType | undefined;
+  isPending: boolean;
 }
 
-export const MyContributionStats = ({ stats }: MyContributionStatsProps) => {
+export const MyContributionStats = ({
+  stats,
+  isPending,
+}: MyContributionStatsProps) => {
   return (
     <View className={"gap-3"}>
       <View className="flex-row flex-wrap gap-3">
@@ -24,7 +28,7 @@ export const MyContributionStats = ({ stats }: MyContributionStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText className="text-lg font-mono-semibold">
-            रु {formatAmount(stats.totalPaid)}
+            {isPending ? "..." : "रु " + formatAmount(stats?.totalPaid ?? "0")}
           </ThemedText>
         </View>
 
@@ -32,7 +36,9 @@ export const MyContributionStats = ({ stats }: MyContributionStatsProps) => {
           <View className="flex-row items-center gap-2">
             <StyledSymbolView
               tintColorClassName={
-                Number(stats.unpaidDues) > 0 ? "accent-danger" : "accent-muted"
+                Number(stats?.unpaidDues ?? "0") > 0
+                  ? "accent-danger"
+                  : "accent-muted"
               }
               size={16}
               name={{ android: "account_balance_wallet" }}
@@ -43,10 +49,10 @@ export const MyContributionStats = ({ stats }: MyContributionStatsProps) => {
           </View>
           <ThemedText
             className={`text-lg font-mono-semibold ${
-              Number(stats.unpaidDues) > 0 ? "text-danger" : ""
+              Number(stats?.unpaidDues ?? "0") > 0 ? "text-danger" : ""
             }`}
           >
-            रु {formatAmount(stats.unpaidDues)}
+            {isPending ? "..." : `रु ${formatAmount(stats?.unpaidDues ?? "0")}`}
           </ThemedText>
         </View>
       </View>
@@ -63,7 +69,9 @@ export const MyContributionStats = ({ stats }: MyContributionStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText className="text-lg font-mono-semibold">
-            रु {formatAmount(stats.totalPenaltiesPaid)}
+            {isPending
+              ? "..."
+              : `रु ${formatAmount(stats?.totalPenaltiesPaid ?? "0")}`}
           </ThemedText>
         </View>
 
@@ -79,10 +87,12 @@ export const MyContributionStats = ({ stats }: MyContributionStatsProps) => {
             </ThemedText>
           </View>
           <ThemedText className="text-lg font-mono-semibold">
-            {stats.paidPeriodsCount}{" "}
-            <ThemedText className="text-xs text-muted-foreground font-mono-regular">
-              ({stats.pendingPeriodsCount} pending)
-            </ThemedText>
+            {isPending ? "..." : stats?.paidPeriodsCount}{" "}
+            {!isPending && (
+              <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+                ({stats?.pendingPeriodsCount ?? 0} pending)
+              </ThemedText>
+            )}
           </ThemedText>
         </View>
       </View>
