@@ -2,37 +2,34 @@ import { AnimatedView } from "@/components/animated-view";
 import { EmptyComponent } from "@/components/layout/empty-component";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
+import { KoshLoanList } from "@/components/loan/kosh-loan-list";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { KoshLoanList } from "@/components/loan/kosh-loan-list";
-import { Card } from "@/components/ui/card";
-import { DateInput } from "@/components/ui/date-input";
-import { SelectInput } from "@/components/ui/select-input";
+import { DangerSoftButton, SecondaryButton } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
+import { useMaterialColors } from "@expo/ui/jetpack-compose";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useGlobalSearchParams } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
-import { Pressable, View } from "react-native";
-import { FadeInUp } from "react-native-reanimated";
+import { useGlobalSearchParams, useRouter } from "expo-router";
+import { useCallback, useMemo } from "react";
+import { View } from "react-native";
+import { FadeOut, ZoomIn } from "react-native-reanimated";
 
 const PAGE_SIZE = 10;
 
 const AllLoanScreen = () => {
-  const { id: koshId } = useGlobalSearchParams<{ id: string }>();
-
-  const [selectedMemberId, setSelectedMemberId] = useState<string>("all");
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
-  const [showFilters, setShowFilters] = useState(false);
-
-  const dateFromStr = useMemo(
-    () => (dateFrom ? dateFrom.toISOString().split("T")[0] : undefined),
-    [dateFrom],
-  );
-  const dateToStr = useMemo(
-    () => (dateTo ? dateTo.toISOString().split("T")[0] : undefined),
-    [dateTo],
-  );
+  const materialColors = useMaterialColors();
+  const {
+    id: koshId,
+    dateFrom,
+    dateTo,
+    memberId,
+  } = useGlobalSearchParams<{
+    id: string;
+    memberId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }>();
+  const router = useRouter();
 
   const {
     data,
@@ -49,9 +46,9 @@ const AllLoanScreen = () => {
       {
         koshId,
         status: "all",
-        memberId: selectedMemberId === "all" ? undefined : selectedMemberId,
-        dateFrom: dateFromStr,
-        dateTo: dateToStr,
+        memberId: memberId === "all" ? undefined : memberId,
+        dateFrom: dateFrom,
+        dateTo: dateTo,
         limit: PAGE_SIZE,
       },
       { getNextPageParam: (lastPage) => lastPage.nextCursor },
@@ -63,26 +60,14 @@ const AllLoanScreen = () => {
     [data],
   );
 
-  const memberOptions = useMemo(
-    () => [
-      { label: "All Members", value: "all" },
-      ...(data?.pages[0]?.members ?? [])
-        .filter((m) => m.id !== "all")
-        .map((m) => ({ label: m.label, value: m.id })),
-    ],
-    [data],
-  );
-
-  const isFiltered =
-    selectedMemberId !== "all" ||
-    dateFrom !== undefined ||
-    dateTo !== undefined;
-
-  const handleResetFilters = () => {
-    setSelectedMemberId("all");
-    setDateFrom(undefined);
-    setDateTo(undefined);
-  };
+  const isFiltered = !!memberId || !!dateFrom || !!dateTo;
+  const clearFilters = useCallback(() => {
+    router.setParams({
+      memberId: undefined,
+      dateFrom: undefined,
+      dateTo: undefined,
+    });
+  }, [router]);
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
@@ -101,93 +86,63 @@ const AllLoanScreen = () => {
     );
   }
 
-  const filterHeader = (
-    <View className="px-2 pt-2 pb-4">
-      <Pressable
-        onPress={() => setShowFilters((prev) => !prev)}
-        className={`flex-row items-center gap-1.5 px-3 py-2 rounded-xl border ${
-          isFiltered || showFilters
-            ? "bg-primary/10 border-primary"
-            : "bg-card border-border"
-        }`}
-      >
-        <StyledSymbolView
-          size={18}
-          tintColorClassName={
-            isFiltered || showFilters
-              ? "accent-primary"
-              : "accent-muted-foreground"
-          }
-          name={{ android: "filter_list" }}
-        />
-        <ThemedText
-          className={`text-xs font-mono-semibold ${
-            isFiltered || showFilters ? "text-primary" : "text-muted-foreground"
-          }`}
-        >
-          Filters{isFiltered ? " (Active)" : ""}
-        </ThemedText>
-      </Pressable>
-
-      {showFilters && (
-        <AnimatedView entering={FadeInUp.duration(200)} className="mt-3">
-          <Card className="p-4 gap-y-3 bg-muted/20">
-            <View className="flex-row items-center justify-between">
-              <ThemedText className="text-xs font-notosans-semibold uppercase text-muted-foreground">
-                Filter Loans
-              </ThemedText>
-              {isFiltered && (
-                <Pressable onPress={handleResetFilters}>
-                  <ThemedText className="text-xs font-mono-semibold text-primary">
-                    Reset
-                  </ThemedText>
-                </Pressable>
-              )}
-            </View>
-
-            <SelectInput
-              label="Member"
-              options={memberOptions}
-              value={selectedMemberId}
-              onValueChange={setSelectedMemberId}
-              placeholder="Select member"
-            />
-
-            <View className="flex-row gap-2">
-              <View className="flex-1">
-                <DateInput
-                  label="From Date"
-                  placeholder="Select start"
-                  value={dateFrom}
-                  onChange={setDateFrom}
-                />
-              </View>
-              <View className="flex-1">
-                <DateInput
-                  label="To Date"
-                  placeholder="Select end"
-                  value={dateTo}
-                  onChange={setDateTo}
-                />
-              </View>
-            </View>
-          </Card>
-        </AnimatedView>
-      )}
-    </View>
-  );
-
   return (
-    <KoshLoanList
-      items={items}
-      isFetchingNextPage={isFetchingNextPage}
-      hasNextPage={hasNextPage}
-      loadMore={loadMore}
-      refreshing={isRefetching}
-      onRefresh={refetch}
-      ListHeaderComponent={filterHeader}
-      ListEmptyComponent={
+    <>
+      <View
+        className="absolute bottom-safe-offset-8 right-safe-offset-4 z-30 gap-y-3"
+        pointerEvents="box-none"
+      >
+        {isFiltered && (
+          <AnimatedView
+            entering={ZoomIn.duration(200)}
+            exiting={FadeOut.duration(200)}
+          >
+            <DangerSoftButton
+              style={{
+                backgroundColor: materialColors.errorContainer,
+              }}
+              className="p-0 size-12.5 rounded-2xl"
+              onPress={clearFilters}
+            >
+              <StyledSymbolView
+                tintColor={materialColors.error}
+                name={{
+                  android: "format_paint",
+                }}
+              />
+            </DangerSoftButton>
+          </AnimatedView>
+        )}
+        <SecondaryButton
+          style={{
+            backgroundColor: materialColors.primaryContainer,
+          }}
+          className="p-0 size-12.5 rounded-2xl"
+          onPress={() =>
+            router.push({
+              pathname: "/kosh/[id]/filter-loans",
+              params: {
+                id: koshId,
+              },
+            })
+          }
+        >
+          <StyledSymbolView
+            tintColor={materialColors.primary}
+            name={{
+              android: "filter_list",
+            }}
+          />
+        </SecondaryButton>
+      </View>
+      {items.length === 0 ? (
         <EmptyComponent
+          actionButtonOnPress={clearFilters}
+          actionButtonContent={
+            <ThemedText className="text-primary-foreground">
+              Clear Filters
+            </ThemedText>
+          }
           message={
             isFiltered
               ? "No loans match your filters"
@@ -199,8 +154,17 @@ const AllLoanScreen = () => {
               : "Loans and pending requests for this kosh will appear here."
           }
         />
-      }
-    />
+      ) : (
+        <KoshLoanList
+          items={items}
+          isFetchingNextPage={isFetchingNextPage}
+          hasNextPage={hasNextPage}
+          loadMore={loadMore}
+          refreshing={isRefetching}
+          onRefresh={refetch}
+        />
+      )}
+    </>
   );
 };
 

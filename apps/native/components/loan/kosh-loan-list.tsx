@@ -14,7 +14,6 @@ interface KoshLoanListProps {
   refreshing: boolean;
   onRefresh: () => void;
   ListHeaderComponent?: React.JSX.Element | null;
-  ListEmptyComponent?: React.ComponentType<any> | React.ReactElement | null;
 }
 
 export const KoshLoanList = ({
@@ -25,7 +24,6 @@ export const KoshLoanList = ({
   refreshing,
   onRefresh,
   ListHeaderComponent,
-  ListEmptyComponent,
 }: KoshLoanListProps) => {
   const renderItem = useCallback(
     ({ item }: { item: KoshLoanItem }) => <KoshLoanCard item={item} />,
@@ -59,7 +57,6 @@ export const KoshLoanList = ({
       keyExtractor={keyExtractor}
       ListFooterComponent={ListFooterComponent}
       ListHeaderComponent={ListHeaderComponent}
-      ListEmptyComponent={ListEmptyComponent}
       experimental_adaptiveRender={{
         enterVelocity: 6,
         exitVelocity: 3,

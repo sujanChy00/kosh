@@ -4,11 +4,13 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
   View,
+  ViewProps,
 } from "react-native";
 import { ThemedText } from "../themed-text";
 
-interface ButtonProps extends TouchableOpacityProps {
+interface ButtonProps extends Omit<TouchableOpacityProps, "style"> {
   wrapperClassName?: string;
+  style?: ViewProps["style"];
 }
 
 const SecondaryRoot = ({
@@ -16,6 +18,7 @@ const SecondaryRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -30,6 +33,7 @@ const SecondaryRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -50,6 +54,7 @@ const PrimaryRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -64,6 +69,7 @@ const PrimaryRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -85,6 +91,7 @@ const DangerRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -99,6 +106,7 @@ const DangerRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -119,6 +127,7 @@ const DangerGhostRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -133,6 +142,7 @@ const DangerGhostRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -153,6 +163,7 @@ const WarningRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -167,6 +178,7 @@ const WarningRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -188,6 +200,7 @@ const DangerSoftRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -202,6 +215,7 @@ const DangerSoftRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -223,6 +237,7 @@ const TertiaryRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -237,6 +252,7 @@ const TertiaryRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -258,6 +274,7 @@ const GhostRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -272,6 +289,7 @@ const GhostRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -293,6 +311,7 @@ const OutlineRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
   ...props
 }: ButtonProps) => {
   return (
@@ -307,6 +326,7 @@ const OutlineRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>

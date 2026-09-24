@@ -24,7 +24,8 @@ function progressPercent(principal: string, remaining: string) {
 export const LoanCard = ({ item }: { item: MyLoanItem }) => {
   const successColor = useCSSVariable("--color-success") as string;
   const isPending =
-    item.status === "pending_adhyaksh" || item.status === "pending_koshadhyaksh";
+    item.status === "pending_adhyaksh" ||
+    item.status === "pending_koshadhyaksh";
   const isPaidOff = item.status === "paid_off";
   const isDefaulted = item.status === "defaulted";
   const pct = progressPercent(item.principal, item.amountRemaining);
@@ -76,7 +77,7 @@ export const LoanCard = ({ item }: { item: MyLoanItem }) => {
           </View>
 
           {item.note && (
-            <View className="gap-y-1 mt-1 bg-muted/40 p-2.5 rounded-lg">
+            <View className="gap-y-1 mt-1 bg-surface-secondary p-2.5 rounded-lg">
               <ThemedText className="text-xs font-mono-semibold text-muted-foreground">
                 Note
               </ThemedText>

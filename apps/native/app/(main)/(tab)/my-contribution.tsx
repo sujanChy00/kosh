@@ -8,7 +8,7 @@ import type { ContributionStatusFilter } from "@kosh-app/api/routers/contributio
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { RefreshControl, ScrollView } from "react-native";
+import { RefreshControl, ScrollView, View } from "react-native";
 
 const MyContributionsScreen = () => {
   const { selectedKosh } = useLocalSearchParams<{ selectedKosh?: string }>();
@@ -32,6 +32,7 @@ const MyContributionsScreen = () => {
 
   return (
     <ScrollView
+      stickyHeaderIndices={[3]}
       refreshControl={
         <RefreshControl
           refreshing={isRefetching}
@@ -43,20 +44,26 @@ const MyContributionsScreen = () => {
       showsVerticalScrollIndicator={false}
       contentContainerClassName="px-4 gap-y-5 pt-safe-offset-16 pb-safe-offset-24"
     >
+      {/* Index 0: Header Title */}
       <ThemedText className="text-2xl font-notosans-semibold">
         My Contributions
       </ThemedText>
-      <HorizontalKoshSelector
-        koshList={data?.koshes ?? []}
-        isPending={isPending}
-      />
+
+      {/* Index 1: Horizontal Kosh Selector (Self-contained Infinite Query & LegendList) */}
+      <HorizontalKoshSelector />
+
+      {/* Index 2: Stats Summary */}
       <MyContributionStats stats={data?.stats} isPending={isPending} />
-      <ContributionHistoryTabs
-        isPending={isPending}
-        statusFilter={statusFilter}
-        items={data?.items ?? []}
-        onStatusFilterChange={setStatusFilter}
-      />
+
+      {/* Index 3: Sticky Tab Bar */}
+      <View className="bg-background pt-2 pb-1 z-10">
+        <ContributionHistoryTabs
+          isPending={isPending}
+          statusFilter={statusFilter}
+          items={data?.items ?? []}
+          onStatusFilterChange={setStatusFilter}
+        />
+      </View>
     </ScrollView>
   );
 };

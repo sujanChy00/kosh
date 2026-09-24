@@ -137,7 +137,7 @@ function parseLoanFeedCursor(
 const slotToCursor = (slot: LoanFeedSlot) =>
   slot === "start" || slot === "done" ? null : `${slot.time}|${slot.id}`;
 
-const EMPTY_PAGE = { items: [] as KoshLoanItem[], nextCursor: null as string | null };
+const EMPTY_PAGE = { items: [] as any[], nextCursor: null as string | null };
 
 async function fetchLoansPage(params: {
   koshId: string;
@@ -631,6 +631,349 @@ export const loanRouter = router({
     }),
 
   /**
+   * Aggregate loan statistics for the current user across all active Koshes
+   * (or filtered to a single Kosh).
+   */
+  myStats: protectedProcedure
+    .input(
+      z
+        .object({
+          koshId: z.string().uuid().optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const memberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.userId, userId), q(m.status, "active")),
+        columns: { koshId: true },
+      });
+
+      let koshIds = memberships.map((m) => m.koshId);
+      if (input?.koshId) {
+        if (!koshIds.includes(input.koshId)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You are not an active member of this kosh",
+          });
+        }
+        koshIds = [input.koshId];
+      }
+
+      if (koshIds.length === 0) {
+        return {
+          activeLoanCount: 0,
+          totalBorrowed: "0",
+          totalRemaining: "0",
+          totalRepaid: "0",
+          totalInterestPaid: "0",
+        };
+      }
+
+      const loans = await db
+        .select({
+          principal: loan.principal,
+          amountRemaining: loan.amountRemaining,
+          status: loan.status,
+          totalRepaid: sql<string>`coalesce((
+            select sum(${loanRepayment.principalPortion} + ${loanRepayment.interestPortion})
+            from ${loanRepayment}
+            where ${loanRepayment.loanId} = ${loan.id}
+          ), 0)`,
+          totalInterestPaid: sql<string>`coalesce((
+            select sum(${loanRepayment.interestPortion})
+            from ${loanRepayment}
+            where ${loanRepayment.loanId} = ${loan.id}
+          ), 0)`,
+        })
+        .from(loan)
+        .where(
+          and(eq(loan.borrowerId, userId), inArray(loan.koshId, koshIds)),
+        );
+
+      let activeLoanCount = 0;
+      let totalBorrowed = 0;
+      let totalRemaining = 0;
+      let totalRepaid = 0;
+      let totalInterestPaid = 0;
+
+      for (const l of loans) {
+        const principal = parseFloat(l.principal);
+        const remaining = parseFloat(l.amountRemaining);
+        const repaid = parseFloat(l.totalRepaid);
+        const interestPaid = parseFloat(l.totalInterestPaid);
+
+        totalBorrowed += principal;
+        totalRepaid += repaid;
+        totalInterestPaid += interestPaid;
+
+        if (l.status === "active") {
+          activeLoanCount++;
+          totalRemaining += remaining;
+        }
+      }
+
+      return {
+        activeLoanCount,
+        totalBorrowed: String(totalBorrowed),
+        totalRemaining: String(totalRemaining),
+        totalRepaid: String(totalRepaid),
+        totalInterestPaid: String(totalInterestPaid),
+      };
+    }),
+
+  /**
+   * Infinite feed of user's personal loans and requests across their koshes
+   * (or filtered by single koshId).
+   */
+  myLoansFeed: protectedProcedure
+    .input(
+      z.object({
+        koshId: z.string().uuid().optional(),
+        status: z.enum(["all", "active", "pending", "cleared"]).default("all"),
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const memberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.userId, userId), q(m.status, "active")),
+        columns: { koshId: true },
+        with: {
+          kosh: {
+            columns: {
+              id: true,
+              name: true,
+              iconUrl: true,
+              currency: true,
+            },
+          },
+        },
+      });
+
+      const koshMap = new Map(memberships.map((m) => [m.koshId, m.kosh]));
+      let koshIds = memberships.map((m) => m.koshId);
+
+      if (input.koshId) {
+        if (!koshMap.has(input.koshId)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You are not an active member of this kosh",
+          });
+        }
+        koshIds = [input.koshId];
+      }
+
+      if (koshIds.length === 0) {
+        return {
+          items: [],
+          nextCursor: null,
+        };
+      }
+
+      const status = input.status;
+      const limit = input.limit;
+      const fetchLoans =
+        status === "all" || status === "active" || status === "cleared";
+      const fetchPending = status === "all" || status === "pending";
+
+      const loanStatuses =
+        status === "active"
+          ? (["active"] as const)
+          : status === "cleared"
+            ? CLEARED_LOAN_STATUSES
+            : (["active", "paid_off", "defaulted"] as const);
+
+      const slots = parseLoanFeedCursor(input.cursor);
+
+      let pendingPage = EMPTY_PAGE;
+      if (fetchPending && slots.pending !== "done") {
+        const pConditions = [
+          eq(loanRequest.requestedBy, userId),
+          inArray(loanRequest.koshId, koshIds),
+          inArray(loanRequest.status, PENDING_REQUEST_STATUSES),
+        ];
+
+        const pCursor = decodeCursor(slotToCursor(slots.pending));
+        if (pCursor) {
+          const cTime = new Date(pCursor.time);
+          pConditions.push(
+            or(
+              lt(loanRequest.createdAt, cTime),
+              and(
+                eq(loanRequest.createdAt, cTime),
+                lt(loanRequest.id, pCursor.id),
+              ),
+            )!,
+          );
+        }
+
+        const rawReqs = await db
+          .select({
+            id: loanRequest.id,
+            koshId: loanRequest.koshId,
+            amountRequested: loanRequest.amountRequested,
+            note: loanRequest.note,
+            status: loanRequest.status,
+            createdAt: loanRequest.createdAt,
+          })
+          .from(loanRequest)
+          .where(and(...pConditions))
+          .orderBy(desc(loanRequest.createdAt), desc(loanRequest.id))
+          .limit(limit + 1);
+
+        const pSlice = rawReqs.slice(0, limit);
+        const pLast = pSlice[pSlice.length - 1];
+
+        const mappedItems: MyLoanItem[] = pSlice.map((r) => {
+          const koshInfo = koshMap.get(r.koshId)!;
+          const createdIso = r.createdAt.toISOString();
+          return {
+            id: r.id,
+            koshId: r.koshId,
+            koshName: koshInfo.name,
+            koshIconUrl: koshInfo.iconUrl,
+            currency: koshInfo.currency,
+            principal: r.amountRequested,
+            interestRate: "0",
+            monthlyInterestRate: "0",
+            yearlyInterestRate: "0",
+            monthlyInterestAmount: "0",
+            issueDate: createdIso.split("T")[0] || "",
+            dueDate: null,
+            status: r.status as "pending_adhyaksh" | "pending_koshadhyaksh",
+            amountRemaining: r.amountRequested,
+            totalRepaid: "0",
+            totalInterestPaid: "0",
+            createdAt: createdIso,
+            amountRequested: r.amountRequested,
+            note: r.note,
+          };
+        });
+
+        pendingPage = {
+          items: mappedItems,
+          nextCursor:
+            rawReqs.length > limit && pLast
+              ? encodeCursor(pLast.createdAt, pLast.id)
+              : null,
+        };
+      }
+
+      let loansPage = EMPTY_PAGE;
+      if (fetchLoans && slots.loans !== "done") {
+        const lConditions = [
+          eq(loan.borrowerId, userId),
+          inArray(loan.koshId, koshIds),
+          inArray(loan.status, loanStatuses),
+        ];
+
+        const lCursor = decodeCursor(slotToCursor(slots.loans));
+        if (lCursor) {
+          const cTime = new Date(lCursor.time);
+          lConditions.push(
+            or(
+              lt(loan.createdAt, cTime),
+              and(eq(loan.createdAt, cTime), lt(loan.id, lCursor.id)),
+            )!,
+          );
+        }
+
+        const rawLoans = await db
+          .select({
+            id: loan.id,
+            koshId: loan.koshId,
+            principal: loan.principal,
+            interestRate: loan.interestRate,
+            issueDate: loan.issueDate,
+            dueDate: loan.dueDate,
+            status: loan.status,
+            amountRemaining: loan.amountRemaining,
+            createdAt: loan.createdAt,
+            totalRepaid: sql<string>`coalesce((
+              select sum(${loanRepayment.principalPortion} + ${loanRepayment.interestPortion})
+              from ${loanRepayment}
+              where ${loanRepayment.loanId} = ${loan.id}
+            ), 0)`,
+            totalInterestPaid: sql<string>`coalesce((
+              select sum(${loanRepayment.interestPortion})
+              from ${loanRepayment}
+              where ${loanRepayment.loanId} = ${loan.id}
+            ), 0)`,
+          })
+          .from(loan)
+          .where(and(...lConditions))
+          .orderBy(desc(loan.createdAt), desc(loan.id))
+          .limit(limit + 1);
+
+        const lSlice = rawLoans.slice(0, limit);
+        const lLast = lSlice[lSlice.length - 1];
+
+        const mappedItems: MyLoanItem[] = lSlice.map((l) => {
+          const principal = parseFloat(l.principal);
+          const koshInfo = koshMap.get(l.koshId)!;
+          const monthlyRate = parseFloat(l.interestRate);
+          const yearlyRate = monthlyRate * 12;
+          const monthlyInterestAmount =
+            Math.round(principal * (monthlyRate / 100) * 100) / 100;
+
+          return {
+            id: l.id,
+            koshId: l.koshId,
+            koshName: koshInfo.name,
+            koshIconUrl: koshInfo.iconUrl,
+            currency: koshInfo.currency,
+            principal: l.principal,
+            interestRate: l.interestRate,
+            monthlyInterestRate: String(monthlyRate),
+            yearlyInterestRate: String(yearlyRate),
+            monthlyInterestAmount: String(monthlyInterestAmount),
+            issueDate: l.issueDate,
+            dueDate: l.dueDate,
+            status: l.status,
+            amountRemaining: l.amountRemaining,
+            totalRepaid: l.totalRepaid,
+            totalInterestPaid: l.totalInterestPaid,
+            createdAt: l.createdAt.toISOString(),
+            amountRequested: null,
+            note: null,
+          };
+        });
+
+        loansPage = {
+          items: mappedItems,
+          nextCursor:
+            rawLoans.length > limit && lLast
+              ? encodeCursor(lLast.createdAt, lLast.id)
+              : null,
+        };
+      }
+
+      const items = [...pendingPage.items, ...loansPage.items];
+      const pendingCursorRaw = fetchPending
+        ? pendingPage.nextCursor ?? "done"
+        : "done";
+      const loansCursorRaw = fetchLoans
+        ? loansPage.nextCursor ?? "done"
+        : "done";
+
+      const nextCursor =
+        pendingCursorRaw === "done" && loansCursorRaw === "done"
+          ? null
+          : `${pendingCursorRaw};${loansCursorRaw}`;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  /**
    * Infinite feed of pending loan requests, active loans, and cleared loans in
    * a kosh, filterable by status, member, and date range. Each page returns a
    * chunk of each status group (pending first, then active, then cleared).
@@ -819,6 +1162,18 @@ export const loanRouter = router({
         items: page.items,
         nextCursor: page.nextCursor,
       };
+    }),
+
+  /** Members & non-member borrowers of a kosh by koshId for selection/filtering */
+  members: protectedProcedure
+    .input(
+      z.object({
+        koshId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      await getUserKoshMembership(ctx.session.user.id, input.koshId);
+      return getKoshMemberOptions(input.koshId);
     }),
 });
 

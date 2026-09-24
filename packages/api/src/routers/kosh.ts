@@ -17,6 +17,31 @@ const listKoshSchema = z.object({
   cursor: z.string().nullable().optional(),
 });
 
+export type KoshRole = "adhyaksh" | "koshadhyaksh" | "sadasya";
+
+export type KoshActivityItem = {
+  id: string;
+  type: "contribution" | "member_joined";
+  koshId: string;
+  koshName: string;
+  koshIconUrl: string | null;
+  title: string;
+  subtitle: string;
+  amount: string | null;
+  status: string;
+  createdAt: string;
+  user: { name: string | null; image: string | null };
+};
+
+export type KoshMember = {
+  id: string;
+  label: string;
+  name: string;
+  image: string | null;
+  isNonMember: boolean;
+  role: KoshRole;
+};
+
 export type KoshListItem = {
   id: string;
   name: string;
@@ -27,7 +52,7 @@ export type KoshListItem = {
   dueDay: number;
   startDate: string;
   endDate: string;
-  role: "adhyaksh" | "koshadhyaksh" | "sadasya";
+  role: KoshRole;
   joinedAt: string | null;
   memberCount: number;
   totalCollected: string;
@@ -40,7 +65,7 @@ export type KoshDetail = Omit<KoshListItem, "joinedAt"> & {
     userId: string;
     name: string | null;
     image: string | null;
-    role: "adhyaksh" | "koshadhyaksh" | "sadasya";
+    role: KoshRole;
     joinedAt: string | null;
   }[];
   maxMembers: number | null;
@@ -1076,18 +1101,72 @@ export const koshRouter = router({
 
       return { success: true, id: deleted.id };
     }),
-});
 
-export type KoshActivityItem = {
-  id: string;
-  type: "contribution" | "member_joined";
-  koshId: string;
-  koshName: string;
-  koshIconUrl: string | null;
-  title: string;
-  subtitle: string;
-  amount: string | null;
-  status: string;
-  createdAt: string;
-  user: { name: string | null; image: string | null };
-};
+  /** Get members and non-member borrowers of a kosh by koshId for selection/filtering */
+  members: protectedProcedure
+    .input(
+      z.object({
+        koshId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: a, eq: q }) =>
+          a(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not an active member of this kosh",
+        });
+      }
+
+      const activeMemberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.koshId, input.koshId), q(m.status, "active")),
+        with: {
+          user: {
+            columns: { id: true, name: true, image: true, email: true },
+          },
+        },
+      });
+
+      const nonMembers = await db.query.nonMemberBorrower.findMany({
+        where: (nm, { eq: q }) => q(nm.koshId, input.koshId),
+      });
+
+      return [
+        {
+          id: "all",
+          label: "All Members",
+          name: "All Members",
+          image: null,
+          isNonMember: false,
+          role: null,
+        },
+        ...activeMemberships.map((m) => ({
+          id: m.user.id,
+          label: m.user.name,
+          name: m.user.name,
+          image: m.user.image,
+          isNonMember: false,
+          role: m.role,
+        })),
+        ...nonMembers.map((nm) => ({
+          id: nm.id,
+          label: `${nm.name} (Non-member)`,
+          name: nm.name,
+          image: null,
+          isNonMember: true,
+          role: null,
+        })),
+      ];
+    }),
+});

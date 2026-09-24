@@ -124,7 +124,11 @@ export const membershipRouter = router({
           })
           .returning();
 
-        if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create invitation. Please try again." });
+        if (!row)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create invitation. Please try again.",
+          });
 
         await tx.insert(notification).values({
           userId: input.userId,
@@ -216,7 +220,11 @@ export const membershipRouter = router({
             .returning();
 
           if (!updated || !resolved) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation is no longer active or could not be accepted." });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Invitation is no longer active or could not be accepted.",
+            });
           }
           return resolved;
         }
@@ -231,7 +239,11 @@ export const membershipRouter = router({
           .where(eq(koshRoleRequest.id, input.requestId))
           .returning();
 
-        if (!resolved) throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation is no longer active or could not be rejected." });
+        if (!resolved)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invitation is no longer active or could not be rejected.",
+          });
         return resolved;
       });
 
@@ -597,7 +609,10 @@ export type InviteTreasurerInput = {
   koshId: string;
   userId: string;
 };
-
+type KoshRole = "adhyaksh" | "koshadhyaksh" | "sadasya";
+type MemberShipStatus = "active" | "pending" | "left" | "removed";
+type ContributionStatus = "pending" | "paid" | "partial" | "late";
+type LoanStatus = "active" | "paid_off" | "defaulted";
 export type RespondTreasurerInviteInput = {
   requestId: string;
   accept: boolean;
@@ -605,15 +620,15 @@ export type RespondTreasurerInviteInput = {
 };
 
 export type MemberDetailData = {
-  viewerRole: "adhyaksh" | "koshadhyaksh" | "sadasya";
+  viewerRole: KoshRole;
   isSelf: boolean;
   member: {
     userId: string;
     name: string | null;
     email: string | null;
     image: string | null;
-    role: "adhyaksh" | "koshadhyaksh" | "sadasya";
-    status: "active" | "pending" | "left" | "removed";
+    role: KoshRole;
+    status: MemberShipStatus;
     joinedAt: string | null;
   };
   kosh: {
@@ -639,7 +654,7 @@ export type MemberDetailData = {
     interestRate: string;
     issueDate: string;
     amountRemaining: string;
-    status: "active" | "paid_off" | "defaulted";
+    status: LoanStatus;
     totalRepaid: string;
     totalInterestPaid: string;
   } | null;
@@ -650,7 +665,7 @@ export type MemberDetailData = {
     contributionAmount: string;
     penaltyAssessed: string;
     penaltyPaid: string;
-    status: "pending" | "paid" | "partial" | "late";
+    status: ContributionStatus;
     datePaid: string | null;
   }[];
   pendingTreasurerInvite: {
