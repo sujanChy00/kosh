@@ -2,32 +2,31 @@ import { AnimatedView } from "@/components/animated-view";
 import { EmptyComponent } from "@/components/layout/empty-component";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
+import { KoshLoanFilters } from "@/components/loan/kosh-loan-filters";
 import { KoshLoanList } from "@/components/loan/kosh-loan-list";
-import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { DangerSoftButton, SecondaryButton } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
-import { useMaterialColors } from "@expo/ui/jetpack-compose";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useGlobalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { View } from "react-native";
-import { FadeOut, ZoomIn } from "react-native-reanimated";
+import { FadeInUp, FadeOut, LinearTransition } from "react-native-reanimated";
 
 const PAGE_SIZE = 10;
 
 const AllLoanScreen = () => {
-  const materialColors = useMaterialColors();
   const {
     id: koshId,
     dateFrom,
     dateTo,
     memberId,
+    memberName,
   } = useGlobalSearchParams<{
     id: string;
     memberId?: string;
     dateFrom?: string;
     dateTo?: string;
+    memberName?: string;
   }>();
   const router = useRouter();
 
@@ -47,8 +46,8 @@ const AllLoanScreen = () => {
         koshId,
         status: "all",
         memberId: memberId === "all" ? undefined : memberId,
-        dateFrom: dateFrom,
-        dateTo: dateTo,
+        dateFrom,
+        dateTo,
         limit: PAGE_SIZE,
       },
       { getNextPageParam: (lastPage) => lastPage.nextCursor },
@@ -61,9 +60,11 @@ const AllLoanScreen = () => {
   );
 
   const isFiltered = !!memberId || !!dateFrom || !!dateTo;
+
   const clearFilters = useCallback(() => {
     router.setParams({
       memberId: undefined,
+      memberName: undefined,
       dateFrom: undefined,
       dateTo: undefined,
     });
@@ -88,53 +89,7 @@ const AllLoanScreen = () => {
 
   return (
     <>
-      <View
-        className="absolute bottom-safe-offset-8 right-safe-offset-4 z-30 gap-y-3"
-        pointerEvents="box-none"
-      >
-        {isFiltered && (
-          <AnimatedView
-            entering={ZoomIn.duration(200)}
-            exiting={FadeOut.duration(200)}
-          >
-            <DangerSoftButton
-              style={{
-                backgroundColor: materialColors.errorContainer,
-              }}
-              className="p-0 size-12.5 rounded-2xl"
-              onPress={clearFilters}
-            >
-              <StyledSymbolView
-                tintColor={materialColors.error}
-                name={{
-                  android: "format_paint",
-                }}
-              />
-            </DangerSoftButton>
-          </AnimatedView>
-        )}
-        <SecondaryButton
-          style={{
-            backgroundColor: materialColors.primaryContainer,
-          }}
-          className="p-0 size-12.5 rounded-2xl"
-          onPress={() =>
-            router.push({
-              pathname: "/kosh/[id]/filter-loans",
-              params: {
-                id: koshId,
-              },
-            })
-          }
-        >
-          <StyledSymbolView
-            tintColor={materialColors.primary}
-            name={{
-              android: "filter_list",
-            }}
-          />
-        </SecondaryButton>
-      </View>
+      <KoshLoanFilters />
       {items.length === 0 ? (
         <EmptyComponent
           actionButtonOnPress={clearFilters}
@@ -155,14 +110,42 @@ const AllLoanScreen = () => {
           }
         />
       ) : (
-        <KoshLoanList
-          items={items}
-          isFetchingNextPage={isFetchingNextPage}
-          hasNextPage={hasNextPage}
-          loadMore={loadMore}
-          refreshing={isRefetching}
-          onRefresh={refetch}
-        />
+        <View>
+          {isFiltered && (
+            <AnimatedView
+              entering={FadeInUp.duration(200)}
+              exiting={FadeOut.duration(150)}
+              layout={LinearTransition.duration(200)}
+              className="p-4 justify-center gap-y-1"
+            >
+              {!!memberName && (
+                <ThemedText className="text-xs">
+                  Showing{" "}
+                  <ThemedText className="text-danger font-mono-medium">
+                    ({items.length})
+                  </ThemedText>{" "}
+                  results for:{" "}
+                  <ThemedText className="text-xs font-mono-medium text-danger">
+                    {memberName ?? "selected member"}
+                  </ThemedText>
+                </ThemedText>
+              )}
+              {!!dateFrom && !!dateTo && (
+                <ThemedText className="text-xs font-mono-medium">
+                  {dateFrom ?? "…"} ➔ {dateTo ?? "…"}
+                </ThemedText>
+              )}
+            </AnimatedView>
+          )}
+          <KoshLoanList
+            items={items}
+            isFetchingNextPage={isFetchingNextPage}
+            hasNextPage={hasNextPage}
+            loadMore={loadMore}
+            refreshing={isRefetching}
+            onRefresh={refetch}
+          />
+        </View>
       )}
     </>
   );

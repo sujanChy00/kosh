@@ -4,13 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Separator } from "@/components/ui/separator";
 import { loanStatusColor } from "@/lib/loan-status-color";
-import { LinearProgressIndicator } from "@expo/ui/jetpack-compose";
 import type { MyLoanItem } from "@kosh-app/api/routers/loan";
 import { formatAmount } from "@kosh-app/utils";
 import { formatShortDate } from "@kosh-app/utils/date";
 import { View } from "react-native";
 import { useCSSVariable } from "uniwind";
-import { Host } from "../layout/host";
+import { ProgressBar } from "../ui/progress-bar";
 
 function progressPercent(principal: string, remaining: string) {
   const p = parseFloat(principal);
@@ -186,18 +185,7 @@ export const LoanCard = ({ item }: { item: MyLoanItem }) => {
           </View>
         )}
       </View>
-      {!isPaidOff && (
-        <Host matchContents={{ vertical: true }}>
-          <LinearProgressIndicator
-            progress={pct}
-            color={successColor}
-            gapSize={0}
-            drawStopIndicator={{
-              stopSize: 0,
-            }}
-          />
-        </Host>
-      )}
+      {!isPaidOff && <ProgressBar progress={pct} />}
 
       <View className="flex-row items-center justify-between">
         <ThemedText className="text-xs text-muted-foreground font-mono-regular">

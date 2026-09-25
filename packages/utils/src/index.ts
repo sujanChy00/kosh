@@ -39,3 +39,14 @@ export const formatAmountCompact = (amount: string) => {
   if (abs >= 1e3) return `${(n / 1e3).toFixed(1).replace(/\.0$/, "")}K`;
   return new Intl.NumberFormat("en-IN").format(n);
 };
+
+export const prettifyErrorMessage = (message?: string) => {
+  if (!message) return null;
+
+  const parsed = JSON.parse(message);
+
+  if (Array.isArray(parsed) && "message" in parsed[0]) return parsed[0].message;
+
+  if ("message" in parsed) return parsed.message;
+  return message;
+};

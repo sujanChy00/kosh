@@ -1,11 +1,10 @@
+import { useHaptics } from "@/hooks/use-haptics";
+import { errorToast, successToast } from "@/utils/toast";
+import { queryClient, trpc } from "@/utils/trpc";
 import { AlertDialog, Text, TextButton } from "@expo/ui/jetpack-compose";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useCSSVariable } from "uniwind";
-import { Host } from "../layout/host";
-import { useHaptics } from "@/hooks/use-haptics";
-import { errorToast, successToast } from "@/utils/toast";
-import { queryClient, trpc } from "@/utils/trpc";
 
 interface Props {
   koshId: string;
@@ -53,45 +52,44 @@ export const DeleteKoshAlert = ({
   if (!visible) return null;
 
   return (
-    <Host matchContents>
-      <AlertDialog onDismissRequest={() => setVisible(false)}>
-        <AlertDialog.Title>
-          <Text style={{ fontSize: 20 }}>Delete Kosh?</Text>
-        </AlertDialog.Title>
+    <AlertDialog onDismissRequest={() => setVisible(false)}>
+      <AlertDialog.Title>
+        <Text style={{ fontSize: 20 }}>Delete Kosh?</Text>
+      </AlertDialog.Title>
 
-        <AlertDialog.Text>
-          <Text>
-            {koshName
-              ? `Are you sure you want to delete "${koshName}"?`
-              : "Are you sure you want to delete this kosh?"}{" "}
-            This action cannot be undone and will remove all associated member, contribution, and loan records.
+      <AlertDialog.Text>
+        <Text>
+          {koshName
+            ? `Are you sure you want to delete "${koshName}"?`
+            : "Are you sure you want to delete this kosh?"}{" "}
+          This action cannot be undone and will remove all associated member,
+          contribution, and loan records.
+        </Text>
+      </AlertDialog.Text>
+
+      <AlertDialog.DismissButton>
+        <TextButton
+          onClick={() => setVisible(false)}
+          enabled={!deleteMutation.isPending}
+        >
+          <Text>Cancel</Text>
+        </TextButton>
+      </AlertDialog.DismissButton>
+
+      <AlertDialog.ConfirmButton>
+        <TextButton
+          onClick={() => {
+            if (koshId) {
+              deleteMutation.mutate({ koshId });
+            }
+          }}
+          enabled={!deleteMutation.isPending}
+        >
+          <Text color={dangerColor}>
+            {deleteMutation.isPending ? "Deleting…" : "Delete"}
           </Text>
-        </AlertDialog.Text>
-
-        <AlertDialog.DismissButton>
-          <TextButton
-            onClick={() => setVisible(false)}
-            enabled={!deleteMutation.isPending}
-          >
-            <Text>Cancel</Text>
-          </TextButton>
-        </AlertDialog.DismissButton>
-
-        <AlertDialog.ConfirmButton>
-          <TextButton
-            onClick={() => {
-              if (koshId) {
-                deleteMutation.mutate({ koshId });
-              }
-            }}
-            enabled={!deleteMutation.isPending}
-          >
-            <Text color={dangerColor}>
-              {deleteMutation.isPending ? "Deleting…" : "Delete"}
-            </Text>
-          </TextButton>
-        </AlertDialog.ConfirmButton>
-      </AlertDialog>
-    </Host>
+        </TextButton>
+      </AlertDialog.ConfirmButton>
+    </AlertDialog>
   );
 };

@@ -4,14 +4,13 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Separator } from "@/components/ui/separator";
 import { loanStatusColor } from "@/lib/loan-status-color";
-import { LinearProgressIndicator } from "@expo/ui/jetpack-compose";
 import type { KoshLoanItem } from "@kosh-app/api/routers/loan";
 import { formatAmount } from "@kosh-app/utils";
 import { formatShortDate } from "@kosh-app/utils/date";
 import { useRouter } from "expo-router";
 import { TouchableOpacity, View } from "react-native";
 import { useCSSVariable } from "uniwind";
-import { Host } from "../layout/host";
+import { ProgressBar } from "../ui/progress-bar";
 
 function progressPercent(principal: string | null, remaining: string | null) {
   const p = parseFloat(principal ?? "");
@@ -30,7 +29,9 @@ export const KoshLoanCard = ({ item }: { item: KoshLoanItem }) => {
   const isPaidOff = item.status === "paid_off";
   const isDefaulted = item.status === "defaulted";
 
-  const pct = isPending ? 0 : progressPercent(item.principal, item.amountRemaining);
+  const pct = isPending
+    ? 0
+    : progressPercent(item.principal, item.amountRemaining);
 
   const router = useRouter();
 
@@ -183,18 +184,7 @@ export const KoshLoanCard = ({ item }: { item: KoshLoanItem }) => {
           )}
         </View>
 
-        {!isPending && !isPaidOff && (
-          <Host matchContents={{ vertical: true }}>
-            <LinearProgressIndicator
-              progress={pct}
-              color={successColor}
-              gapSize={0}
-              drawStopIndicator={{
-                stopSize: 0,
-              }}
-            />
-          </Host>
-        )}
+        {!isPending && !isPaidOff && <ProgressBar progress={pct} />}
 
         {!isPending && (
           <View className="flex-row items-center justify-between">

@@ -1,31 +1,49 @@
 import { trpc } from "@/utils/trpc";
-import { useMaterialColors } from "@expo/ui/jetpack-compose";
+import ERROR_ICON from "@expo/material-symbols/error.xml";
+import { ScrollView } from "@expo/ui";
+import {
+  CircularProgressIndicator,
+  Column,
+  FilledTonalButton,
+  Icon,
+  RadioButton,
+  Row,
+  Spacer,
+  Text,
+  useMaterialColors,
+} from "@expo/ui/jetpack-compose";
+import {
+  fillMaxWidth,
+  height,
+  padding,
+  selectable,
+  selectableGroup,
+} from "@expo/ui/jetpack-compose/modifiers";
 import type { KoshMember } from "@kosh-app/api/routers/kosh";
+import { prettifyErrorMessage } from "@kosh-app/utils";
 import { useQuery } from "@tanstack/react-query";
-import { useGlobalSearchParams } from "expo-router";
-import { useCallback, useMemo } from "react";
-import { FlatList, TouchableOpacity, View } from "react-native";
-import { ZoomIn, ZoomOut } from "react-native-reanimated";
-import { AnimatedView } from "../animated-view";
-import { StyledSymbolView } from "../styled-symbol-view";
-import { ThemedText } from "../themed-text";
-import { Avatar } from "../ui/avatar";
-import { Shimmer, ShimmerGroup } from "../ui/shimmer";
+import { useLocalSearchParams } from "expo-router";
+import { useMemo } from "react";
 
 interface Props {
-  memberId: string | undefined;
-  onSelect: (memberId: string) => void;
+  selectedMember: { name: string | undefined; id: string | undefined };
+  onSelect: (memberId: string, memberName: string) => void;
+  sheetOpened: boolean;
 }
 
-export const KoshMemberSelector = ({ memberId, onSelect }: Props) => {
-  const materialColor = useMaterialColors();
-  const { id: koshId } = useGlobalSearchParams<{
+export const KoshMemberSelector = ({
+  selectedMember,
+  onSelect,
+  sheetOpened,
+}: Props) => {
+  const materialColors = useMaterialColors();
+  const { id: koshId } = useLocalSearchParams<{
     id: string;
     memberId?: string;
   }>();
 
   const membersQuery = useQuery(
-    trpc.kosh.members.queryOptions({ koshId }, { enabled: !!koshId }),
+    trpc.kosh.members.queryOptions({ koshId }, { enabled: sheetOpened }),
   );
   const memberOptions = useMemo(
     () =>
@@ -33,90 +51,71 @@ export const KoshMemberSelector = ({ memberId, onSelect }: Props) => {
     [membersQuery.data],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: KoshMember }) => (
-      <TouchableOpacity activeOpacity={0.7} onPress={() => onSelect(item.id)}>
-        <View className="flex-row items-center gap-1 justify-between p-3">
-          <View className="flex-row items-center gap-3">
-            <Avatar>
-              <Avatar.Image alt={item.name} source={item.image} />
-              <Avatar.Fallback fallback={item.name} source={item.image} />
-            </Avatar>
-
-            <ThemedText>{item.name}</ThemedText>
-          </View>
-          <View
-            className="items-center justify-center size-6 rounded-full border-2"
-            style={{
-              borderColor: materialColor.primary,
-            }}
-          >
-            {memberId === item.id && (
-              <AnimatedView
-                entering={ZoomIn.duration(200)}
-                exiting={ZoomOut.duration(300)}
-                className="size-3.5 rounded-full"
-                style={{
-                  backgroundColor: materialColor.primary,
-                }}
-              />
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    ),
-    [memberId],
-  );
-
-  const ListEmptyComponent = useMemo(
-    () => (
-      <View className="p-4 pt-10 items-center gap-1">
-        <StyledSymbolView
-          tintColorClassName="accent-warning"
-          name={{
-            android: "info",
-          }}
-        />
-        <ThemedText className="text-center text-base font-notosans-medium-italic">
-          No members found
-        </ThemedText>
-      </View>
-    ),
-    [],
-  );
-
   if (membersQuery.isPending)
     return (
-      <ShimmerGroup>
-        <View className="gap-y-3 p-4">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <View
-              key={index}
-              className="flex-row items-center justify-between gap-3"
-            >
-              <View className="flex-row items-center gap-3 flex-1 shrink">
-                <Shimmer className="size-10 rounded-full" />
-                <View className="gap-y-1 flex-1 shrink">
-                  <Shimmer className="w-[80%] h-2" />
-                  <Shimmer className="w-[40%] h-2" />
-                </View>
-              </View>
-              <Shimmer className="size-6 rounded-full" />
-            </View>
-          ))}
-        </View>
-      </ShimmerGroup>
+      <Row
+        horizontalArrangement={"center"}
+        verticalAlignment="center"
+        modifiers={[fillMaxWidth(), height(400)]}
+      >
+        <CircularProgressIndicator />
+      </Row>
+    );
+
+  if (membersQuery.isError)
+    return (
+      <Column
+        horizontalAlignment="center"
+        verticalArrangement={"center"}
+        modifiers={[fillMaxWidth(), height(400)]}
+      >
+        <Icon source={ERROR_ICON} tint={materialColors.error} size={30} />
+        <Text color={materialColors.error}>
+          {prettifyErrorMessage(membersQuery.error?.message) ??
+            "Failed to load members"}
+        </Text>
+        <Spacer modifiers={[height(10)]} />
+        <FilledTonalButton onClick={membersQuery.refetch}>
+          <Text>Try again</Text>
+        </FilledTonalButton>
+      </Column>
+    );
+
+  if (memberOptions.length === 0)
+    return (
+      <Column
+        horizontalAlignment="center"
+        verticalArrangement={"center"}
+        modifiers={[fillMaxWidth(), height(400)]}
+      >
+        <Icon source={ERROR_ICON} size={30} />
+        <Text>No members found</Text>
+      </Column>
     );
 
   return (
-    <FlatList
-      showsVerticalScrollIndicator={false}
-      contentContainerClassName="px-4 pb-20"
-      data={memberOptions}
-      nestedScrollEnabled
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      ListEmptyComponent={ListEmptyComponent}
-    />
+    <ScrollView modifiers={[fillMaxWidth()]} style={{ height: 400 }}>
+      <Column modifiers={[selectableGroup()]}>
+        {memberOptions.map((opt) => (
+          <Row
+            key={opt.id}
+            verticalAlignment="center"
+            modifiers={[
+              fillMaxWidth(),
+              height(56),
+              selectable(
+                opt.id === selectedMember?.id,
+                () => onSelect(opt.id, opt.name),
+                "radioButton",
+              ),
+              padding(16, 0, 16, 0),
+            ]}
+          >
+            <RadioButton selected={opt.id === selectedMember?.id} />
+            <Text modifiers={[padding(16, 0, 0, 0)]}>{opt.name}</Text>
+          </Row>
+        ))}
+      </Column>
+    </ScrollView>
   );
 };
