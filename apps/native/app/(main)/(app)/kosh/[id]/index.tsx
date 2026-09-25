@@ -1,6 +1,7 @@
 import { AnimatedView } from "@/components/animated-view";
 import { KoshContributionInfo } from "@/components/kosh/kosh-contribution-info";
 import { KoshDetailsHeader } from "@/components/kosh/kosh-details-header";
+import { KoshFinancialStats } from "@/components/kosh/kosh-financial-stats";
 import { KoshLoanTerms } from "@/components/kosh/kosh-loan-terms";
 import { KoshMembersList } from "@/components/kosh/kosh-membership-list";
 import { ErrorComponent } from "@/components/layout/error-component";
@@ -60,6 +61,7 @@ const KoshDetailScreen = () => {
         <View className="gap-y-6 px-4">
           <KoshLoanTerms kosh={koshData} />
           <KoshContributionInfo kosh={koshData} />
+          <KoshFinancialStats kosh={koshData} />
           <KoshMembersList kosh={koshData} />
         </View>
       </ScrollView>

@@ -6,7 +6,7 @@ import { contribution } from "@kosh-app/db/schema/contributions";
 import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 
@@ -76,6 +76,14 @@ export type KoshDetail = Omit<KoshListItem, "joinedAt"> & {
   latePenaltyAmount: string | null;
   applyPenalty: boolean;
   penaltyGraceDays: number | null;
+  stats: {
+    totalPenaltyCollected: string;
+    totalInterestCollected: string;
+    totalLoanDistributed: string;
+    externalLoanDistributed: string;
+    externalLoanInterestCollected: string;
+    totalOutstandingLoans: string;
+  };
 };
 
 const createKoshSchema = z
@@ -446,6 +454,63 @@ export const koshRouter = router({
           ),
         );
 
+      const [penaltyRow] = await db
+        .select({
+          totalPenaltyCollected: sql<string>`coalesce(sum(${contribution.penaltyPaid}), 0)`,
+        })
+        .from(contribution)
+        .where(eq(contribution.koshId, input.koshId));
+
+      const [memberLoanDistRow] = await db
+        .select({
+          totalLoanDistributed: sql<string>`coalesce(sum(${loan.principal}), 0)`,
+        })
+        .from(loan)
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.borrowerId),
+          ),
+        );
+
+      const [memberInterestRow] = await db
+        .select({
+          totalInterestCollected: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
+        })
+        .from(loanRepayment)
+        .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.borrowerId),
+          ),
+        );
+
+      const [externalLoanDistRow] = await db
+        .select({
+          externalLoanDistributed: sql<string>`coalesce(sum(${loan.principal}), 0)`,
+        })
+        .from(loan)
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.nonMemberBorrowerId),
+          ),
+        );
+
+      const [externalInterestRow] = await db
+        .select({
+          externalLoanInterestCollected: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
+        })
+        .from(loanRepayment)
+        .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.nonMemberBorrowerId),
+          ),
+        );
+
       const collected =
         (parseFloat(contribRow?.collected ?? "0") || 0) +
         (parseFloat(interestRow?.interest ?? "0") || 0);
@@ -499,6 +564,15 @@ export const koshRouter = router({
           role: m.role,
           joinedAt: m.joinedAt?.toISOString() ?? null,
         })),
+        stats: {
+          totalPenaltyCollected: penaltyRow?.totalPenaltyCollected ?? "0",
+          totalInterestCollected: memberInterestRow?.totalInterestCollected ?? "0",
+          totalLoanDistributed: memberLoanDistRow?.totalLoanDistributed ?? "0",
+          externalLoanDistributed: externalLoanDistRow?.externalLoanDistributed ?? "0",
+          externalLoanInterestCollected:
+            externalInterestRow?.externalLoanInterestCollected ?? "0",
+          totalOutstandingLoans: loanRow?.outstanding ?? "0",
+        },
       } satisfies KoshDetail;
     }),
 

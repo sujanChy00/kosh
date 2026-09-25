@@ -1,9 +1,10 @@
 import { db } from "@kosh-app/db";
+import { user } from "@kosh-app/db/schema/auth";
 import { contribution } from "@kosh-app/db/schema/contributions";
 import { koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, eq, lt } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -988,6 +989,134 @@ export const contributionRouter = router({
         items,
       };
     }),
+
+  /**
+   * Infinite query for contribution history of a specific kosh.
+   */
+  historyByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        status: z
+          .enum(["all", "paid", "pending", "late", "partial"])
+          .optional()
+          .default("all"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const limit = input.limit ?? 20;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: a, eq: q }) =>
+          a(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not a member of this kosh",
+        });
+      }
+
+      const conditions = [eq(contribution.koshId, input.koshId)];
+
+      if (input.status && input.status !== "all") {
+        conditions.push(eq(contribution.status, input.status));
+      }
+
+      if (input.cursor) {
+        const parts = input.cursor.split("|");
+        const cPeriod = parts[0];
+        const cTimestamp = parts[1];
+        const cId = parts[2];
+        if (cPeriod && cTimestamp && cId) {
+          const cDate = new Date(Number(cTimestamp));
+          conditions.push(
+            or(
+              lt(contribution.period, cPeriod),
+              and(
+                eq(contribution.period, cPeriod),
+                lt(contribution.createdAt, cDate),
+              ),
+              and(
+                eq(contribution.period, cPeriod),
+                eq(contribution.createdAt, cDate),
+                lt(contribution.id, cId),
+              ),
+            )!,
+          );
+        }
+      }
+
+      const rows = await db
+        .select({
+          contribution: {
+            id: contribution.id,
+            koshId: contribution.koshId,
+            memberId: contribution.memberId,
+            period: contribution.period,
+            expectedAmount: contribution.expectedAmount,
+            contributionAmount: contribution.contributionAmount,
+            penaltyAssessed: contribution.penaltyAssessed,
+            penaltyPaid: contribution.penaltyPaid,
+            status: contribution.status,
+            datePaid: contribution.datePaid,
+            createdAt: contribution.createdAt,
+          },
+          member: {
+            id: user.id,
+            name: user.name,
+            image: user.image,
+          },
+        })
+        .from(contribution)
+        .innerJoin(user, eq(contribution.memberId, user.id))
+        .where(and(...conditions))
+        .orderBy(
+          desc(contribution.period),
+          desc(contribution.createdAt),
+          desc(contribution.id),
+        )
+        .limit(limit + 1);
+
+      const hasMore = rows.length > limit;
+      const page = rows.slice(0, limit);
+      const last = page[page.length - 1];
+
+      const items = page.map((r) => ({
+        id: r.contribution.id,
+        koshId: r.contribution.koshId,
+        memberId: r.contribution.memberId,
+        memberName: r.member.name,
+        memberImage: r.member.image,
+        period: r.contribution.period,
+        periodLabel: periodLabel(r.contribution.period),
+        expectedAmount: r.contribution.expectedAmount,
+        contributionAmount: r.contribution.contributionAmount,
+        penaltyAssessed: r.contribution.penaltyAssessed,
+        penaltyPaid: r.contribution.penaltyPaid,
+        status: r.contribution.status,
+        datePaid: r.contribution.datePaid
+          ? r.contribution.datePaid.toISOString()
+          : null,
+        createdAt: r.contribution.createdAt.toISOString(),
+      }));
+
+      return {
+        items,
+        nextCursor:
+          hasMore && last
+            ? `${last.contribution.period}|${last.contribution.createdAt.getTime()}|${last.contribution.id}`
+            : null,
+      };
+    }),
 });
 
 export type ContributionMemberData = {
@@ -1100,3 +1229,20 @@ export type MyContributionsData = {
 export type MyContributionItem = MyContributionsData["items"][number];
 export type MyContributionStats = MyContributionsData["stats"];
 export type ContributionStatusFilter = "all" | "paid" | "pending" | "late";
+
+export type KoshContributionHistoryItem = {
+  id: string;
+  koshId: string;
+  memberId: string;
+  memberName: string | null;
+  memberImage: string | null;
+  period: string;
+  periodLabel: string;
+  expectedAmount: string;
+  contributionAmount: string;
+  penaltyAssessed: string;
+  penaltyPaid: string;
+  status: "pending" | "paid" | "partial" | "late";
+  datePaid: string | null;
+  createdAt: string;
+};
