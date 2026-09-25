@@ -26,6 +26,7 @@ interface IShimmerGroup {
   readonly direction?: ShimmerDirection;
   readonly variant?: "shimmer" | "pulse";
   readonly opacity?: number;
+  readonly className?: string;
 }
 
 type ShimmerDirection =

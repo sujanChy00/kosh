@@ -1,6 +1,6 @@
 import { tv, type VariantProps } from "@kosh-app/utils";
 import { createContext, useContext, useMemo } from "react";
-import { Pressable, PressableProps, TextProps } from "react-native";
+import { TextProps, View, ViewProps } from "react-native";
 import { ThemedText } from "../themed-text";
 
 const root = tv({
@@ -115,7 +115,7 @@ const useChip = () => {
   return ctx;
 };
 
-interface ChipRootProps extends PressableProps, ChipVariants {
+interface ChipRootProps extends ViewProps, ChipVariants {
   className?: string;
 }
 
@@ -134,12 +134,9 @@ const Root = ({
 
   return (
     <ChipContext.Provider value={contextValue}>
-      <Pressable
-        className={root({ variant, size, color, className })}
-        {...rest}
-      >
+      <View className={root({ variant, size, color, className })} {...rest}>
         {typeof children === "string" ? <Label>{children}</Label> : children}
-      </Pressable>
+      </View>
     </ChipContext.Provider>
   );
 };

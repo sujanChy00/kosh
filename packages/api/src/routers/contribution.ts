@@ -1,9 +1,10 @@
 import { db } from "@kosh-app/db";
+import { user } from "@kosh-app/db/schema/auth";
 import { contribution } from "@kosh-app/db/schema/contributions";
 import { koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, eq, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, lte, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -104,11 +105,7 @@ function defaultPeriodFor(dueDay: number, today = new Date()) {
     // This month's due date already passed. If the next occurrence (next
     // month) is more than 5 days away we stay on this month — the period
     // whose due date just passed; otherwise we jump ahead to it.
-    const nextDue = new Date(
-      today.getFullYear(),
-      today.getMonth() + 1,
-      dueDay,
-    );
+    const nextDue = new Date(today.getFullYear(), today.getMonth() + 1, dueDay);
     offset = daysUntil(nextDue, today) > LATE_THRESHOLD_DAYS ? 0 : 1;
   } else {
     // This month's due date is still ahead. More than 5 days out → default
@@ -116,10 +113,7 @@ function defaultPeriodFor(dueDay: number, today = new Date()) {
     offset = daysUntil(thisDue, today) > LATE_THRESHOLD_DAYS ? -1 : 0;
   }
 
-  return periodFromParts(
-    today.getFullYear(),
-    today.getMonth() + 1 + offset,
-  );
+  return periodFromParts(today.getFullYear(), today.getMonth() + 1 + offset);
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -253,7 +247,10 @@ function computeRepaymentSplit(
   const principal = parseFloat(loanRow.principal);
   const rate = parseFloat(loanRow.interestRate); // % per year
   const remaining = parseFloat(loanRow.amountRemaining);
-  const days = Math.max(0, daysBetween(new Date(`${loanRow.issueDate}T00:00:00`)));
+  const days = Math.max(
+    0,
+    daysBetween(new Date(`${loanRow.issueDate}T00:00:00`)),
+  );
   const accrued = principal * (rate / 100) * (days / 365);
   const interestOwed = round2(Math.max(0, accrued - paidInterest));
   const maxPayment = round2(remaining + interestOwed);
@@ -261,7 +258,7 @@ function computeRepaymentSplit(
   if (payment - maxPayment > 0.005) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Repayment amount exceeds the outstanding balance",
+      message: `Repayment amount (${payment}) exceeds the outstanding loan balance of ${maxPayment}`,
     });
   }
 
@@ -310,18 +307,68 @@ async function applyMemberEntry(input: {
   // ── Contribution write ─────────────────────────────────────────────────
   const existing = await db.query.contribution.findFirst({
     where: (c, { and: a, eq: q }) =>
-      a(q(c.koshId, koshRow.id), q(c.memberId, entry.memberId), q(c.period, period)),
+      a(
+        q(c.koshId, koshRow.id),
+        q(c.memberId, entry.memberId),
+        q(c.period, period),
+      ),
   });
+
+  const priorRows = await db
+    .select()
+    .from(contribution)
+    .where(
+      and(
+        eq(contribution.koshId, koshRow.id),
+        eq(contribution.memberId, entry.memberId),
+        lt(contribution.period, period),
+      ),
+    );
+
+  let priorContributionArrears = 0;
+  let priorPenaltyArrears = 0;
+  for (const r of priorRows) {
+    priorContributionArrears += round2(
+      Math.max(
+        0,
+        parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount),
+      ),
+    );
+    priorPenaltyArrears += round2(
+      Math.max(
+        0,
+        parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid),
+      ),
+    );
+  }
 
   const expected = existing
     ? parseFloat(existing.expectedAmount)
     : parseFloat(koshRow.monthlyAmount);
+
   const contributionAmount =
     entry.contributionAmount != null
       ? round2(entry.contributionAmount)
       : existing
         ? parseFloat(existing.contributionAmount)
         : 0;
+
+  if (contributionAmount < 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Contribution amount cannot be negative",
+    });
+  }
+
+  const maxContributionAllowed = round2(expected + priorContributionArrears);
+
+  if (contributionAmount > maxContributionAllowed) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Contribution amount (${contributionAmount}) cannot exceed total contribution due of ${maxContributionAllowed}`,
+    });
+  }
+
   const penaltyPaid =
     entry.penaltyPaid != null
       ? round2(entry.penaltyPaid)
@@ -329,13 +376,13 @@ async function applyMemberEntry(input: {
         ? parseFloat(existing.penaltyPaid)
         : 0;
 
-  // Penalty charged: a stored assessment is never recomputed (history is
-  // preserved), otherwise the kosh's late penalty applies once this period is
-  // past its grace window (`isPenaltyDue`) — late itself is the trigger, so a
-  // member who pays the full amount late still owes it. The adhyaksh can
-  // collect up to the assessed amount but never more (`min` cap); partial
-  // penalty payments are allowed.
-  const outstanding = round2(expected - contributionAmount);
+  if (penaltyPaid < 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Penalty paid cannot be negative",
+    });
+  }
+
   const computedAssessed =
     isPenaltyDue && koshRow.latePenaltyAmount != null
       ? parseFloat(koshRow.latePenaltyAmount)
@@ -346,9 +393,17 @@ async function applyMemberEntry(input: {
       0,
     ),
   );
-  const effectivePenaltyPaid = round2(
-    Math.min(penaltyPaid, penaltyAssessed),
-  );
+
+  const maxPenaltyAllowed = round2(penaltyAssessed + priorPenaltyArrears);
+
+  if (penaltyPaid > maxPenaltyAllowed) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Penalty paid (${penaltyPaid}) cannot exceed total penalty due of ${maxPenaltyAllowed}`,
+    });
+  }
+
+  const effectivePenaltyPaid = penaltyPaid;
 
   let status: "paid" | "late" | "partial" | "pending";
   if (contributionAmount >= expected) status = "paid";
@@ -397,16 +452,21 @@ async function applyMemberEntry(input: {
   }
 
   // ── Loan repayment write (independent of the contribution above) ─────
-  let repayment:
-    | {
-        id: string;
-        principalPortion: string;
-        interestPortion: string;
-        remainingBalanceAfter: string;
-      }
-    | null = null;
+  let repayment: {
+    id: string;
+    principalPortion: string;
+    interestPortion: string;
+    remainingBalanceAfter: string;
+  } | null = null;
 
   const repaymentAmount = entry.repaymentAmount ?? 0;
+  if (repaymentAmount < 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Loan repayment amount cannot be negative",
+    });
+  }
+
   if (repaymentAmount > 0) {
     const activeLoan = await db.query.loan.findFirst({
       where: (l, { and: a, eq: q }) =>
@@ -496,11 +556,7 @@ async function runBulk(
   actorId: string,
 ) {
   const { koshRow } = await requireAdhyaksh(koshId, actorId);
-  const periodConfig = await resolvePeriodConfig(
-    koshRow.id,
-    period,
-    koshRow,
-  );
+  const periodConfig = await resolvePeriodConfig(koshRow.id, period, koshRow);
   const dueDate = dueDateFor(period, periodConfig.dueDay);
   const isPastDue = startOfDay(new Date()).getTime() > dueDate.getTime();
   const isPenaltyDue = isPenaltyDueFor(periodConfig, dueDate);
@@ -535,6 +591,219 @@ async function runBulk(
 
   const failed = results.filter((r) => !r.ok).length;
   return { results, summary: { succeeded: results.length - failed, failed } };
+}
+
+async function queryContributionsByKosh(input: {
+  koshId: string;
+  userId: string;
+  limit?: number;
+  cursor?: string | null;
+  statusGroup?: "all" | "paid" | "pending" | "late";
+  memberId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const {
+    koshId,
+    userId,
+    cursor,
+    statusGroup = "all",
+    memberId,
+    dateFrom,
+    dateTo,
+  } = input;
+  const limit = input.limit ?? 20;
+
+  // Verify membership
+  const membership = await db.query.koshMembership.findFirst({
+    where: (m, { and: a, eq: q }) =>
+      a(
+        q(m.koshId, koshId),
+        q(m.userId, userId),
+        q(m.status, "active"),
+      ),
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You are not a member of this kosh",
+    });
+  }
+
+  const conditions = [eq(contribution.koshId, koshId)];
+
+  if (statusGroup === "paid") {
+    conditions.push(inArray(contribution.status, ["paid", "late"]));
+  } else if (statusGroup === "pending") {
+    conditions.push(inArray(contribution.status, ["pending", "partial"]));
+  } else if (statusGroup === "late") {
+    conditions.push(eq(contribution.status, "late"));
+  }
+
+  if (memberId && memberId !== "all") {
+    conditions.push(eq(contribution.memberId, memberId));
+  }
+
+  if (dateFrom) {
+    conditions.push(gte(contribution.period, dateFrom));
+  }
+
+  if (dateTo) {
+    conditions.push(lte(contribution.period, dateTo));
+  }
+
+  if (cursor) {
+    const parts = cursor.split("|");
+    const cPeriod = parts[0];
+    const cTimestamp = parts[1];
+    const cId = parts[2];
+    if (cPeriod && cTimestamp && cId) {
+      const cDate = new Date(Number(cTimestamp));
+      conditions.push(
+        or(
+          lt(contribution.period, cPeriod),
+          and(
+            eq(contribution.period, cPeriod),
+            lt(contribution.createdAt, cDate),
+          ),
+          and(
+            eq(contribution.period, cPeriod),
+            eq(contribution.createdAt, cDate),
+            lt(contribution.id, cId),
+          ),
+        )!,
+      );
+    }
+  }
+
+  const rows = await db
+    .select({
+      contribution: {
+        id: contribution.id,
+        koshId: contribution.koshId,
+        memberId: contribution.memberId,
+        period: contribution.period,
+        expectedAmount: contribution.expectedAmount,
+        contributionAmount: contribution.contributionAmount,
+        penaltyAssessed: contribution.penaltyAssessed,
+        penaltyPaid: contribution.penaltyPaid,
+        status: contribution.status,
+        datePaid: contribution.datePaid,
+        createdAt: contribution.createdAt,
+      },
+      member: {
+        id: user.id,
+        name: user.name,
+        image: user.image,
+      },
+    })
+    .from(contribution)
+    .innerJoin(user, eq(contribution.memberId, user.id))
+    .where(and(...conditions))
+    .orderBy(
+      desc(contribution.period),
+      desc(contribution.createdAt),
+      desc(contribution.id),
+    )
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+
+  // Fetch loan repayments for the members in this page for this kosh
+  const pageMemberIds = Array.from(
+    new Set(page.map((r) => r.contribution.memberId)),
+  );
+
+  const repayments =
+    pageMemberIds.length > 0
+      ? await db
+          .select({
+            borrowerId: loan.borrowerId,
+            originalPrincipal: loan.principal,
+            principalPortion: loanRepayment.principalPortion,
+            interestPortion: loanRepayment.interestPortion,
+            remainingBalanceAfter: loanRepayment.remainingBalanceAfter,
+            date: loanRepayment.date,
+          })
+          .from(loanRepayment)
+          .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+          .where(
+            and(
+              eq(loan.koshId, koshId),
+              inArray(loan.borrowerId, pageMemberIds),
+            ),
+          )
+      : [];
+
+  const repaymentByMemberDate = new Map<
+    string,
+    {
+      originalPrincipal: string;
+      principalPaid: number;
+      interestPaid: number;
+      remainingBalanceAfter: string;
+    }
+  >();
+  for (const rep of repayments) {
+    if (!rep.borrowerId || !rep.date) continue;
+    const dateKey = `${rep.borrowerId}_${toDateString(rep.date)}`;
+    const existing = repaymentByMemberDate.get(dateKey) ?? {
+      originalPrincipal: rep.originalPrincipal ?? "0",
+      principalPaid: 0,
+      interestPaid: 0,
+      remainingBalanceAfter: rep.remainingBalanceAfter ?? "0",
+    };
+    existing.principalPaid += parseFloat(rep.principalPortion ?? "0");
+    existing.interestPaid += parseFloat(rep.interestPortion ?? "0");
+    existing.originalPrincipal = rep.originalPrincipal ?? existing.originalPrincipal;
+    existing.remainingBalanceAfter = rep.remainingBalanceAfter ?? "0";
+    repaymentByMemberDate.set(dateKey, existing);
+  }
+
+  const items = page.map((r) => {
+    const dateKey = r.contribution.datePaid
+      ? `${r.contribution.memberId}_${toDateString(r.contribution.datePaid)}`
+      : null;
+    const rep = dateKey ? repaymentByMemberDate.get(dateKey) : null;
+
+    return {
+      id: r.contribution.id,
+      koshId: r.contribution.koshId,
+      memberId: r.contribution.memberId,
+      memberName: r.member.name,
+      memberImage: r.member.image,
+      period: r.contribution.period,
+      periodLabel: periodLabel(r.contribution.period),
+      expectedAmount: r.contribution.expectedAmount,
+      contributionAmount: r.contribution.contributionAmount,
+      penaltyAssessed: r.contribution.penaltyAssessed,
+      penaltyPaid: r.contribution.penaltyPaid,
+      status: r.contribution.status,
+      datePaid: r.contribution.datePaid
+        ? r.contribution.datePaid.toISOString()
+        : null,
+      loanRepayment: rep
+        ? {
+            originalPrincipal: rep.originalPrincipal,
+            principalPaid: String(rep.principalPaid),
+            interestPaid: String(rep.interestPaid),
+            remainingBalanceAfter: rep.remainingBalanceAfter,
+          }
+        : null,
+      createdAt: r.contribution.createdAt.toISOString(),
+    };
+  });
+
+  return {
+    items,
+    nextCursor:
+      hasMore && last
+        ? `${last.contribution.period}|${last.contribution.createdAt.getTime()}|${last.contribution.id}`
+        : null,
+  };
 }
 
 // ─── Router ────────────────────────────────────────────────────────────────
@@ -573,13 +842,12 @@ export const contributionRouter = router({
         periodConfig.applyPenalty && periodConfig.latePenaltyAmount != null
           ? toDateString(
               new Date(
-                dueDate.getTime() +
-                  penaltyGraceDaysFor(periodConfig) * DAY_MS,
+                dueDate.getTime() + penaltyGraceDaysFor(periodConfig) * DAY_MS,
               ),
             )
           : null;
 
-      const [memberships, existingRows, activeLoans, priorRows] =
+      const [memberships, existingRows, activeLoans, priorRows, loanRepayments] =
         await Promise.all([
           db.query.koshMembership.findMany({
             where: (m, { and: a, eq: q }) =>
@@ -602,6 +870,9 @@ export const contributionRouter = router({
             .select({
               id: loan.id,
               borrowerId: loan.borrowerId,
+              principal: loan.principal,
+              interestRate: loan.interestRate,
+              issueDate: loan.issueDate,
               amountRemaining: loan.amountRemaining,
             })
             .from(loan)
@@ -617,12 +888,28 @@ export const contributionRouter = router({
                 lt(contribution.period, period),
               ),
             ),
+          db
+            .select({
+              loanId: loanRepayment.loanId,
+              interestPortion: loanRepayment.interestPortion,
+            })
+            .from(loanRepayment),
         ]);
 
       const rowByMember = new Map(existingRows.map((r) => [r.memberId, r]));
       const loanByMember = new Map(
         activeLoans.filter((l) => l.borrowerId).map((l) => [l.borrowerId, l]),
       );
+
+      const paidInterestByLoan = new Map<string, number>();
+      for (const r of loanRepayments) {
+        if (!r.loanId) continue;
+        const current = paidInterestByLoan.get(r.loanId) ?? 0;
+        paidInterestByLoan.set(
+          r.loanId,
+          current + parseFloat(r.interestPortion ?? "0"),
+        );
+      }
 
       // Carried-over arrears from periods before the one being viewed: how much
       // contribution and penalty the member still owes from earlier cycles.
@@ -637,10 +924,16 @@ export const contributionRouter = router({
           penalty: 0,
         };
         owed.contribution += round2(
-          Math.max(0, parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount)),
+          Math.max(
+            0,
+            parseFloat(r.expectedAmount) - parseFloat(r.contributionAmount),
+          ),
         );
         owed.penalty += round2(
-          Math.max(0, parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid)),
+          Math.max(
+            0,
+            parseFloat(r.penaltyAssessed) - parseFloat(r.penaltyPaid),
+          ),
         );
         priorByMember.set(r.memberId, owed);
       }
@@ -651,7 +944,8 @@ export const contributionRouter = router({
           ? parseFloat(row.expectedAmount)
           : parseFloat(periodConfig.monthlyAmount);
         const paid = row ? parseFloat(row.contributionAmount) : 0;
-        const recordedLate = overdueDays > LATE_THRESHOLD_DAYS && paid < expected;
+        const recordedLate =
+          overdueDays > LATE_THRESHOLD_DAYS && paid < expected;
 
         const showPenalty = row ? true : isPenaltyDue;
         const penaltyPrefill = row
@@ -666,16 +960,45 @@ export const contributionRouter = router({
           penalty: 0,
         };
 
+        const maxContributionAllowed = round2(expected + prior.contribution);
+        const penaltyAssessedVal = parseFloat(penaltyPrefill ?? "0");
+        const maxPenaltyAllowed = round2(penaltyAssessedVal + prior.penalty);
+
+        let activeLoanInfo = null;
+        if (loanRow) {
+          const principal = parseFloat(loanRow.principal);
+          const rate = parseFloat(loanRow.interestRate);
+          const remaining = parseFloat(loanRow.amountRemaining);
+          const days = Math.max(
+            0,
+            daysBetween(new Date(`${loanRow.issueDate}T00:00:00`)),
+          );
+          const accrued = principal * (rate / 100) * (days / 365);
+          const paidInterest = paidInterestByLoan.get(loanRow.id) ?? 0;
+          const interestOwed = round2(Math.max(0, accrued - paidInterest));
+          const totalPayoff = round2(remaining + interestOwed);
+
+          activeLoanInfo = {
+            id: loanRow.id,
+            remainingPrincipal: String(remaining),
+            interestOwed: String(interestOwed),
+            totalPayoff: String(totalPayoff),
+          };
+        }
+
         return {
           userId: m.userId,
           name: m.user.name,
           image: m.user.image,
           role: m.role,
           expectedAmount: String(expected),
+          maxContributionAllowed: String(maxContributionAllowed),
           contributionPrefill: String(expected),
           penaltyPrefill,
+          maxPenaltyAllowed: String(maxPenaltyAllowed),
           hasActiveLoan: Boolean(loanRow),
           loanRemaining: loanRow ? loanRow.amountRemaining : null,
+          activeLoan: activeLoanInfo,
           recordedLate,
           existing: row
             ? {
@@ -756,6 +1079,232 @@ export const contributionRouter = router({
         ctx.session.user.id,
       );
     }),
+
+  /**
+   * All contributions for the current user across their active koshes
+   * (optionally filtered by a single koshId).
+   */
+  myContributions: protectedProcedure
+    .input(
+      z
+        .object({
+          koshId: koshIdSchema.optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const userMemberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.userId, userId), q(m.status, "active")),
+        with: {
+          kosh: {
+            columns: {
+              id: true,
+              name: true,
+              iconUrl: true,
+              monthlyAmount: true,
+              currency: true,
+              dueDay: true,
+            },
+          },
+        },
+      });
+
+      const koshes = userMemberships.map((m) => m.kosh);
+      const koshIds = input?.koshId ? [input.koshId] : koshes.map((k) => k.id);
+
+      if (koshIds.length === 0) {
+        return {
+          koshes: [],
+          stats: {
+            totalPaid: "0",
+            totalPenaltiesPaid: "0",
+            unpaidDues: "0",
+            paidPeriodsCount: 0,
+            pendingPeriodsCount: 0,
+            latePeriodsCount: 0,
+          },
+          items: [],
+        };
+      }
+
+      const records = await db.query.contribution.findMany({
+        where: (c, { and: a, eq: q, inArray: inArr }) =>
+          a(q(c.memberId, userId), inArr(c.koshId, koshIds)),
+        with: {
+          kosh: {
+            columns: { id: true, name: true, iconUrl: true, currency: true },
+          },
+        },
+        orderBy: (c, { desc: d }) => [d(c.period)],
+      });
+
+      let totalPaid = 0;
+      let totalPenaltiesPaid = 0;
+      let unpaidDues = 0;
+      let paidPeriodsCount = 0;
+      let pendingPeriodsCount = 0;
+      let latePeriodsCount = 0;
+
+      const items = records.map((r) => {
+        const cAmount = parseFloat(r.contributionAmount ?? "0");
+        const pPaid = parseFloat(r.penaltyPaid ?? "0");
+        const pAssessed = parseFloat(r.penaltyAssessed ?? "0");
+        const expected = parseFloat(r.expectedAmount ?? "0");
+
+        totalPaid += cAmount;
+        totalPenaltiesPaid += pPaid;
+
+        if (r.status === "paid") {
+          paidPeriodsCount++;
+        } else if (r.status === "late") {
+          paidPeriodsCount++;
+          latePeriodsCount++;
+        } else {
+          pendingPeriodsCount++;
+          if (r.status === "partial") {
+            unpaidDues += Math.max(0, expected - cAmount);
+          } else {
+            unpaidDues += expected;
+          }
+        }
+
+        unpaidDues += Math.max(0, pAssessed - pPaid);
+
+        return {
+          id: r.id,
+          koshId: r.koshId,
+          koshName: r.kosh.name,
+          koshIconUrl: r.kosh.iconUrl,
+          period: r.period,
+          periodLabel: periodLabel(r.period),
+          expectedAmount: r.expectedAmount,
+          contributionAmount: r.contributionAmount,
+          penaltyAssessed: r.penaltyAssessed,
+          penaltyPaid: r.penaltyPaid,
+          status: r.status,
+          datePaid: r.datePaid ? r.datePaid.toISOString() : null,
+        };
+      });
+
+      return {
+        koshes,
+        stats: {
+          totalPaid: String(totalPaid),
+          totalPenaltiesPaid: String(totalPenaltiesPaid),
+          unpaidDues: String(unpaidDues),
+          paidPeriodsCount,
+          pendingPeriodsCount,
+          latePeriodsCount,
+        },
+        items,
+      };
+    }),
+
+  /**
+   * Dedicated queries for contributions with filter support (member, date range)
+   */
+  allContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        memberId: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "all",
+      });
+    }),
+
+  paidContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "paid",
+      });
+    }),
+
+  pendingContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "pending",
+      });
+    }),
+
+  lateContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "late",
+      });
+    }),
+
+  /**
+   * Legacy/fallback infinite query for contribution history of a specific kosh.
+   */
+  historyByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        status: z
+          .enum(["all", "paid", "pending", "late", "partial"])
+          .optional()
+          .default("all"),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const statusGroup =
+        input.status === "paid"
+          ? "paid"
+          : input.status === "pending" || input.status === "partial"
+            ? "pending"
+            : input.status === "late"
+              ? "late"
+              : "all";
+      return queryContributionsByKosh({
+        koshId: input.koshId,
+        limit: input.limit,
+        cursor: input.cursor,
+        userId: ctx.session.user.id,
+        statusGroup,
+      });
+    }),
 });
 
 export type ContributionMemberData = {
@@ -764,10 +1313,18 @@ export type ContributionMemberData = {
   image: string | null;
   role: string;
   expectedAmount: string;
+  maxContributionAllowed: string;
   contributionPrefill: string;
   penaltyPrefill: string | null;
+  maxPenaltyAllowed: string;
   hasActiveLoan: boolean;
   loanRemaining: string | null;
+  activeLoan: {
+    id: string;
+    remainingPrincipal: string;
+    interestOwed: string;
+    totalPayoff: string;
+  } | null;
   recordedLate: boolean;
   existing: {
     status: string;
@@ -822,4 +1379,64 @@ export type RecordEntryResult = {
     interestPortion: string;
     remainingBalanceAfter: string;
   } | null;
+};
+
+export type MyContributionsData = {
+  koshes: {
+    id: string;
+    name: string;
+    iconUrl: string | null;
+    monthlyAmount: string;
+    currency: string;
+    dueDay: number;
+  }[];
+  stats: {
+    totalPaid: string;
+    totalPenaltiesPaid: string;
+    unpaidDues: string;
+    paidPeriodsCount: number;
+    pendingPeriodsCount: number;
+    latePeriodsCount: number;
+  };
+  items: {
+    id: string;
+    koshId: string;
+    koshName: string;
+    koshIconUrl: string | null;
+    period: string;
+    periodLabel: string;
+    expectedAmount: string;
+    contributionAmount: string;
+    penaltyAssessed: string;
+    penaltyPaid: string;
+    status: "pending" | "paid" | "partial" | "late";
+    datePaid: string | null;
+  }[];
+};
+
+export type MyContributionItem = MyContributionsData["items"][number];
+export type MyContributionStats = MyContributionsData["stats"];
+export type ContributionStatusFilter = "all" | "paid" | "pending" | "late";
+
+export type KoshContributionHistoryItem = {
+  id: string;
+  koshId: string;
+  memberId: string;
+  memberName: string | null;
+  memberImage: string | null;
+  period: string;
+  periodLabel: string;
+  expectedAmount: string;
+  contributionAmount: string;
+  penaltyAssessed: string;
+  penaltyPaid: string;
+  status: "pending" | "paid" | "partial" | "late";
+  datePaid: string | null;
+  loanRepayment: {
+    originalPrincipal: string;
+    principalPaid: string;
+    interestPaid: string;
+    remainingBalanceAfter: string;
+  } | null;
+  createdAt: string;
 };

@@ -27,6 +27,8 @@ export interface DateInputProps {
   prefix?: React.ReactNode;
   suffix?: React.ReactNode;
   description?: string;
+  variant?: "input" | "picker";
+  showVariantToggle?: boolean;
 }
 
 export function DateInput({
@@ -41,6 +43,8 @@ export function DateInput({
   prefix,
   suffix,
   description,
+  variant = "input",
+  showVariantToggle = false,
 }: DateInputProps) {
   const [mutedForeground] = useCSSVariable(["--color-muted-foreground"]) as [
     string,
@@ -119,7 +123,8 @@ export function DateInput({
               ? { start: minimumDate!, end: maximumDate! }
               : undefined
           }
-          variant="input"
+          variant={variant}
+          showVariantToggle={showVariantToggle}
         />
       )}
     </Host>

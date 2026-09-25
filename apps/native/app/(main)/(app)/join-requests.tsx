@@ -1,3 +1,4 @@
+import { HorizontalKoshSelector } from "@/components/kosh/horizontal-kosh-selector";
 import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
 import { DangerButton, PrimaryButton } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { queryClient, trpc } from "@/utils/trpc";
 import type { KoshListItem } from "@kosh-app/api/routers/kosh";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 
 const MANAGER_ROLES: KoshListItem["role"][] = ["adhyaksh", "koshadhyaksh"];
@@ -21,13 +22,6 @@ type JoinRequestUser = {
   image: string | null;
 };
 
-type JoinRequestRow = {
-  id: string;
-  status: "pending" | "approved" | "rejected";
-  requestedAt: string | Date;
-  user: JoinRequestUser | null;
-};
-
 const formatRequestedAt = (value: string | Date) =>
   new Date(value).toLocaleDateString(undefined, {
     day: "numeric",
@@ -37,13 +31,10 @@ const formatRequestedAt = (value: string | Date) =>
 
 const JoinRequestsScreen = () => {
   const haptics = useHaptics();
-  const params = useLocalSearchParams<{ koshId?: string }>();
-  const paramKoshId =
-    typeof params.koshId === "string" ? params.koshId : undefined;
-
-  const [selectedKoshId, setSelectedKoshId] = useState<string | undefined>(
-    paramKoshId,
-  );
+  const { koshId, selectedKosh } = useLocalSearchParams<{
+    koshId?: string;
+    selectedKosh?: string;
+  }>();
 
   const koshesQuery = useInfiniteQuery(
     trpc.kosh.list.infiniteQueryOptions(
@@ -59,7 +50,7 @@ const JoinRequestsScreen = () => {
   const managedKoshes =
     koshList.filter((k) => MANAGER_ROLES.includes(k.role)) ?? [];
 
-  const activeKoshId = selectedKoshId ?? managedKoshes[0]?.id;
+  const activeKoshId = selectedKosh ?? managedKoshes[0]?.id;
 
   const requestsQuery = useQuery(
     trpc.invite.requests.queryOptions(
@@ -121,33 +112,7 @@ const JoinRequestsScreen = () => {
     >
       <Stack.Screen options={{ headerTitle: "Join requests" }} />
 
-      {managedKoshes.length > 1 ? (
-        <View className="gap-2">
-          <ThemedText className="text-xs uppercase tracking-[0.2em] text-muted">
-            Kosh
-          </ThemedText>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerClassName="gap-2"
-          >
-            {managedKoshes.map((kosh) => {
-              const selected = kosh.id === activeKoshId;
-              return (
-                <Chip
-                  key={kosh.id}
-                  variant={selected ? "primary" : "soft"}
-                  color="primary"
-                  size="md"
-                  onPress={() => setSelectedKoshId(kosh.id)}
-                >
-                  <Chip.Label>{kosh.name}</Chip.Label>
-                </Chip>
-              );
-            })}
-          </ScrollView>
-        </View>
-      ) : null}
+      <HorizontalKoshSelector koshList={managedKoshes} />
 
       {!activeKoshId ? (
         <Card>

@@ -6,8 +6,8 @@ import { useCallback, useMemo } from "react";
 import { ErrorComponent } from "../layout/error-component";
 import { ListFetchingMoreComponent } from "../layout/list-fetching-more-component";
 import { ListSeparatorComponent } from "../layout/list-separator-component";
-import { PendingComponent } from "../layout/pending-component";
 import { KoshCard } from "./kosh-card";
+import { KoshCardSkeleton } from "./kosh-card-skeleton";
 import { KoshEmptyComponent } from "./kosh-empty-component";
 
 const PAGE_SIZE = 10;
@@ -41,7 +41,12 @@ export const KoshList = () => {
   }, [hasNextPage, isFetchingNextPage]);
 
   const renderItem = useCallback(
-    ({ item }: { item: KoshListItem }) => <KoshCard kosh={item} />,
+    ({ item }: { item: KoshListItem }) => (
+      <KoshCard
+        kosh={item}
+        className="bg-surface rounded-3xl shadow overflow-hidden"
+      />
+    ),
     [],
   );
   const keyExtractor = useCallback(({ id }: KoshListItem) => id.toString(), []);
@@ -56,7 +61,13 @@ export const KoshList = () => {
     [isFetchingNextPage, hasNextPage],
   );
 
-  if (isLoading) return <PendingComponent />;
+  if (isLoading)
+    return (
+      <KoshCardSkeleton
+        className="bg-surface rounded-3xl shadow overflow-hidden"
+        wrapperClassName="p-2"
+      />
+    );
 
   if (isError)
     return (
@@ -79,7 +90,7 @@ export const KoshList = () => {
       refreshing={isRefetching}
       onRefresh={refetch}
       ItemSeparatorComponent={ListSeparator}
-      estimatedItemSize={239.625}
+      estimatedItemSize={110.25}
       showsVerticalScrollIndicator={false}
       recycleItems
       renderItem={renderItem}

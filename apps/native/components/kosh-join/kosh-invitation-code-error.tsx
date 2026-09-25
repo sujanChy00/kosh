@@ -1,4 +1,4 @@
-import { KoshJoinDialog } from "@/components/kosh/kosh-join-dialog";
+import { JoinNewKoshDialog } from "@/components/kosh/join-new-kosh-dialog";
 import { OutlineButton, PrimaryButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useState } from "react";
@@ -23,13 +23,10 @@ export const KoshInvitationCodeError = ({
   const [isVisible, setIsVisible] = useState(false);
   return (
     <>
-      <KoshJoinDialog
+      <JoinNewKoshDialog
         isVisible={isVisible}
         setIsVisible={setIsVisible}
-        onConfirm={(code) => {
-          onConfirm(code);
-          console.log(code);
-        }}
+        onConfirm={onConfirm}
       />
       <View className="p-4 flex-1 justify-center">
         <View className={"gap-y-6"}>

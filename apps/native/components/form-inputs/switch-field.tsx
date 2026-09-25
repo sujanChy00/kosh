@@ -1,5 +1,5 @@
 import { useFieldContext } from "@/contexts/form-context";
-import { twMerge } from "tailwind-merge";
+import { cn } from "@kosh-app/utils";
 import { Field, FieldDescription } from "../ui/field";
 import { SwitchInput, SwitchInputProps } from "../ui/switch-input";
 
@@ -20,7 +20,7 @@ export const SwitchField = ({
     <Field className={className}>
       <SwitchInput
         {...props}
-        className={twMerge("justify-between", inputClassName)}
+        className={cn("justify-between", inputClassName)}
         onValueChange={field.handleChange}
         value={field.state.value ?? false}
       />

@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
 
-const koshIdSchema = z.string().uuid();
+const koshIdSchema = z.uuid();
 const tokenSchema = z.string().trim().toUpperCase().min(1).max(20);
 
 export type InvitePreview = {
@@ -90,7 +90,10 @@ async function countActiveMembers(koshId: string) {
 
 type InviteLookup =
   | { row: null; status: "not_found" }
-  | { row: NonNullable<Awaited<ReturnType<typeof db.query.invite.findFirst>>>; status: "active" | "expired" | "revoked" };
+  | {
+      row: NonNullable<Awaited<ReturnType<typeof db.query.invite.findFirst>>>;
+      status: "active" | "expired" | "revoked";
+    };
 
 async function lookUpInvite(token: string): Promise<InviteLookup> {
   const row = await db.query.invite.findFirst({
@@ -171,7 +174,7 @@ export const inviteRouter = router({
               maxUses: input.maxUses,
             })
             .returning();
-          if (!row) throw new Error("Invite insert returned no row");
+          if (!row) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create invite. Please try again." });
           return row;
         } catch (error) {
           const isCollision =
@@ -213,7 +216,7 @@ export const inviteRouter = router({
 
   /** Adhyaksh revokes an invite — the token stops working immediately. */
   revoke: protectedProcedure
-    .input(z.object({ inviteId: z.string().uuid() }))
+    .input(z.object({ inviteId: z.uuid() }))
     .mutation(async ({ ctx, input }) => {
       const row = await db.query.invite.findFirst({
         where: (i, { eq: q }) => q(i.id, input.inviteId),
@@ -229,7 +232,7 @@ export const inviteRouter = router({
         .set({ status: "revoked" })
         .where(eq(invite.id, input.inviteId))
         .returning();
-      if (!updated) throw new Error("Failed to revoke invite");
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "Invite not found or already revoked." });
       return updated;
     }),
 
@@ -312,10 +315,7 @@ export const inviteRouter = router({
       return db.transaction(async (tx) => {
         const existing = await tx.query.koshMembership.findFirst({
           where: (m, { and: a, eq: q }) =>
-            a(
-              q(m.koshId, inviteRow.koshId),
-              q(m.userId, ctx.session.user.id),
-            ),
+            a(q(m.koshId, inviteRow.koshId), q(m.userId, ctx.session.user.id)),
           columns: { id: true, status: true },
         });
         if (existing?.status === "active") {
@@ -381,7 +381,7 @@ export const inviteRouter = router({
             status: "pending",
           })
           .returning();
-        if (!request) throw new Error("Join request insert returned no row");
+        if (!request) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create join request. Please try again." });
 
         await tx
           .update(invite)
@@ -440,7 +440,7 @@ export const inviteRouter = router({
   review: protectedProcedure
     .input(
       z.object({
-        requestId: z.string().uuid(),
+        requestId: z.uuid(),
         decision: z.enum(["approved", "rejected"]),
         reason: z.string().trim().max(300).optional(),
       }),
@@ -487,10 +487,7 @@ export const inviteRouter = router({
 
           const membership = await tx.query.koshMembership.findFirst({
             where: (m, { and: a, eq: q }) =>
-              a(
-                q(m.koshId, request.koshId),
-                q(m.userId, request.userId),
-              ),
+              a(q(m.koshId, request.koshId), q(m.userId, request.userId)),
             columns: { id: true, status: true },
           });
           if (!membership || membership.status !== "pending") {
@@ -518,7 +515,7 @@ export const inviteRouter = router({
             })
             .where(eq(joinRequest.id, input.requestId))
             .returning();
-          if (!updated) throw new Error("Failed to approve join request");
+          if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Join request was not found or has already been processed." });
           return updated;
         }
 
@@ -528,13 +525,11 @@ export const inviteRouter = router({
             status: "rejected",
             reviewedBy: ctx.session.user.id,
             reviewedAt: new Date(),
-            rejectionReason: input.reason?.trim()
-              ? input.reason.trim()
-              : null,
+            rejectionReason: input.reason?.trim() ? input.reason.trim() : null,
           })
           .where(eq(joinRequest.id, input.requestId))
           .returning();
-        if (!updated) throw new Error("Failed to reject join request");
+        if (!updated) throw new TRPCError({ code: "BAD_REQUEST", message: "Join request was not found or has already been processed." });
 
         // Delete the pending membership so the (kosh, user) slot is free again.
         await tx

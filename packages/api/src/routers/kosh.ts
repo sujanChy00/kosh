@@ -6,7 +6,7 @@ import { contribution } from "@kosh-app/db/schema/contributions";
 import { kosh, koshMembership, koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 
@@ -16,6 +16,31 @@ const listKoshSchema = z.object({
   limit: z.number().int().min(1).max(50).default(20),
   cursor: z.string().nullable().optional(),
 });
+
+export type KoshRole = "adhyaksh" | "koshadhyaksh" | "sadasya";
+
+export type KoshActivityItem = {
+  id: string;
+  type: "contribution" | "member_joined";
+  koshId: string;
+  koshName: string;
+  koshIconUrl: string | null;
+  title: string;
+  subtitle: string;
+  amount: string | null;
+  status: string;
+  createdAt: string;
+  user: { name: string | null; image: string | null };
+};
+
+export type KoshMember = {
+  id: string;
+  label: string;
+  name: string;
+  image: string | null;
+  isNonMember: boolean;
+  role: KoshRole;
+};
 
 export type KoshListItem = {
   id: string;
@@ -27,7 +52,7 @@ export type KoshListItem = {
   dueDay: number;
   startDate: string;
   endDate: string;
-  role: "adhyaksh" | "koshadhyaksh" | "sadasya";
+  role: KoshRole;
   joinedAt: string | null;
   memberCount: number;
   totalCollected: string;
@@ -40,7 +65,7 @@ export type KoshDetail = Omit<KoshListItem, "joinedAt"> & {
     userId: string;
     name: string | null;
     image: string | null;
-    role: "adhyaksh" | "koshadhyaksh" | "sadasya";
+    role: KoshRole;
     joinedAt: string | null;
   }[];
   maxMembers: number | null;
@@ -51,6 +76,14 @@ export type KoshDetail = Omit<KoshListItem, "joinedAt"> & {
   latePenaltyAmount: string | null;
   applyPenalty: boolean;
   penaltyGraceDays: number | null;
+  stats: {
+    totalPenaltyCollected: string;
+    totalInterestCollected: string;
+    totalLoanDistributed: string;
+    externalLoanDistributed: string;
+    externalLoanInterestCollected: string;
+    totalOutstandingLoans: string;
+  };
 };
 
 const createKoshSchema = z
@@ -115,7 +148,10 @@ function addMonths(date: Date, months: number) {
  * endpoints. Used to keep the duration from being shrunk past periods that
  * have already started. */
 function elapsedMonthsSince(startDate: string, now = new Date()) {
-  const [year, month] = startDate.split("-").map(Number);
+  const [yearStr, monthStr] = startDate.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  if (!year || !month) return 0;
   const start = new Date(year, month - 1, 1);
   const current = new Date(now.getFullYear(), now.getMonth(), 1);
   return (
@@ -128,13 +164,13 @@ function elapsedMonthsSince(startDate: string, now = new Date()) {
 /** The list of contribution periods (`YYYY-MM-01`) that have already started,
  * from the kosh's start month through the current month, capped at the kosh's
  * end date. */
-function startedPeriods(
-  startDate: string,
-  endDate: string,
-  now = new Date(),
-) {
-  const [startYear, startMonth] = startDate.split("-").map(Number);
-  const [endYear, endMonth] = endDate.split("-").map(Number);
+function startedPeriods(startDate: string, endDate: string, now = new Date()) {
+  const [startYearStr, startMonthStr] = startDate.split("-");
+  const [endYearStr, endMonthStr] = endDate.split("-");
+  const startYear = Number(startYearStr) || 0;
+  const startMonth = Number(startMonthStr) || 1;
+  const endYear = Number(endYearStr) || 0;
+  const endMonth = Number(endMonthStr) || 1;
   const start = new Date(startYear, startMonth - 1, 1);
   const end = new Date(endYear, endMonth - 1, 1);
   const current = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -148,7 +184,7 @@ function startedPeriods(
 }
 
 const updateKoshSchema = z.object({
-  koshId: z.string().uuid(),
+  koshId: z.uuid(),
   name: z.string().trim().min(1, "Name is required").max(80),
   description: z.string().trim().max(500).optional(),
   iconUrl: z.string().max(500).optional(),
@@ -168,7 +204,7 @@ export type UpdateKoshInput = z.infer<typeof updateKoshSchema>;
 
 const updateTransactionPinSchema = z
   .object({
-    koshId: z.string().uuid(),
+    koshId: z.uuid(),
     oldPin: z.string().regex(/^\d{6}$/, "Old PIN must be 6 digits"),
     newPin: z.string().regex(/^\d{6}$/, "New PIN must be 6 digits"),
     password: z.string().min(1, "Password is required"),
@@ -183,11 +219,11 @@ export type UpdateTransactionPinInput = z.infer<
 >;
 
 const requestTransactionPinResetSchema = z.object({
-  koshId: z.string().uuid(),
+  koshId: z.uuid(),
 });
 
 const resetTransactionPinSchema = z.object({
-  koshId: z.string().uuid(),
+  koshId: z.uuid(),
   otp: z.string().regex(/^\d{6}$/, "OTP must be 6 digits"),
   newPin: z.string().regex(/^\d{6}$/, "New PIN must be 6 digits"),
   password: z.string().min(1, "Password is required"),
@@ -198,7 +234,7 @@ const TRANSACTION_PIN_RESET_IDENTIFIER = (koshId: string) =>
 
 function maskEmail(email: string) {
   const [local, domain] = email.split("@");
-  if (!domain) return email;
+  if (!domain || !local) return email;
   return `${local.slice(0, 1)}***@${domain}`;
 }
 
@@ -341,7 +377,7 @@ export const koshRouter = router({
     }),
 
   getById: protectedProcedure
-    .input(z.object({ koshId: z.string().uuid() }))
+    .input(z.object({ koshId: z.uuid() }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
 
@@ -418,6 +454,63 @@ export const koshRouter = router({
           ),
         );
 
+      const [penaltyRow] = await db
+        .select({
+          totalPenaltyCollected: sql<string>`coalesce(sum(${contribution.penaltyPaid}), 0)`,
+        })
+        .from(contribution)
+        .where(eq(contribution.koshId, input.koshId));
+
+      const [memberLoanDistRow] = await db
+        .select({
+          totalLoanDistributed: sql<string>`coalesce(sum(${loan.principal}), 0)`,
+        })
+        .from(loan)
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.borrowerId),
+          ),
+        );
+
+      const [memberInterestRow] = await db
+        .select({
+          totalInterestCollected: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
+        })
+        .from(loanRepayment)
+        .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.borrowerId),
+          ),
+        );
+
+      const [externalLoanDistRow] = await db
+        .select({
+          externalLoanDistributed: sql<string>`coalesce(sum(${loan.principal}), 0)`,
+        })
+        .from(loan)
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.nonMemberBorrowerId),
+          ),
+        );
+
+      const [externalInterestRow] = await db
+        .select({
+          externalLoanInterestCollected: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
+        })
+        .from(loanRepayment)
+        .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+        .where(
+          and(
+            eq(loan.koshId, input.koshId),
+            isNotNull(loan.nonMemberBorrowerId),
+          ),
+        );
+
       const collected =
         (parseFloat(contribRow?.collected ?? "0") || 0) +
         (parseFloat(interestRow?.interest ?? "0") || 0);
@@ -471,6 +564,15 @@ export const koshRouter = router({
           role: m.role,
           joinedAt: m.joinedAt?.toISOString() ?? null,
         })),
+        stats: {
+          totalPenaltyCollected: penaltyRow?.totalPenaltyCollected ?? "0",
+          totalInterestCollected: memberInterestRow?.totalInterestCollected ?? "0",
+          totalLoanDistributed: memberLoanDistRow?.totalLoanDistributed ?? "0",
+          externalLoanDistributed: externalLoanDistRow?.externalLoanDistributed ?? "0",
+          externalLoanInterestCollected:
+            externalInterestRow?.externalLoanInterestCollected ?? "0",
+          totalOutstandingLoans: loanRow?.outstanding ?? "0",
+        },
       } satisfies KoshDetail;
     }),
 
@@ -505,7 +607,7 @@ export const koshRouter = router({
                   : null,
               applyPenalty: input.applyPenalty ?? false,
               penaltyGraceDays: input.applyPenalty
-                ? input.penaltyGraceDays ?? null
+                ? (input.penaltyGraceDays ?? null)
                 : null,
               startDate: toDateString(startDate),
               durationMonths: input.durationMonths,
@@ -517,7 +619,10 @@ export const koshRouter = router({
             .returning();
 
           if (!row) {
-            throw new Error("Kosh insert returned no row");
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create Kosh. Please try again.",
+            });
           }
 
           await tx.insert(koshMembership).values({
@@ -562,7 +667,10 @@ export const koshRouter = router({
         columns: { role: true },
       });
 
-      if (membership?.role !== "adhyaksh" && membership?.role !== "koshadhyaksh") {
+      if (
+        membership?.role !== "adhyaksh" &&
+        membership?.role !== "koshadhyaksh"
+      ) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only an adhyaksh or koshadhyaksh can update the kosh",
@@ -641,7 +749,7 @@ export const koshRouter = router({
             ? String(input.latePenaltyAmount)
             : null,
         penaltyGraceDays: input.applyPenalty
-          ? input.penaltyGraceDays ?? null
+          ? (input.penaltyGraceDays ?? null)
           : null,
       };
       const configChanged =
@@ -653,10 +761,7 @@ export const koshRouter = router({
         newPeriodConfig.penaltyGraceDays !== current.penaltyGraceDays;
 
       if (configChanged) {
-        const periods = startedPeriods(
-          current.startDate,
-          current.endDate,
-        );
+        const periods = startedPeriods(current.startDate, current.endDate);
         if (periods.length > 0) {
           await db
             .insert(koshPeriod)
@@ -800,7 +905,7 @@ export const koshRouter = router({
       const userId = ctx.session.user.id;
 
       const membership = await db.query.koshMembership.findFirst({
-        where: (m, { and: q, eq: e }) =>
+        where: (m, { eq: e }) =>
           and(
             e(m.koshId, input.koshId),
             e(m.userId, userId),
@@ -832,7 +937,9 @@ export const koshRouter = router({
       const expiresAt = new Date(Date.now() + 600_000);
 
       // Replace any existing OTP for this kosh (single active code).
-      await db.delete(verification).where(eq(verification.identifier, identifier));
+      await db
+        .delete(verification)
+        .where(eq(verification.identifier, identifier));
       await db.insert(verification).values({
         id: crypto.randomUUID(),
         identifier,
@@ -863,7 +970,7 @@ export const koshRouter = router({
       const userId = ctx.session.user.id;
 
       const membership = await db.query.koshMembership.findFirst({
-        where: (m, { and: q, eq: e }) =>
+        where: (m, { eq: e }) =>
           and(
             e(m.koshId, input.koshId),
             e(m.userId, userId),
@@ -884,7 +991,10 @@ export const koshRouter = router({
 
       const identifier = TRANSACTION_PIN_RESET_IDENTIFIER(input.koshId);
       const [stored] = await db
-        .select({ value: verification.value, expiresAt: verification.expiresAt })
+        .select({
+          value: verification.value,
+          expiresAt: verification.expiresAt,
+        })
         .from(verification)
         .where(eq(verification.identifier, identifier))
         .limit(1);
@@ -928,7 +1038,6 @@ export const koshRouter = router({
           });
         }
 
-        // Single-use: consume the OTP after a successful reset.
         await db
           .delete(verification)
           .where(eq(verification.identifier, identifier));
@@ -942,5 +1051,196 @@ export const koshRouter = router({
           cause: error,
         });
       }
+    }),
+
+  /** Recent activity across all koshes the current user belongs to. */
+  recentActivity: protectedProcedure
+    .input(
+      z
+        .object({ limit: z.number().int().min(1).max(20).default(10) })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+      const limit = input?.limit ?? 10;
+
+      const userMemberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.userId, userId), q(m.status, "active")),
+        columns: { koshId: true },
+      });
+
+      const koshIds = userMemberships.map((m) => m.koshId);
+      if (koshIds.length === 0) return [];
+
+      const [recentContributions, recentMemberships] = await Promise.all([
+        db.query.contribution.findMany({
+          where: (c, { inArray: inArr }) => inArr(c.koshId, koshIds),
+          with: {
+            kosh: { columns: { id: true, name: true, iconUrl: true } },
+            member: { columns: { id: true, name: true, image: true } },
+          },
+          orderBy: (c, { desc: d }) => [d(c.createdAt)],
+          limit,
+        }),
+        db.query.koshMembership.findMany({
+          where: (m, { and: a, inArray: inArr, eq: q }) =>
+            a(inArr(m.koshId, koshIds), q(m.status, "active")),
+          with: {
+            kosh: { columns: { id: true, name: true, iconUrl: true } },
+            user: { columns: { id: true, name: true, image: true } },
+          },
+          orderBy: (m, { desc: d }) => [d(m.joinedAt)],
+          limit,
+        }),
+      ]);
+
+      const items: KoshActivityItem[] = [];
+
+      for (const c of recentContributions) {
+        items.push({
+          id: `contrib-${c.id}`,
+          type: "contribution",
+          koshId: c.koshId,
+          koshName: c.kosh.name,
+          koshIconUrl: c.kosh.iconUrl,
+          title: `Contribution ${c.status === "paid" ? "Paid" : c.status === "late" ? "Paid Late" : "Updated"}`,
+          subtitle: `${c.member.name ?? "Member"} · ${c.period}`,
+          amount: c.contributionAmount,
+          status: c.status,
+          createdAt: c.createdAt.toISOString(),
+          user: { name: c.member.name, image: c.member.image },
+        });
+      }
+
+      for (const m of recentMemberships) {
+        if (m.joinedAt) {
+          items.push({
+            id: `member-${m.koshId}-${m.userId}`,
+            type: "member_joined",
+            koshId: m.koshId,
+            koshName: m.kosh.name,
+            koshIconUrl: m.kosh.iconUrl,
+            title: "New Member Joined",
+            subtitle: `${m.user.name ?? "Member"} joined as ${m.role}`,
+            amount: null,
+            status: "active",
+            createdAt: m.joinedAt.toISOString(),
+            user: { name: m.user.name, image: m.user.image },
+          });
+        }
+      }
+
+      items.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+      return items.slice(0, limit);
+    }),
+
+  /** Delete a kosh. Only the Adhyaksh (creator/owner) can delete a kosh. */
+  delete: protectedProcedure
+    .input(z.object({ koshId: z.uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: a, eq: q }) =>
+          a(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+        columns: { role: true },
+      });
+
+      if (!membership || membership.role !== "adhyaksh") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the Adhyaksh can delete this kosh",
+        });
+      }
+
+      const [deleted] = await db
+        .delete(kosh)
+        .where(eq(kosh.id, input.koshId))
+        .returning({ id: kosh.id });
+
+      if (!deleted) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Kosh not found",
+        });
+      }
+
+      return { success: true, id: deleted.id };
+    }),
+
+  /** Get members and non-member borrowers of a kosh by koshId for selection/filtering */
+  members: protectedProcedure
+    .input(
+      z.object({
+        koshId: z.string().uuid(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id;
+
+      const membership = await db.query.koshMembership.findFirst({
+        where: (m, { and: a, eq: q }) =>
+          a(
+            q(m.koshId, input.koshId),
+            q(m.userId, userId),
+            q(m.status, "active"),
+          ),
+      });
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not an active member of this kosh",
+        });
+      }
+
+      const activeMemberships = await db.query.koshMembership.findMany({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.koshId, input.koshId), q(m.status, "active")),
+        with: {
+          user: {
+            columns: { id: true, name: true, image: true, email: true },
+          },
+        },
+      });
+
+      const nonMembers = await db.query.nonMemberBorrower.findMany({
+        where: (nm, { eq: q }) => q(nm.koshId, input.koshId),
+      });
+
+      return [
+        {
+          id: "all",
+          label: "All Members",
+          name: "All Members",
+          image: null,
+          isNonMember: false,
+          role: null,
+        },
+        ...activeMemberships.map((m) => ({
+          id: m.user.id,
+          label: m.user.name,
+          name: m.user.name,
+          image: m.user.image,
+          isNonMember: false,
+          role: m.role,
+        })),
+        ...nonMembers.map((nm) => ({
+          id: nm.id,
+          label: `${nm.name} (Non-member)`,
+          name: nm.name,
+          image: null,
+          isNonMember: true,
+          role: null,
+        })),
+      ];
     }),
 });

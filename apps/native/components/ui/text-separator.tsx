@@ -1,5 +1,5 @@
+import { cn } from "@kosh-app/utils";
 import { View } from "react-native";
-import { twMerge } from "tailwind-merge";
 import { ThemedText } from "../themed-text";
 import { Separator } from "./separator";
 
@@ -12,13 +12,10 @@ interface Props {
 export const TextSeparator = ({ text, className, textClassName }: Props) => {
   return (
     <View
-      className={twMerge(
-        "flex-row items-center gap-1 justify-between",
-        className,
-      )}
+      className={cn("flex-row items-center gap-1 justify-between", className)}
     >
       <Separator className="flex-1" />
-      <ThemedText className={twMerge("text-muted text-xs", textClassName)}>
+      <ThemedText className={cn("text-muted text-xs", textClassName)}>
         {text}
       </ThemedText>
       <Separator className="flex-1" />

@@ -3,14 +3,14 @@ import { memo, useState } from "react";
 import { View } from "react-native";
 import { ThemedText } from "../themed-text";
 import { OutlineButton, PrimaryButton } from "../ui/button";
-import { KoshJoinDialog } from "./kosh-join-dialog";
+import { JoinNewKoshDialog } from "./join-new-kosh-dialog";
 
 export const KoshEmptyComponent = memo(() => {
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
   return (
     <>
-      <KoshJoinDialog
+      <JoinNewKoshDialog
         isVisible={isVisible}
         setIsVisible={setIsVisible}
         onConfirm={(token) => {

@@ -1,75 +1,80 @@
 import { KoshDetail } from "@kosh-app/api/routers/kosh";
-import { formatAmount } from "@kosh-app/utils";
-import { View } from "react-native";
+import { formatAmountCompact } from "@kosh-app/utils";
+import { Alert, Pressable, View } from "react-native";
 import { CurvedBackground } from "../layout/curved-background";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
-import { Chip } from "../ui/chip";
 import { KoshOptions } from "./kosh-options";
+import { KoshRoleChip } from "./kosh-role-chip";
 
 export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
+  const onShowAmount = (title: string, amount: string) => {
+    Alert.alert(title, `₹ ${amount}`);
+  };
+
   return (
     <CurvedBackground height={270}>
       <View className="gap-y-6 px-4 pt-safe-offset-14">
-        <View className="gap-y-1 w-full">
-          <View className="flex-row gap-2 items-center w-full">
-            <Avatar className="size-16">
-              <Avatar.Image source={kosh.iconUrl} alt={kosh.name} />
-              <Avatar.Fallback source={kosh.iconUrl} fallback={kosh.name} />
-            </Avatar>
-            <View className="flex-1 shrink">
-              <ThemedText
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                className="text-2xl font-notosans-semibold capitalize text-primary-foreground"
-              >
-                {kosh.name}
-              </ThemedText>
-              <View className="flex-row items-center gap-1">
-                <ThemedText className="text-gray-300">
-                  {kosh.memberCount} members ·
-                </ThemedText>
-                <Chip variant="soft" color="warning" size="sm">
-                  <Chip.Label className="uppercase font-mono-medium">
-                    {kosh.role}
-                  </Chip.Label>
-                </Chip>
-              </View>
-            </View>
-            <KoshOptions koshId={kosh.id} role={kosh.role} />
-          </View>
-          {kosh.description && (
-            <ThemedText className="text-gray-300 text-xs">
-              {kosh.description}
+        <View className="flex-row gap-2 items-center w-full">
+          <Avatar className="size-16">
+            <Avatar.Image source={kosh.iconUrl} alt={kosh.name} />
+            <Avatar.Fallback source={kosh.iconUrl} fallback={kosh.name} />
+          </Avatar>
+          <View className="flex-1 shrink">
+            <ThemedText
+              numberOfLines={1}
+              ellipsizeMode="tail"
+              className="text-2xl font-notosans-semibold capitalize text-primary-foreground"
+            >
+              {kosh.name}
             </ThemedText>
-          )}
+            <View className="flex-row items-center gap-1">
+              <ThemedText className="text-gray-300">
+                {kosh.memberCount} members ·
+              </ThemedText>
+              <KoshRoleChip role={kosh.role} />
+            </View>
+          </View>
+          <KoshOptions koshId={kosh.id} role={kosh.role} koshName={kosh.name} />
         </View>
         <View className="flex-row items-center gap-3">
-          <View className="flex-row items-center gap-1.5 bg-black/20 p-3 pr-5 rounded-3xl">
-            <View className="size-10 rounded-full items-center justify-center bg-primary/40">
+          <Pressable
+            onPress={() => {
+              onShowAmount("Total Collected", kosh.totalCollected);
+            }}
+            className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl"
+          >
+            <View className="size-10 rounded-full items-center justify-center bg-primary/40 shrink-0">
               <StyledSymbolView
                 tintColorClassName="accent-warning"
                 size={18}
-                name={{
-                  android: "database",
-                }}
+                name={{ android: "database" }}
               />
             </View>
-            <View>
+            <View className="flex-1 min-w-0">
               <ThemedText className="text-xs text-gray-300">
                 COLLECTED
               </ThemedText>
-              <ThemedText className="text-base">
-                रु {""}
-                <ThemedText className="font-mono-semibold text-2xl">
-                  {formatAmount(kosh.totalCollected)}
+              <ThemedText
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                className="text-sm text-primary-foreground"
+              >
+                रु{" "}
+                <ThemedText className="font-mono-semibold text-lg text-primary-foreground">
+                  {formatAmountCompact(kosh.totalCollected)}
                 </ThemedText>
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
 
-          <View className="flex-row items-center gap-1.5 bg-black/20 p-3 pr-6 rounded-3xl">
+          <Pressable
+            onPress={() => {
+              onShowAmount("In Kosh", kosh.totalRemaining);
+            }}
+            className="flex-1 min-w-0 flex-row items-center gap-1.5 bg-black/20 p-3 rounded-3xl"
+          >
             <View className="size-10 rounded-full items-center justify-center bg-primary/40">
               <StyledSymbolView
                 tintColorClassName="accent-warning"
@@ -81,14 +86,14 @@ export const KoshDetailsHeader = ({ kosh }: { kosh: KoshDetail }) => {
             </View>
             <View>
               <ThemedText className="text-xs text-gray-300">IN KOSH</ThemedText>
-              <ThemedText className="text-base">
+              <ThemedText className="text-xs text-primary-foreground">
                 रु {""}
-                <ThemedText className="font-mono-semibold text-2xl">
-                  {formatAmount(kosh.totalRemaining)}
+                <ThemedText className="font-mono-semibold text-lg text-primary-foreground">
+                  {formatAmountCompact(kosh.totalRemaining)}
                 </ThemedText>
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
         </View>
       </View>
     </CurvedBackground>

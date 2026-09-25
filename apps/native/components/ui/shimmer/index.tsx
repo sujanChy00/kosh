@@ -1,12 +1,20 @@
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { memo, useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
+  Easing,
   View,
   type LayoutChangeEvent,
   type LayoutRectangle,
 } from "react-native";
-import { Easing } from "react-native-reanimated";
 import { SHIMMER_PRESETS } from "./const";
 import type { IShimmerEffect, IShimmerGroup } from "./shimmer.types";
 
@@ -20,17 +28,22 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
     style,
     variant = "shimmer",
     direction = "leftToRight",
-    preset = "dark",
+    preset,
     opacity = 1,
     children,
   }: IShimmerEffect):
     (React.ReactNode & React.JSX.Element & React.ReactElement) | null => {
+    const { isDark } = useAppTheme();
     const [layout, setLayout] = useState<LayoutRectangle | null>(null);
     const shimmerAnim = useRef<Animated.Value>(new Animated.Value(0)).current;
     const pulseAnim = useRef<Animated.Value>(new Animated.Value(0.3)).current;
     const fadeAnim = useRef<Animated.Value>(new Animated.Value(0)).current;
 
-    const theme = SHIMMER_PRESETS[preset] ?? SHIMMER_PRESETS.dark;
+    const theme = useMemo(() => {
+      if (preset) return SHIMMER_PRESETS[preset] ?? SHIMMER_PRESETS.dark;
+      if (isDark) return SHIMMER_PRESETS["dark"];
+      return SHIMMER_PRESETS["neutral"];
+    }, [SHIMMER_PRESETS, preset, isDark]);
 
     const themeColors =
       shimmerColors && shimmerColors.length >= 2 ? shimmerColors : theme.colors;
@@ -125,7 +138,7 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
           return {
             transform: [
               {
-                translateX: shimmerAnim.interpolate<number>({
+                translateX: shimmerAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [-waveWidth, layout.width + waveWidth],
                 }),
@@ -147,7 +160,7 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
           return {
             transform: [
               {
-                translateY: shimmerAnim.interpolate<number>({
+                translateY: shimmerAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [-waveWidth, layout.height + waveWidth],
                 }),
@@ -158,7 +171,7 @@ export const ShimmerEffect: React.FC<IShimmerEffect> &
           return {
             transform: [
               {
-                translateY: shimmerAnim.interpolate<number>({
+                translateY: shimmerAnim.interpolate({
                   inputRange: [0, 1],
                   outputRange: [layout.height + waveWidth, -waveWidth],
                 }),
@@ -259,7 +272,7 @@ export const ShimmerGroup: React.FC<IShimmerGroup> &
   ({
     isLoading = true,
     children,
-    preset = "dark",
+    preset,
     shimmerColors,
     duration = 1500,
     direction = "leftToRight",
@@ -298,6 +311,7 @@ export const ShimmerGroup: React.FC<IShimmerGroup> &
     return <>{propagateProps(children)}</>;
   },
 );
+
 export const Shimmer: React.FC<IShimmerEffect> &
   React.FunctionComponent<IShimmerEffect> = memo<IShimmerEffect>(
   (

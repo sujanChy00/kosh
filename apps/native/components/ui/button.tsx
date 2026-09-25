@@ -4,11 +4,13 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
   View,
+  ViewProps,
 } from "react-native";
 import { ThemedText } from "../themed-text";
 
-interface ButtonProps extends TouchableOpacityProps {
+interface ButtonProps extends Omit<TouchableOpacityProps, "style"> {
   wrapperClassName?: string;
+  style?: ViewProps["style"];
 }
 
 const SecondaryRoot = ({
@@ -16,11 +18,14 @@ const SecondaryRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -30,6 +35,7 @@ const SecondaryRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -50,11 +56,14 @@ const PrimaryRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -64,6 +73,7 @@ const PrimaryRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -85,11 +95,14 @@ const DangerRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -99,6 +112,7 @@ const DangerRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -119,11 +133,14 @@ const DangerGhostRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -133,6 +150,7 @@ const DangerGhostRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -153,11 +171,14 @@ const WarningRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -167,6 +188,7 @@ const WarningRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -188,11 +210,14 @@ const DangerSoftRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -202,6 +227,7 @@ const DangerSoftRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -223,11 +249,14 @@ const TertiaryRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -237,6 +266,7 @@ const TertiaryRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -258,11 +288,14 @@ const GhostRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -272,6 +305,7 @@ const GhostRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>
@@ -293,11 +327,14 @@ const OutlineRoot = ({
   disabled = false,
   wrapperClassName,
   children,
+  style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -307,6 +344,7 @@ const OutlineRoot = ({
           disabled && "opacity-50",
           className,
         )}
+        style={style}
       >
         {children}
       </View>

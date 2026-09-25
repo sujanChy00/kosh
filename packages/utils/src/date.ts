@@ -42,3 +42,12 @@ export const formatRemainingDays = (date: Date) => {
 
   return `${days} ${days === 1 ? "day" : "days"} left`;
 };
+
+export function formatPeriodName(periodStr: string) {
+  const [yearStr, monthStr] = periodStr.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  if (!year || !month) return periodStr;
+  const date = new Date(year, month - 1, 1);
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}

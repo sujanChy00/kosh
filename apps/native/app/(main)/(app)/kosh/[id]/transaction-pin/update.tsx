@@ -1,6 +1,5 @@
 import { TransactionPinPasswordDialog } from "@/components/kosh/transaction-pin/transaction-pin-password-dialog";
 import { ThemedText } from "@/components/themed-text";
-import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { useAppTheme } from "@/contexts/app-theme-context";
 import {
   TRANSACTION_PIN_FORM_VALUES,
@@ -14,7 +13,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 const UpdateTransactionPinScreen = () => {
   const haptics = useHaptics();
@@ -152,38 +150,24 @@ const UpdateTransactionPinScreen = () => {
               />
             )}
           />
+          <View>
+            <TouchableOpacity
+              className="py-3"
+              onPress={handleForgot}
+              disabled={forgotMutation.isPending}
+            >
+              <ThemedText className="text-center">
+                {forgotMutation.isPending ? "Sending…" : "Forgot Pin?"}
+              </ThemedText>
+            </TouchableOpacity>
+            <form.SubmitButton disabled={forgotMutation.isPending}>
+              <ThemedText className="text-primary-foreground">
+                {updateMutation.isPending ? "Submitting…" : "Submit"}
+              </ThemedText>
+            </form.SubmitButton>
+          </View>
         </View>
-        <AnimatedSpacer height={400} />
       </ScrollView>
-      <KeyboardStickyView
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: 12,
-          backgroundColor: colors.background,
-        }}
-        offset={{
-          closed: -20,
-          opened: -10,
-        }}
-      >
-        <TouchableOpacity
-          className="py-3"
-          onPress={handleForgot}
-          disabled={forgotMutation.isPending}
-        >
-          <ThemedText className="text-center">
-            {forgotMutation.isPending ? "Sending…" : "Forgot Pin?"}
-          </ThemedText>
-        </TouchableOpacity>
-        <form.SubmitButton disabled={forgotMutation.isPending}>
-          <ThemedText className="text-primary-foreground">
-            {updateMutation.isPending ? "Submitting…" : "Submit"}
-          </ThemedText>
-        </form.SubmitButton>
-      </KeyboardStickyView>
     </form.AppForm>
   );
 };

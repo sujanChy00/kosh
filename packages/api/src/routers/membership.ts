@@ -1,8 +1,9 @@
 import { db } from "@kosh-app/db";
 import { koshMembership, koshRoleRequest } from "@kosh-app/db/schema/kosh";
+import { loanRepayment } from "@kosh-app/db/schema/loans";
 import { notification } from "@kosh-app/db/schema/notifications";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -123,7 +124,11 @@ export const membershipRouter = router({
           })
           .returning();
 
-        if (!row) throw new Error("Invitation insert returned no row");
+        if (!row)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create invitation. Please try again.",
+          });
 
         await tx.insert(notification).values({
           userId: input.userId,
@@ -150,7 +155,7 @@ export const membershipRouter = router({
   respondTreasurerInvite: protectedProcedure
     .input(
       z.object({
-        requestId: z.string().uuid(),
+        requestId: z.uuid(),
         accept: z.boolean(),
         reason: z.string().trim().max(300).optional(),
       }),
@@ -215,7 +220,11 @@ export const membershipRouter = router({
             .returning();
 
           if (!updated || !resolved) {
-            throw new Error("Failed to accept invitation");
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "Invitation is no longer active or could not be accepted.",
+            });
           }
           return resolved;
         }
@@ -230,7 +239,11 @@ export const membershipRouter = router({
           .where(eq(koshRoleRequest.id, input.requestId))
           .returning();
 
-        if (!resolved) throw new Error("Failed to reject invitation");
+        if (!resolved)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Invitation is no longer active or could not be rejected.",
+          });
         return resolved;
       });
 
@@ -306,15 +319,359 @@ export const membershipRouter = router({
       createdAt: request.createdAt,
     }));
   }),
+
+  /** Detailed information for a single kosh member including profile, stats, loan, and contributions history. */
+  getMemberDetail: protectedProcedure
+    .input(z.object({ koshId: koshIdSchema, userId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const viewerMembership = await getActiveMembership(
+        input.koshId,
+        ctx.session.user.id,
+      );
+      if (!viewerMembership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not a member of this kosh",
+        });
+      }
+
+      const targetMembership = await db.query.koshMembership.findFirst({
+        where: (m, { and: a, eq: q }) =>
+          a(q(m.koshId, input.koshId), q(m.userId, input.userId)),
+        with: {
+          user: {
+            columns: { id: true, name: true, email: true, image: true },
+          },
+        },
+      });
+
+      if (!targetMembership) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Member not found in this kosh",
+        });
+      }
+
+      const koshData = await db.query.kosh.findFirst({
+        where: (k, { eq: q }) => q(k.id, input.koshId),
+        columns: {
+          id: true,
+          name: true,
+          monthlyAmount: true,
+          currency: true,
+          dueDay: true,
+          loanCap: true,
+          memberInterestRate: true,
+        },
+      });
+
+      if (!koshData) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Kosh not found" });
+      }
+
+      const memberContributions = await db.query.contribution.findMany({
+        where: (c, { and: a, eq: q }) =>
+          a(q(c.koshId, input.koshId), q(c.memberId, input.userId)),
+        orderBy: (c, { desc: d }) => [d(c.period)],
+      });
+
+      let totalPaid = 0;
+      let totalPenaltiesPaid = 0;
+      let paidPeriodsCount = 0;
+      let pendingPeriodsCount = 0;
+      let latePeriodsCount = 0;
+      let arrearsAmount = 0;
+
+      const contributionsList = memberContributions.map((c) => {
+        const cAmount = parseFloat(c.contributionAmount ?? "0");
+        const pPaid = parseFloat(c.penaltyPaid ?? "0");
+        const pAssessed = parseFloat(c.penaltyAssessed ?? "0");
+        const expected = parseFloat(c.expectedAmount ?? "0");
+
+        totalPaid += cAmount;
+        totalPenaltiesPaid += pPaid;
+
+        if (c.status === "paid") {
+          paidPeriodsCount++;
+        } else if (c.status === "late") {
+          paidPeriodsCount++;
+          latePeriodsCount++;
+        } else {
+          pendingPeriodsCount++;
+          if (c.status === "partial") {
+            arrearsAmount += Math.max(0, expected - cAmount);
+          } else {
+            arrearsAmount += expected;
+          }
+        }
+
+        arrearsAmount += Math.max(0, pAssessed - pPaid);
+
+        return {
+          id: c.id,
+          period: c.period,
+          expectedAmount: c.expectedAmount,
+          contributionAmount: c.contributionAmount,
+          penaltyAssessed: c.penaltyAssessed,
+          penaltyPaid: c.penaltyPaid,
+          status: c.status,
+          datePaid: c.datePaid ? c.datePaid.toISOString() : null,
+        };
+      });
+
+      const activeLoan = await db.query.loan.findFirst({
+        where: (l, { and: a, eq: q }) =>
+          a(q(l.koshId, input.koshId), q(l.borrowerId, input.userId)),
+        orderBy: (l, { desc: d }) => [d(l.createdAt)],
+      });
+
+      let loanData = null;
+      if (activeLoan) {
+        const [repaymentAgg] = await db
+          .select({
+            totalRepaid: sql<string>`coalesce(sum(${loanRepayment.principalPortion} + ${loanRepayment.interestPortion}), 0)`,
+            totalInterestPaid: sql<string>`coalesce(sum(${loanRepayment.interestPortion}), 0)`,
+          })
+          .from(loanRepayment)
+          .where(eq(loanRepayment.loanId, activeLoan.id));
+
+        loanData = {
+          id: activeLoan.id,
+          principal: activeLoan.principal,
+          interestRate: activeLoan.interestRate,
+          issueDate: activeLoan.issueDate,
+          amountRemaining: activeLoan.amountRemaining,
+          status: activeLoan.status,
+          totalRepaid: repaymentAgg?.totalRepaid ?? "0",
+          totalInterestPaid: repaymentAgg?.totalInterestPaid ?? "0",
+        };
+      }
+
+      const pendingInvite = await db.query.koshRoleRequest.findFirst({
+        where: (r, { and: a, eq: q }) =>
+          a(
+            q(r.koshId, input.koshId),
+            q(r.inviteeId, input.userId),
+            q(r.status, "pending"),
+          ),
+        columns: { id: true, createdAt: true },
+      });
+
+      return {
+        viewerRole: viewerMembership.role,
+        isSelf: ctx.session.user.id === input.userId,
+        member: {
+          userId: targetMembership.userId,
+          name: targetMembership.user.name,
+          email: targetMembership.user.email,
+          image: targetMembership.user.image,
+          role: targetMembership.role,
+          status: targetMembership.status,
+          joinedAt: targetMembership.joinedAt
+            ? targetMembership.joinedAt.toISOString()
+            : null,
+        },
+        kosh: koshData,
+        stats: {
+          totalPaid: String(totalPaid),
+          totalPenaltiesPaid: String(totalPenaltiesPaid),
+          paidPeriodsCount,
+          pendingPeriodsCount,
+          latePeriodsCount,
+          arrearsAmount: String(arrearsAmount),
+        },
+        activeLoan: loanData,
+        contributions: contributionsList,
+        pendingTreasurerInvite: pendingInvite
+          ? {
+              id: pendingInvite.id,
+              createdAt: pendingInvite.createdAt.toISOString(),
+            }
+          : null,
+      };
+    }),
+
+  /** Remove a member from the kosh (must be Adhyaksh or Koshadhyaksh). */
+  removeMember: protectedProcedure
+    .input(z.object({ koshId: koshIdSchema, userId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const viewerMembership = await getActiveMembership(
+        input.koshId,
+        ctx.session.user.id,
+      );
+      if (
+        !viewerMembership ||
+        (viewerMembership.role !== "adhyaksh" &&
+          viewerMembership.role !== "koshadhyaksh")
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only an Adhyaksh or Koshadhyaksh can remove members",
+        });
+      }
+
+      if (ctx.session.user.id === input.userId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You cannot remove yourself using this action",
+        });
+      }
+
+      const targetMembership = await getActiveMembership(
+        input.koshId,
+        input.userId,
+      );
+      if (!targetMembership) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "That member is not an active member of this kosh",
+        });
+      }
+
+      if (targetMembership.role === "adhyaksh") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "The Adhyaksh cannot be removed",
+        });
+      }
+
+      const activeLoan = await db.query.loan.findFirst({
+        where: (l, { and: a, eq: q, inArray: inArr }) =>
+          a(
+            q(l.koshId, input.koshId),
+            q(l.borrowerId, input.userId),
+            inArr(l.status, ["active", "defaulted"]),
+          ),
+      });
+      if (activeLoan) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot remove a member with an active or defaulted loan",
+        });
+      }
+
+      const [updated] = await db
+        .update(koshMembership)
+        .set({ status: "removed", leftAt: new Date() })
+        .where(
+          and(
+            eq(koshMembership.koshId, input.koshId),
+            eq(koshMembership.userId, input.userId),
+          ),
+        )
+        .returning();
+
+      return updated;
+    }),
+
+  /** Demote a Koshadhyaksh back to Sadasya (must be Adhyaksh). */
+  demoteTreasurer: protectedProcedure
+    .input(z.object({ koshId: koshIdSchema, userId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const viewerMembership = await getActiveMembership(
+        input.koshId,
+        ctx.session.user.id,
+      );
+      if (!viewerMembership || viewerMembership.role !== "adhyaksh") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only the Adhyaksh can demote treasurers",
+        });
+      }
+
+      const targetMembership = await getActiveMembership(
+        input.koshId,
+        input.userId,
+      );
+      if (!targetMembership || targetMembership.role !== "koshadhyaksh") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "That member is not a Koshadhyaksh",
+        });
+      }
+
+      const [updated] = await db
+        .update(koshMembership)
+        .set({ role: "sadasya" })
+        .where(
+          and(
+            eq(koshMembership.koshId, input.koshId),
+            eq(koshMembership.userId, input.userId),
+          ),
+        )
+        .returning();
+
+      return updated;
+    }),
 });
 
 export type InviteTreasurerInput = {
   koshId: string;
   userId: string;
 };
-
+type KoshRole = "adhyaksh" | "koshadhyaksh" | "sadasya";
+type MemberShipStatus = "active" | "pending" | "left" | "removed";
+type ContributionStatus = "pending" | "paid" | "partial" | "late";
+type LoanStatus = "active" | "paid_off" | "defaulted";
 export type RespondTreasurerInviteInput = {
   requestId: string;
   accept: boolean;
   reason?: string;
 };
+
+export type MemberDetailData = {
+  viewerRole: KoshRole;
+  isSelf: boolean;
+  member: {
+    userId: string;
+    name: string | null;
+    email: string | null;
+    image: string | null;
+    role: KoshRole;
+    status: MemberShipStatus;
+    joinedAt: string | null;
+  };
+  kosh: {
+    id: string;
+    name: string;
+    monthlyAmount: string;
+    currency: string;
+    dueDay: number;
+    loanCap: string;
+    memberInterestRate: string;
+  };
+  stats: {
+    totalPaid: string;
+    totalPenaltiesPaid: string;
+    paidPeriodsCount: number;
+    pendingPeriodsCount: number;
+    latePeriodsCount: number;
+    arrearsAmount: string;
+  };
+  activeLoan: {
+    id: string;
+    principal: string;
+    interestRate: string;
+    issueDate: string;
+    amountRemaining: string;
+    status: LoanStatus;
+    totalRepaid: string;
+    totalInterestPaid: string;
+  } | null;
+  contributions: {
+    id: string;
+    period: string;
+    expectedAmount: string;
+    contributionAmount: string;
+    penaltyAssessed: string;
+    penaltyPaid: string;
+    status: ContributionStatus;
+    datePaid: string | null;
+  }[];
+  pendingTreasurerInvite: {
+    id: string;
+    createdAt: string;
+  } | null;
+};
+
+export type MemberContributionItem = MemberDetailData["contributions"][number];

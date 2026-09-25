@@ -62,6 +62,12 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
+        name="kosh/[id]/(contribution-history)"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="kosh/[id]/transaction-pin/update"
         options={{
           headerShown: false,
@@ -83,6 +89,18 @@ const AppLayout = () => {
         name="kosh/[id]/join-request"
         options={{
           headerTitle: "Join requests",
+        }}
+      />
+      <Stack.Screen
+        name="kosh/[id]/[userId]/index"
+        options={{
+          headerTitle: "Member details",
+        }}
+      />
+      <Stack.Screen
+        name="kosh/[id]/(loans)"
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen

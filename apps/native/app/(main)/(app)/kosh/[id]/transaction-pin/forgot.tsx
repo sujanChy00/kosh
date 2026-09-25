@@ -1,6 +1,5 @@
 import { TransactionPinPasswordDialog } from "@/components/kosh/transaction-pin/transaction-pin-password-dialog";
 import { ThemedText } from "@/components/themed-text";
-import { AnimatedSpacer } from "@/components/ui/animated-spacer";
 import { PrimaryButton } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { useAppTheme } from "@/contexts/app-theme-context";
@@ -19,7 +18,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import { ScrollView, TouchableOpacity, View } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 const ForgotTransactionPinScreen = () => {
   const { colors } = useAppTheme();
@@ -190,36 +188,22 @@ const ForgotTransactionPinScreen = () => {
               />
             )}
           />
+          <View>
+            <TouchableOpacity
+              className="py-3"
+              onPress={handleResend}
+              disabled={resendMutation.isPending}
+            >
+              <ThemedText className="text-center uppercase">
+                {resendMutation.isPending ? "Resending..." : "RESEND"}
+              </ThemedText>
+            </TouchableOpacity>
+            <form.SubmitButton disabled={resendMutation.isPending}>
+              <PrimaryButton.Label>Confirm Pin</PrimaryButton.Label>
+            </form.SubmitButton>
+          </View>
         </View>
-        <AnimatedSpacer height={400} />
       </ScrollView>
-      <KeyboardStickyView
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          paddingHorizontal: 12,
-          backgroundColor: colors.background,
-        }}
-        offset={{
-          closed: -20,
-          opened: -10,
-        }}
-      >
-        <TouchableOpacity
-          className="py-3"
-          onPress={handleResend}
-          disabled={resendMutation.isPending}
-        >
-          <ThemedText className="text-center uppercase">
-            {resendMutation.isPending ? "Resending..." : "RESEND"}
-          </ThemedText>
-        </TouchableOpacity>
-        <form.SubmitButton disabled={resendMutation.isPending}>
-          <PrimaryButton.Label>Confirm Pin</PrimaryButton.Label>
-        </form.SubmitButton>
-      </KeyboardStickyView>
     </form.AppForm>
   );
 };

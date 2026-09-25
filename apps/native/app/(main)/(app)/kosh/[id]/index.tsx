@@ -1,6 +1,7 @@
 import { AnimatedView } from "@/components/animated-view";
 import { KoshContributionInfo } from "@/components/kosh/kosh-contribution-info";
 import { KoshDetailsHeader } from "@/components/kosh/kosh-details-header";
+import { KoshFinancialStats } from "@/components/kosh/kosh-financial-stats";
 import { KoshLoanTerms } from "@/components/kosh/kosh-loan-terms";
 import { KoshMembersList } from "@/components/kosh/kosh-membership-list";
 import { ErrorComponent } from "@/components/layout/error-component";
@@ -10,8 +11,7 @@ import { PrimaryButton } from "@/components/ui/button";
 import { trpc } from "@/utils/trpc";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocalSearchParams } from "expo-router";
-import { ScrollView, View } from "react-native";
-import { RefreshControl } from "react-native-gesture-handler";
+import { RefreshControl, ScrollView, View } from "react-native";
 import { SlideInDown } from "react-native-reanimated";
 
 const KoshDetailScreen = () => {
@@ -45,7 +45,14 @@ const KoshDetailScreen = () => {
   return (
     <View className="flex-1">
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isRefetching} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => {
+              refetch();
+            }}
+          />
+        }
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="gap-y-6 pb-safe-offset-36"
@@ -54,6 +61,7 @@ const KoshDetailScreen = () => {
         <View className="gap-y-6 px-4">
           <KoshLoanTerms kosh={koshData} />
           <KoshContributionInfo kosh={koshData} />
+          <KoshFinancialStats kosh={koshData} />
           <KoshMembersList kosh={koshData} />
         </View>
       </ScrollView>
@@ -64,7 +72,7 @@ const KoshDetailScreen = () => {
         <Link
           asChild
           href={{
-            pathname: "/kosh/[id]/invite",
+            pathname: "/kosh/[id]/contribute",
             params: {
               id: koshData.id,
             },

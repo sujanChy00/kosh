@@ -1,5 +1,5 @@
+import { cn } from "@kosh-app/utils";
 import { ActivityIndicator, Modal, View } from "react-native";
-import { twMerge } from "tailwind-merge";
 import { ThemedText } from "../themed-text";
 
 interface Props {
@@ -26,7 +26,7 @@ export const FullScreenSpinner = ({
     >
       <View className="flex-1 items-center justify-center bg-black/50">
         <View
-          className={twMerge(
+          className={cn(
             "items-center rounded-lg bg-background px-6 py-5 gap-y-3",
             className,
           )}
