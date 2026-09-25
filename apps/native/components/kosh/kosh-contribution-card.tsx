@@ -20,7 +20,10 @@ export const KoshContributionCard = ({
       <View className="flex-row items-center justify-between gap-3">
         <View className="flex-row items-center gap-2.5 flex-1 shrink">
           <Avatar className="size-9">
-            <Avatar.Image source={item.memberImage} alt={item.memberName ?? "Member"} />
+            <Avatar.Image
+              source={item.memberImage}
+              alt={item.memberName ?? "Member"}
+            />
             <Avatar.Fallback
               className="text-xs font-notosans-medium"
               source={item.memberImage}
@@ -68,7 +71,9 @@ export const KoshContributionCard = ({
                 रु {formatAmount(String(penaltyOwed))}
               </ThemedText>
             </View>
-          ) : <View />}
+          ) : (
+            <View />
+          )}
           {Number(item.penaltyPaid) > 0 && (
             <View>
               <ThemedText
@@ -91,6 +96,49 @@ export const KoshContributionCard = ({
           )}
         </View>
       )}
+
+      {item.loanRepayment &&
+        (Number(item.loanRepayment.principalPaid) > 0 ||
+          Number(item.loanRepayment.interestPaid) > 0) && (
+          <View className="gap-y-2 bg-surface-secondary p-3 rounded-xl mt-0.5">
+            <View className="flex-row items-center justify-between gap-3 pb-1.5 border-b border-separator">
+              <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+                Loan Taken
+              </ThemedText>
+              <ThemedText className="text-xs font-mono-semibold text-foreground">
+                रु {formatAmount(item.loanRepayment.originalPrincipal ?? "")}
+              </ThemedText>
+            </View>
+
+            <View className="flex-row items-center justify-between gap-3">
+              <View>
+                <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+                  Principal Paid
+                </ThemedText>
+                <ThemedText className="text-xs font-mono-semibold">
+                  रु {formatAmount(item.loanRepayment.principalPaid)}
+                </ThemedText>
+              </View>
+              <View>
+                <ThemedText className="text-xs text-success font-mono-regular text-right">
+                  Interest Paid
+                </ThemedText>
+                <ThemedText className="text-xs text-success font-mono-semibold text-right">
+                  रु {formatAmount(item.loanRepayment.interestPaid)}
+                </ThemedText>
+              </View>
+            </View>
+
+            <View className="flex-row items-center justify-between gap-3 pt-1.5 border-t border-separator">
+              <ThemedText className="text-xs text-muted-foreground font-mono-regular">
+                Remaining Loan Owed
+              </ThemedText>
+              <ThemedText className="text-xs font-mono-semibold text-warning">
+                रु {formatAmount(item.loanRepayment.remainingBalanceAfter)}
+              </ThemedText>
+            </View>
+          </View>
+        )}
 
       {item.datePaid && (
         <ThemedText className="text-muted text-xs font-mono-regular text-right">

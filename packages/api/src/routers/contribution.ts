@@ -4,7 +4,7 @@ import { contribution } from "@kosh-app/db/schema/contributions";
 import { koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -1090,24 +1090,90 @@ export const contributionRouter = router({
       const page = rows.slice(0, limit);
       const last = page[page.length - 1];
 
-      const items = page.map((r) => ({
-        id: r.contribution.id,
-        koshId: r.contribution.koshId,
-        memberId: r.contribution.memberId,
-        memberName: r.member.name,
-        memberImage: r.member.image,
-        period: r.contribution.period,
-        periodLabel: periodLabel(r.contribution.period),
-        expectedAmount: r.contribution.expectedAmount,
-        contributionAmount: r.contribution.contributionAmount,
-        penaltyAssessed: r.contribution.penaltyAssessed,
-        penaltyPaid: r.contribution.penaltyPaid,
-        status: r.contribution.status,
-        datePaid: r.contribution.datePaid
-          ? r.contribution.datePaid.toISOString()
-          : null,
-        createdAt: r.contribution.createdAt.toISOString(),
-      }));
+      // Fetch loan repayments for the members in this page for this kosh
+      const memberIds = Array.from(
+        new Set(page.map((r) => r.contribution.memberId)),
+      );
+
+      const repayments =
+        memberIds.length > 0
+          ? await db
+              .select({
+                borrowerId: loan.borrowerId,
+                originalPrincipal: loan.principal,
+                principalPortion: loanRepayment.principalPortion,
+                interestPortion: loanRepayment.interestPortion,
+                remainingBalanceAfter: loanRepayment.remainingBalanceAfter,
+                date: loanRepayment.date,
+              })
+              .from(loanRepayment)
+              .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+              .where(
+                and(
+                  eq(loan.koshId, input.koshId),
+                  inArray(loan.borrowerId, memberIds),
+                ),
+              )
+          : [];
+
+      const repaymentByMemberDate = new Map<
+        string,
+        {
+          originalPrincipal: string;
+          principalPaid: number;
+          interestPaid: number;
+          remainingBalanceAfter: string;
+        }
+      >();
+      for (const rep of repayments) {
+        if (!rep.borrowerId || !rep.date) continue;
+        const dateKey = `${rep.borrowerId}_${toDateString(rep.date)}`;
+        const existing = repaymentByMemberDate.get(dateKey) ?? {
+          originalPrincipal: rep.originalPrincipal ?? "0",
+          principalPaid: 0,
+          interestPaid: 0,
+          remainingBalanceAfter: rep.remainingBalanceAfter ?? "0",
+        };
+        existing.principalPaid += parseFloat(rep.principalPortion ?? "0");
+        existing.interestPaid += parseFloat(rep.interestPortion ?? "0");
+        existing.originalPrincipal = rep.originalPrincipal ?? existing.originalPrincipal;
+        existing.remainingBalanceAfter = rep.remainingBalanceAfter ?? "0";
+        repaymentByMemberDate.set(dateKey, existing);
+      }
+
+      const items = page.map((r) => {
+        const dateKey = r.contribution.datePaid
+          ? `${r.contribution.memberId}_${toDateString(r.contribution.datePaid)}`
+          : null;
+        const rep = dateKey ? repaymentByMemberDate.get(dateKey) : null;
+
+        return {
+          id: r.contribution.id,
+          koshId: r.contribution.koshId,
+          memberId: r.contribution.memberId,
+          memberName: r.member.name,
+          memberImage: r.member.image,
+          period: r.contribution.period,
+          periodLabel: periodLabel(r.contribution.period),
+          expectedAmount: r.contribution.expectedAmount,
+          contributionAmount: r.contribution.contributionAmount,
+          penaltyAssessed: r.contribution.penaltyAssessed,
+          penaltyPaid: r.contribution.penaltyPaid,
+          status: r.contribution.status,
+          datePaid: r.contribution.datePaid
+            ? r.contribution.datePaid.toISOString()
+            : null,
+          loanRepayment: rep
+            ? {
+                originalPrincipal: rep.originalPrincipal,
+                principalPaid: String(rep.principalPaid),
+                interestPaid: String(rep.interestPaid),
+                remainingBalanceAfter: rep.remainingBalanceAfter,
+              }
+            : null,
+          createdAt: r.contribution.createdAt.toISOString(),
+        };
+      });
 
       return {
         items,
@@ -1244,5 +1310,11 @@ export type KoshContributionHistoryItem = {
   penaltyPaid: string;
   status: "pending" | "paid" | "partial" | "late";
   datePaid: string | null;
+  loanRepayment: {
+    originalPrincipal: string;
+    principalPaid: string;
+    interestPaid: string;
+    remainingBalanceAfter: string;
+  } | null;
   createdAt: string;
 };
