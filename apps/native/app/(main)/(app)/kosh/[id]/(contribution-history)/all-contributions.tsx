@@ -1,9 +1,9 @@
 import { AnimatedView } from "@/components/animated-view";
+import { KoshContributionFilters } from "@/components/kosh/kosh-contribution-filters";
+import { KoshContributionList } from "@/components/kosh/kosh-contribution-list";
 import { EmptyComponent } from "@/components/layout/empty-component";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
-import { KoshLoanFilters } from "@/components/loan/kosh-loan-filters";
-import { KoshLoanList } from "@/components/loan/kosh-loan-list";
 import { ThemedText } from "@/components/themed-text";
 import { trpc } from "@/utils/trpc";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import { FadeInUp, FadeOut, LinearTransition } from "react-native-reanimated";
 
 const PAGE_SIZE = 10;
 
-const AllLoanScreen = () => {
+const AllContributionsScreen = () => {
   const {
     id: koshId,
     dateFrom,
@@ -37,14 +37,13 @@ const AllLoanScreen = () => {
     isFetchingNextPage,
     isRefetching,
     refetch,
-    isLoading,
+    isPending,
     error,
     isError,
   } = useInfiniteQuery(
-    trpc.loan.allLoansByKosh.infiniteQueryOptions(
+    trpc.contribution.allContributionsByKosh.infiniteQueryOptions(
       {
         koshId,
-        status: "all",
         memberId: memberId === "all" ? undefined : memberId,
         dateFrom,
         dateTo,
@@ -76,47 +75,47 @@ const AllLoanScreen = () => {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading) return <PendingComponent />;
+  if (isPending) return <PendingComponent />;
 
   if (isError) {
     return (
       <ErrorComponent
         refetch={refetch}
-        message={error?.message ?? "Failed to load kosh loans."}
+        message={error?.message ?? "Failed to load contribution history."}
       />
     );
   }
 
   return (
-    <>
-      <KoshLoanFilters />
+    <View className="flex-1 bg-background">
+      <KoshContributionFilters />
       {items.length === 0 ? (
         <EmptyComponent
-          actionButtonOnPress={isFiltered ? clearFilters : refetch}
+          actionButtonOnPress={clearFilters}
           actionButtonContent={
             <ThemedText className="text-primary-foreground">
-              {isFiltered ? "Clear Filters" : "Try again"}
+              Clear Filters
             </ThemedText>
           }
           message={
             isFiltered
-              ? "No loans match your filters"
-              : "No loans or requests found"
+              ? "No contributions match your filters"
+              : "No contribution history found"
           }
           description={
             isFiltered
               ? "Try adjusting or resetting the filters."
-              : "Loans and pending requests for this kosh will appear here."
+              : "Contribution records for this kosh will appear here."
           }
         />
       ) : (
-        <View>
+        <View className="flex-1">
           {isFiltered && (
             <AnimatedView
               entering={FadeInUp.duration(200)}
               exiting={FadeOut.duration(150)}
               layout={LinearTransition.duration(200)}
-              className="p-4 justify-center gap-y-1"
+              className="p-4 pb-0 justify-center gap-y-1"
             >
               {!!memberName && (
                 <ThemedText className="text-xs">
@@ -137,7 +136,7 @@ const AllLoanScreen = () => {
               )}
             </AnimatedView>
           )}
-          <KoshLoanList
+          <KoshContributionList
             items={items}
             isFetchingNextPage={isFetchingNextPage}
             hasNextPage={hasNextPage}
@@ -147,8 +146,8 @@ const AllLoanScreen = () => {
           />
         </View>
       )}
-    </>
+    </View>
   );
 };
 
-export default AllLoanScreen;
+export default AllContributionsScreen;

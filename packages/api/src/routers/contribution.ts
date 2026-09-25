@@ -4,7 +4,7 @@ import { contribution } from "@kosh-app/db/schema/contributions";
 import { koshPeriod } from "@kosh-app/db/schema/kosh";
 import { loan, loanRepayment } from "@kosh-app/db/schema/loans";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, lt, or } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, lte, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { protectedProcedure, router } from "../index";
@@ -593,6 +593,219 @@ async function runBulk(
   return { results, summary: { succeeded: results.length - failed, failed } };
 }
 
+async function queryContributionsByKosh(input: {
+  koshId: string;
+  userId: string;
+  limit?: number;
+  cursor?: string | null;
+  statusGroup?: "all" | "paid" | "pending" | "late";
+  memberId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const {
+    koshId,
+    userId,
+    cursor,
+    statusGroup = "all",
+    memberId,
+    dateFrom,
+    dateTo,
+  } = input;
+  const limit = input.limit ?? 20;
+
+  // Verify membership
+  const membership = await db.query.koshMembership.findFirst({
+    where: (m, { and: a, eq: q }) =>
+      a(
+        q(m.koshId, koshId),
+        q(m.userId, userId),
+        q(m.status, "active"),
+      ),
+  });
+
+  if (!membership) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "You are not a member of this kosh",
+    });
+  }
+
+  const conditions = [eq(contribution.koshId, koshId)];
+
+  if (statusGroup === "paid") {
+    conditions.push(inArray(contribution.status, ["paid", "late"]));
+  } else if (statusGroup === "pending") {
+    conditions.push(inArray(contribution.status, ["pending", "partial"]));
+  } else if (statusGroup === "late") {
+    conditions.push(eq(contribution.status, "late"));
+  }
+
+  if (memberId && memberId !== "all") {
+    conditions.push(eq(contribution.memberId, memberId));
+  }
+
+  if (dateFrom) {
+    conditions.push(gte(contribution.period, dateFrom));
+  }
+
+  if (dateTo) {
+    conditions.push(lte(contribution.period, dateTo));
+  }
+
+  if (cursor) {
+    const parts = cursor.split("|");
+    const cPeriod = parts[0];
+    const cTimestamp = parts[1];
+    const cId = parts[2];
+    if (cPeriod && cTimestamp && cId) {
+      const cDate = new Date(Number(cTimestamp));
+      conditions.push(
+        or(
+          lt(contribution.period, cPeriod),
+          and(
+            eq(contribution.period, cPeriod),
+            lt(contribution.createdAt, cDate),
+          ),
+          and(
+            eq(contribution.period, cPeriod),
+            eq(contribution.createdAt, cDate),
+            lt(contribution.id, cId),
+          ),
+        )!,
+      );
+    }
+  }
+
+  const rows = await db
+    .select({
+      contribution: {
+        id: contribution.id,
+        koshId: contribution.koshId,
+        memberId: contribution.memberId,
+        period: contribution.period,
+        expectedAmount: contribution.expectedAmount,
+        contributionAmount: contribution.contributionAmount,
+        penaltyAssessed: contribution.penaltyAssessed,
+        penaltyPaid: contribution.penaltyPaid,
+        status: contribution.status,
+        datePaid: contribution.datePaid,
+        createdAt: contribution.createdAt,
+      },
+      member: {
+        id: user.id,
+        name: user.name,
+        image: user.image,
+      },
+    })
+    .from(contribution)
+    .innerJoin(user, eq(contribution.memberId, user.id))
+    .where(and(...conditions))
+    .orderBy(
+      desc(contribution.period),
+      desc(contribution.createdAt),
+      desc(contribution.id),
+    )
+    .limit(limit + 1);
+
+  const hasMore = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const last = page[page.length - 1];
+
+  // Fetch loan repayments for the members in this page for this kosh
+  const pageMemberIds = Array.from(
+    new Set(page.map((r) => r.contribution.memberId)),
+  );
+
+  const repayments =
+    pageMemberIds.length > 0
+      ? await db
+          .select({
+            borrowerId: loan.borrowerId,
+            originalPrincipal: loan.principal,
+            principalPortion: loanRepayment.principalPortion,
+            interestPortion: loanRepayment.interestPortion,
+            remainingBalanceAfter: loanRepayment.remainingBalanceAfter,
+            date: loanRepayment.date,
+          })
+          .from(loanRepayment)
+          .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
+          .where(
+            and(
+              eq(loan.koshId, koshId),
+              inArray(loan.borrowerId, pageMemberIds),
+            ),
+          )
+      : [];
+
+  const repaymentByMemberDate = new Map<
+    string,
+    {
+      originalPrincipal: string;
+      principalPaid: number;
+      interestPaid: number;
+      remainingBalanceAfter: string;
+    }
+  >();
+  for (const rep of repayments) {
+    if (!rep.borrowerId || !rep.date) continue;
+    const dateKey = `${rep.borrowerId}_${toDateString(rep.date)}`;
+    const existing = repaymentByMemberDate.get(dateKey) ?? {
+      originalPrincipal: rep.originalPrincipal ?? "0",
+      principalPaid: 0,
+      interestPaid: 0,
+      remainingBalanceAfter: rep.remainingBalanceAfter ?? "0",
+    };
+    existing.principalPaid += parseFloat(rep.principalPortion ?? "0");
+    existing.interestPaid += parseFloat(rep.interestPortion ?? "0");
+    existing.originalPrincipal = rep.originalPrincipal ?? existing.originalPrincipal;
+    existing.remainingBalanceAfter = rep.remainingBalanceAfter ?? "0";
+    repaymentByMemberDate.set(dateKey, existing);
+  }
+
+  const items = page.map((r) => {
+    const dateKey = r.contribution.datePaid
+      ? `${r.contribution.memberId}_${toDateString(r.contribution.datePaid)}`
+      : null;
+    const rep = dateKey ? repaymentByMemberDate.get(dateKey) : null;
+
+    return {
+      id: r.contribution.id,
+      koshId: r.contribution.koshId,
+      memberId: r.contribution.memberId,
+      memberName: r.member.name,
+      memberImage: r.member.image,
+      period: r.contribution.period,
+      periodLabel: periodLabel(r.contribution.period),
+      expectedAmount: r.contribution.expectedAmount,
+      contributionAmount: r.contribution.contributionAmount,
+      penaltyAssessed: r.contribution.penaltyAssessed,
+      penaltyPaid: r.contribution.penaltyPaid,
+      status: r.contribution.status,
+      datePaid: r.contribution.datePaid
+        ? r.contribution.datePaid.toISOString()
+        : null,
+      loanRepayment: rep
+        ? {
+            originalPrincipal: rep.originalPrincipal,
+            principalPaid: String(rep.principalPaid),
+            interestPaid: String(rep.interestPaid),
+            remainingBalanceAfter: rep.remainingBalanceAfter,
+          }
+        : null,
+      createdAt: r.contribution.createdAt.toISOString(),
+    };
+  });
+
+  return {
+    items,
+    nextCursor:
+      hasMore && last
+        ? `${last.contribution.period}|${last.contribution.createdAt.getTime()}|${last.contribution.id}`
+        : null,
+  };
+}
+
 // ─── Router ────────────────────────────────────────────────────────────────
 
 export const contributionRouter = router({
@@ -991,7 +1204,86 @@ export const contributionRouter = router({
     }),
 
   /**
-   * Infinite query for contribution history of a specific kosh.
+   * Dedicated queries for contributions with filter support (member, date range)
+   */
+  allContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        memberId: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "all",
+      });
+    }),
+
+  paidContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        memberId: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "paid",
+      });
+    }),
+
+  pendingContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        memberId: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "pending",
+      });
+    }),
+
+  lateContributionsByKosh: protectedProcedure
+    .input(
+      z.object({
+        koshId: koshIdSchema,
+        limit: z.number().int().min(1).max(50).default(20),
+        cursor: z.string().nullable().optional(),
+        memberId: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return queryContributionsByKosh({
+        ...input,
+        userId: ctx.session.user.id,
+        statusGroup: "late",
+      });
+    }),
+
+  /**
+   * Legacy/fallback infinite query for contribution history of a specific kosh.
    */
   historyByKosh: protectedProcedure
     .input(
@@ -1006,182 +1298,21 @@ export const contributionRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id;
-      const limit = input.limit ?? 20;
-
-      const membership = await db.query.koshMembership.findFirst({
-        where: (m, { and: a, eq: q }) =>
-          a(
-            q(m.koshId, input.koshId),
-            q(m.userId, userId),
-            q(m.status, "active"),
-          ),
+      const statusGroup =
+        input.status === "paid"
+          ? "paid"
+          : input.status === "pending" || input.status === "partial"
+            ? "pending"
+            : input.status === "late"
+              ? "late"
+              : "all";
+      return queryContributionsByKosh({
+        koshId: input.koshId,
+        limit: input.limit,
+        cursor: input.cursor,
+        userId: ctx.session.user.id,
+        statusGroup,
       });
-
-      if (!membership) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You are not a member of this kosh",
-        });
-      }
-
-      const conditions = [eq(contribution.koshId, input.koshId)];
-
-      if (input.status && input.status !== "all") {
-        conditions.push(eq(contribution.status, input.status));
-      }
-
-      if (input.cursor) {
-        const parts = input.cursor.split("|");
-        const cPeriod = parts[0];
-        const cTimestamp = parts[1];
-        const cId = parts[2];
-        if (cPeriod && cTimestamp && cId) {
-          const cDate = new Date(Number(cTimestamp));
-          conditions.push(
-            or(
-              lt(contribution.period, cPeriod),
-              and(
-                eq(contribution.period, cPeriod),
-                lt(contribution.createdAt, cDate),
-              ),
-              and(
-                eq(contribution.period, cPeriod),
-                eq(contribution.createdAt, cDate),
-                lt(contribution.id, cId),
-              ),
-            )!,
-          );
-        }
-      }
-
-      const rows = await db
-        .select({
-          contribution: {
-            id: contribution.id,
-            koshId: contribution.koshId,
-            memberId: contribution.memberId,
-            period: contribution.period,
-            expectedAmount: contribution.expectedAmount,
-            contributionAmount: contribution.contributionAmount,
-            penaltyAssessed: contribution.penaltyAssessed,
-            penaltyPaid: contribution.penaltyPaid,
-            status: contribution.status,
-            datePaid: contribution.datePaid,
-            createdAt: contribution.createdAt,
-          },
-          member: {
-            id: user.id,
-            name: user.name,
-            image: user.image,
-          },
-        })
-        .from(contribution)
-        .innerJoin(user, eq(contribution.memberId, user.id))
-        .where(and(...conditions))
-        .orderBy(
-          desc(contribution.period),
-          desc(contribution.createdAt),
-          desc(contribution.id),
-        )
-        .limit(limit + 1);
-
-      const hasMore = rows.length > limit;
-      const page = rows.slice(0, limit);
-      const last = page[page.length - 1];
-
-      // Fetch loan repayments for the members in this page for this kosh
-      const memberIds = Array.from(
-        new Set(page.map((r) => r.contribution.memberId)),
-      );
-
-      const repayments =
-        memberIds.length > 0
-          ? await db
-              .select({
-                borrowerId: loan.borrowerId,
-                originalPrincipal: loan.principal,
-                principalPortion: loanRepayment.principalPortion,
-                interestPortion: loanRepayment.interestPortion,
-                remainingBalanceAfter: loanRepayment.remainingBalanceAfter,
-                date: loanRepayment.date,
-              })
-              .from(loanRepayment)
-              .innerJoin(loan, eq(loanRepayment.loanId, loan.id))
-              .where(
-                and(
-                  eq(loan.koshId, input.koshId),
-                  inArray(loan.borrowerId, memberIds),
-                ),
-              )
-          : [];
-
-      const repaymentByMemberDate = new Map<
-        string,
-        {
-          originalPrincipal: string;
-          principalPaid: number;
-          interestPaid: number;
-          remainingBalanceAfter: string;
-        }
-      >();
-      for (const rep of repayments) {
-        if (!rep.borrowerId || !rep.date) continue;
-        const dateKey = `${rep.borrowerId}_${toDateString(rep.date)}`;
-        const existing = repaymentByMemberDate.get(dateKey) ?? {
-          originalPrincipal: rep.originalPrincipal ?? "0",
-          principalPaid: 0,
-          interestPaid: 0,
-          remainingBalanceAfter: rep.remainingBalanceAfter ?? "0",
-        };
-        existing.principalPaid += parseFloat(rep.principalPortion ?? "0");
-        existing.interestPaid += parseFloat(rep.interestPortion ?? "0");
-        existing.originalPrincipal = rep.originalPrincipal ?? existing.originalPrincipal;
-        existing.remainingBalanceAfter = rep.remainingBalanceAfter ?? "0";
-        repaymentByMemberDate.set(dateKey, existing);
-      }
-
-      const items = page.map((r) => {
-        const dateKey = r.contribution.datePaid
-          ? `${r.contribution.memberId}_${toDateString(r.contribution.datePaid)}`
-          : null;
-        const rep = dateKey ? repaymentByMemberDate.get(dateKey) : null;
-
-        return {
-          id: r.contribution.id,
-          koshId: r.contribution.koshId,
-          memberId: r.contribution.memberId,
-          memberName: r.member.name,
-          memberImage: r.member.image,
-          period: r.contribution.period,
-          periodLabel: periodLabel(r.contribution.period),
-          expectedAmount: r.contribution.expectedAmount,
-          contributionAmount: r.contribution.contributionAmount,
-          penaltyAssessed: r.contribution.penaltyAssessed,
-          penaltyPaid: r.contribution.penaltyPaid,
-          status: r.contribution.status,
-          datePaid: r.contribution.datePaid
-            ? r.contribution.datePaid.toISOString()
-            : null,
-          loanRepayment: rep
-            ? {
-                originalPrincipal: rep.originalPrincipal,
-                principalPaid: String(rep.principalPaid),
-                interestPaid: String(rep.interestPaid),
-                remainingBalanceAfter: rep.remainingBalanceAfter,
-              }
-            : null,
-          createdAt: r.contribution.createdAt.toISOString(),
-        };
-      });
-
-      return {
-        items,
-        nextCursor:
-          hasMore && last
-            ? `${last.contribution.period}|${last.contribution.createdAt.getTime()}|${last.contribution.id}`
-            : null,
-      };
     }),
 });
 

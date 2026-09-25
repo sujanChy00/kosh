@@ -142,10 +142,9 @@ export const KoshOptions = ({ koshId, role, koshName }: KoshOptionsProps) => {
         ),
         onClick: () => {
           router.push({
-            pathname: "/kosh/[id]/contribution-history",
+            pathname: "/kosh/[id]/all-contributions",
             params: {
               id: koshId,
-              role,
             },
           });
           hideSheet();

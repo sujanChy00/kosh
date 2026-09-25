@@ -62,9 +62,9 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="kosh/[id]/contribution-history"
+        name="kosh/[id]/(contribution-history)"
         options={{
-          headerTitle: "Contribution history",
+          headerShown: false,
         }}
       />
       <Stack.Screen
