@@ -5,23 +5,12 @@ import { Chip } from "@/components/ui/chip";
 import { Separator } from "@/components/ui/separator";
 import { loanStatusColor } from "@/lib/loan-status-color";
 import type { MyLoanItem } from "@kosh-app/api/routers/loan";
-import { formatAmount } from "@kosh-app/utils";
+import { formatAmount, progressPercent } from "@kosh-app/utils";
 import { formatShortDate } from "@kosh-app/utils/date";
 import { View } from "react-native";
-import { useCSSVariable } from "uniwind";
 import { ProgressBar } from "../ui/progress-bar";
 
-function progressPercent(principal: string, remaining: string) {
-  const p = parseFloat(principal);
-  const r = parseFloat(remaining);
-
-  if (!p || p <= 0) return 0;
-
-  return Math.min(1, Math.max(0, (p - r) / p));
-}
-
 export const LoanCard = ({ item }: { item: MyLoanItem }) => {
-  const successColor = useCSSVariable("--color-success") as string;
   const isPending =
     item.status === "pending_adhyaksh" ||
     item.status === "pending_koshadhyaksh";

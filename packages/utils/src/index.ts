@@ -50,3 +50,17 @@ export const prettifyErrorMessage = (message?: string) => {
   if ("message" in parsed) return parsed.message;
   return message;
 };
+
+export function progressPercent(
+  principal: string | null,
+  remaining: string | null,
+) {
+  if (!principal || !remaining) return 0;
+
+  const p = parseFloat(principal ?? "");
+  const r = parseFloat(remaining ?? "");
+
+  if (!p || p <= 0) return 0;
+
+  return Math.min(1, Math.max(0, (p - r) / p));
+}

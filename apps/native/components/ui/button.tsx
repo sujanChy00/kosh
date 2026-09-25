@@ -19,11 +19,13 @@ const SecondaryRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -55,11 +57,13 @@ const PrimaryRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -92,11 +96,13 @@ const DangerRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -128,11 +134,13 @@ const DangerGhostRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -164,11 +172,13 @@ const WarningRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -201,11 +211,13 @@ const DangerSoftRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -238,11 +250,13 @@ const TertiaryRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -275,11 +289,13 @@ const GhostRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >
@@ -312,11 +328,13 @@ const OutlineRoot = ({
   wrapperClassName,
   children,
   style,
+  activeOpacity,
   ...props
 }: ButtonProps) => {
   return (
     <TouchableOpacity
       disabled={disabled}
+      activeOpacity={activeOpacity ?? 0.7}
       {...props}
       className={wrapperClassName}
     >

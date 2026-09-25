@@ -1231,9 +1231,6 @@ export const contributionRouter = router({
         koshId: koshIdSchema,
         limit: z.number().int().min(1).max(50).default(20),
         cursor: z.string().nullable().optional(),
-        memberId: z.string().optional(),
-        dateFrom: z.string().optional(),
-        dateTo: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1250,9 +1247,6 @@ export const contributionRouter = router({
         koshId: koshIdSchema,
         limit: z.number().int().min(1).max(50).default(20),
         cursor: z.string().nullable().optional(),
-        memberId: z.string().optional(),
-        dateFrom: z.string().optional(),
-        dateTo: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -1269,9 +1263,6 @@ export const contributionRouter = router({
         koshId: koshIdSchema,
         limit: z.number().int().min(1).max(50).default(20),
         cursor: z.string().nullable().optional(),
-        memberId: z.string().optional(),
-        dateFrom: z.string().optional(),
-        dateTo: z.string().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
