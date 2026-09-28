@@ -1,4 +1,5 @@
 import { useMessageActionsContext } from "@/contexts/chat-thread-context";
+import CONTENT_COPY_ICON from "@expo/material-symbols/content_copy.xml";
 import DELETE_ICON from "@expo/material-symbols/delete.xml";
 import EDIT_ICON from "@expo/material-symbols/edit.xml";
 import REFRESH_ICON from "@expo/material-symbols/refresh.xml";
@@ -16,28 +17,14 @@ import {
   useMaterialColors,
 } from "@expo/ui/jetpack-compose";
 import { fillMaxWidth, paddingAll } from "@expo/ui/jetpack-compose/modifiers";
-import { QUICK_REACTIONS, type MessageAction } from "@kosh-app/utils";
-
-export type { MessageAction };
-
-export type MessageActionsSheetProps = {
-  visible: boolean;
-  canEdit: boolean;
-  canReply: boolean;
-  canReact: boolean;
-  canDelete: boolean;
-  canShare: boolean;
-  isFailed: boolean;
-  onClose: () => void;
-  onReact: (emoji: string) => void;
-  onAction: (action: MessageAction) => void;
-};
+import { QUICK_REACTIONS } from "@kosh-app/utils";
 
 export const MessageActionsSheet = () => {
   const {
     onClose,
     canShare,
     canReact,
+    canCopy,
     canEdit,
     canDelete,
     isFailed,
@@ -90,6 +77,13 @@ export const MessageActionsSheet = () => {
                   label="Reply"
                   icon={REPLY_ICON}
                   onPress={run(() => onAction("reply"))}
+                />
+              )}
+              {canCopy && (
+                <SheetRow
+                  label="Copy"
+                  icon={CONTENT_COPY_ICON}
+                  onPress={run(() => onAction("copy"))}
                 />
               )}
               {canEdit && (

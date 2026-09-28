@@ -6,7 +6,8 @@ import { isRemoteImage } from "./url";
  * renders these and the hook that dispatches them both need the union, and
  * neither should have to import the other.
  */
-export type MessageAction = "reply" | "edit" | "delete" | "retry" | "share";
+export type MessageAction =
+  "reply" | "copy" | "edit" | "delete" | "retry" | "share";
 
 /**
  * Client-minted id for an optimistic send, reused across retry so a retry is
@@ -35,6 +36,28 @@ export function isShareableImage(
   return (
     message?.type === "image" && isRemoteImage(message.attachments?.[0]?.url)
   );
+}
+
+/**
+ * Whether a message has text worth putting on the clipboard.
+ *
+ * Stated once, like `isShareableImage`, so the sheet's Copy row and the handler
+ * behind it cannot disagree - the failure mode being a Copy button that either
+ * never appears or appears on an image bubble and then copies `null`.
+ *
+ * A tombstone is excluded explicitly: it is a `text` row whose `content` the
+ * server has nulled, so the `content` check covers it, but the reason is worth
+ * naming at the point the rule is made.
+ */
+export function isCopyableText(
+  message?: {
+    type: ChatMessageItem["type"];
+    content?: string | null;
+    deletedAt?: string | null;
+  } | null,
+): message is { type: "text"; content: string } {
+  if (!message || message.deletedAt != null) return false;
+  return message.type === "text" && !!message.content;
 }
 
 /** Locally-owned optimistic row, before the server has confirmed it. */

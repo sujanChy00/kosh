@@ -1,6 +1,12 @@
 import { useShareImage } from "@/hooks/use-share-image";
+import { successToast } from "@/utils/toast";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
-import { isShareableImage, type MessageAction } from "@kosh-app/utils";
+import {
+  isCopyableText,
+  isShareableImage,
+  type MessageAction,
+} from "@kosh-app/utils";
+import * as Clipboard from "expo-clipboard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { ChatOptimistic } from "./use-chat-optimistic";
@@ -15,6 +21,7 @@ export type MessageActions = {
   isFailed: boolean;
   canReply: boolean;
   canReact: boolean;
+  canCopy: boolean;
   canShare: boolean;
   canEdit: boolean;
   canDelete: boolean;
@@ -112,6 +119,17 @@ export const useMessageActions = ({
         case "reply":
           onReply(message);
           return;
+        case "copy": {
+          // The row's text is `selectable`, but the wrapping Pressable claims
+          // the long press first at 280ms, so the native selection handles never
+          // surface. The sheet is the only reachable way to copy, which makes
+          // this the action that has to be right.
+          if (!isCopyableText(message)) return;
+          Clipboard.setStringAsync(message.content).then(() => {
+            successToast({ title: "Message copied" });
+          });
+          return;
+        }
         case "edit":
           onEdit(message);
           return;
@@ -177,6 +195,7 @@ export const useMessageActions = ({
    */
   const canAct = !isPending && !isDeleted;
   const canShare = canAct && isShareableImage(message);
+  const canCopy = canAct && isCopyableText(message);
   const canEdit = canAct && !!isOwn && message?.type === "text";
   const canDelete = canAct && !!isOwn;
   const isOpen = message !== null && !isDeleted;
@@ -188,6 +207,7 @@ export const useMessageActions = ({
       isFailed: isPending,
       canReply: canAct,
       canReact: canAct,
+      canCopy,
       canShare,
       canEdit,
       canDelete,
@@ -200,6 +220,7 @@ export const useMessageActions = ({
       isOpen,
       isPending,
       canAct,
+      canCopy,
       canShare,
       canEdit,
       canDelete,
