@@ -2,7 +2,7 @@ import { ProfileImagePicker } from "@/components/setting/profile-image-picker";
 import { ThemedText } from "@/components/themed-text";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
-import { isRemoteImage, uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient, trpc } from "@/utils/trpc";
 import ACCOUNT_BALANCE_ICON from "@expo/material-symbols/account_balance.xml";
@@ -22,6 +22,7 @@ import type {
   KoshDetail,
   UpdateKoshInput,
 } from "@kosh-app/api/routers/kosh";
+import { isRemoteImage } from "@kosh-app/utils";
 import { DUE_DAY_OPTIONS } from "@kosh-app/utils/constants/data";
 import { dateFormatterWithSeparator } from "@kosh-app/utils/date";
 import { useSelector } from "@tanstack/react-form";

@@ -1,4 +1,41 @@
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
+import { isRemoteImage } from "./url";
+
+/**
+ * Long-press actions offered on a message. Domain, not UI: the sheet that
+ * renders these and the hook that dispatches them both need the union, and
+ * neither should have to import the other.
+ */
+export type MessageAction = "reply" | "edit" | "delete" | "retry" | "share";
+
+/**
+ * Client-minted id for an optimistic send, reused across retry so a retry is
+ * idempotent server-side. The prefix is only a debugging aid; uniqueness comes
+ * from the timestamp plus random suffix.
+ */
+export function createMessageClientId(kind: "text" | "image" = "text") {
+  const prefix = kind === "image" ? "i" : "c";
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Whether a message can be handed to the system share sheet.
+ *
+ * Both halves matter and are easy to get wrong separately: the image has to be
+ * a confirmed row (a pending bubble holds an on-device `file://` URI) and its
+ * first attachment has to already be an http(s) URL, because sharing downloads
+ * the image first and cannot read a local file.
+ */
+export function isShareableImage(
+  message?: {
+    type: ChatMessageItem["type"];
+    attachments?: ChatMessageItem["attachments"] | null;
+  } | null,
+): boolean {
+  return (
+    message?.type === "image" && isRemoteImage(message.attachments?.[0]?.url)
+  );
+}
 
 /** Locally-owned optimistic row, before the server has confirmed it. */
 export type PendingMessage = {
@@ -71,6 +108,8 @@ export type MessagePatch = {
   deletedAt?: string | null;
   content?: string | null;
   attachments?: ChatMessageItem["attachments"];
+  /** Cleared alongside the content: a tombstone does not keep its quote. */
+  replyTo?: ChatMessageItem["replyTo"];
 };
 
 /**
@@ -125,6 +164,27 @@ export function buildChatEntries(
   for (const [id, patch] of patches) {
     const base = byId.get(id);
     if (base) byId.set(id, { ...base, ...patch });
+  }
+
+  // A reply carries its target as a snapshot read at the time the reply was
+  // fetched, so a tombstone applied to the target is invisible to the reply
+  // until the refetch lands. Propagate it here: otherwise a deleted message
+  // shows its own tombstone directly above a reply that still quotes its full
+  // text, for the length of a round trip.
+  //
+  // Nulling `content` to match the server's own delete behaviour - the text is
+  // gone from the database too, so keeping it in the quote would resurrect it.
+  for (const message of byId.values()) {
+    const reply = message.replyTo;
+    if (!reply || reply.deletedAt) continue;
+
+    const targetPatch = patches.get(reply.id);
+    if (!targetPatch?.deletedAt) continue;
+
+    byId.set(message.id, {
+      ...message,
+      replyTo: { ...reply, content: null, deletedAt: targetPatch.deletedAt },
+    });
   }
 
   const confirmedClientIds = new Set<string>();

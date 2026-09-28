@@ -1,10 +1,24 @@
-import { StyledSymbolView } from "@/components/styled-symbol-view";
-import { ThemedText } from "@/components/themed-text";
-import { Modal, Pressable, View } from "react-native";
+import { useMessageActionsContext } from "@/contexts/chat-thread-context";
+import DELETE_ICON from "@expo/material-symbols/delete.xml";
+import EDIT_ICON from "@expo/material-symbols/edit.xml";
+import REFRESH_ICON from "@expo/material-symbols/refresh.xml";
+import REPLY_ICON from "@expo/material-symbols/reply_all.xml";
+import SHARE_ICON from "@expo/material-symbols/share.xml";
+import { BottomSheet } from "@expo/ui";
+import {
+  Column,
+  HorizontalDivider,
+  Icon,
+  IconProps,
+  Row,
+  Text,
+  TextButton,
+  useMaterialColors,
+} from "@expo/ui/jetpack-compose";
+import { fillMaxWidth, paddingAll } from "@expo/ui/jetpack-compose/modifiers";
+import { QUICK_REACTIONS, type MessageAction } from "@kosh-app/utils";
 
-import { QUICK_REACTIONS } from "@kosh-app/utils";
-
-export type MessageAction = "reply" | "edit" | "delete" | "retry" | "share";
+export type { MessageAction };
 
 export type MessageActionsSheetProps = {
   visible: boolean;
@@ -19,125 +33,94 @@ export type MessageActionsSheetProps = {
   onAction: (action: MessageAction) => void;
 };
 
-/**
- * Long-press actions for a message.
- *
- * Every action is gated by an explicit `can*` prop rather than being derived
- * here, so the sheet can only ever offer something the server will accept. A
- * soft-deleted message is the case that motivated that: it is a tombstone, and
- * reacting to, editing or deleting it all fail with "This message was deleted".
- * Rendering those rows anyway produces a dead-end menu.
- *
- * Mounted once at screen level and driven by a message id held in screen state,
- * rather than once per row. That is deliberate: with `recycleItems` a row can be
- * handed a different message while its own sheet is open, and per-row sheet
- * state would then end up attached to the wrong message.
- */
-export const MessageActionsSheet = ({
-  visible,
-  canEdit,
-  canReply,
-  canReact,
-  canDelete,
-  canShare,
-  isFailed,
-  onClose,
-  onReact,
-  onAction,
-}: MessageActionsSheetProps) => {
+export const MessageActionsSheet = () => {
+  const {
+    onClose,
+    canShare,
+    canReact,
+    canEdit,
+    canDelete,
+    isFailed,
+    isOpen,
+    onAction,
+    onReact,
+    canReply,
+  } = useMessageActionsContext();
+
   const run = (fn: () => void) => () => {
     onClose();
     fn();
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
+    <BottomSheet
+      isPresented={isOpen}
+      onDismiss={onClose}
+      showDragIndicator={false}
     >
-      <Pressable
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss message actions"
-        className="flex-1 items-center justify-center bg-black/40 px-6"
-      >
-        {/* Swallow taps so pressing inside the sheet does not dismiss it. */}
-        <Pressable onPress={() => {}} className="w-full max-w-sm">
-          <View className="bg-background rounded-2xl overflow-hidden border-hairline">
-            {canReact && (
-              <View className="flex-row justify-center gap-1 py-3">
-                {QUICK_REACTIONS.map((emoji) => (
-                  <Pressable
-                    key={emoji}
-                    onPress={run(() => onReact(emoji))}
-                    accessibilityRole="button"
-                    accessibilityLabel={`React with ${emoji}`}
-                    className="size-11 rounded-full items-center justify-center active:bg-surface-secondary"
-                  >
-                    <ThemedText className="text-2xl">{emoji}</ThemedText>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-
-            {canReact && <View className="h-hairline bg-separator" />}
-
-            {isFailed ? (
-              <SheetRow
-                label="Try sending again"
-                icon="refresh"
-                onPress={run(() => onAction("retry"))}
-              />
-            ) : (
-              <>
-                {canReply && (
-                  <SheetRow
-                    label="Reply"
-                    icon="reply"
-                    onPress={run(() => onAction("reply"))}
-                  />
-                )}
-                {canShare && (
-                  <SheetRow
-                    label="Share"
-                    icon="share"
-                    onPress={run(() => onAction("share"))}
-                  />
-                )}
-                {canEdit && (
-                  <SheetRow
-                    label="Edit"
-                    icon="edit"
-                    onPress={run(() => onAction("edit"))}
-                  />
-                )}
-                {canDelete && (
-                  <SheetRow
-                    label="Delete"
-                    icon="delete"
-                    destructive
-                    onPress={run(() => onAction("delete"))}
-                  />
-                )}
-              </>
-            )}
-          </View>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      <Column>
+        {canReact && (
+          <Row
+            verticalAlignment="center"
+            horizontalArrangement={"spaceBetween"}
+          >
+            {QUICK_REACTIONS.map((emoji) => (
+              <TextButton key={emoji} onClick={run(() => onReact(emoji))}>
+                <Text>{emoji}</Text>
+              </TextButton>
+            ))}
+          </Row>
+        )}
+        {canReact && <HorizontalDivider />}
+        <Row
+          modifiers={[paddingAll(10), fillMaxWidth()]}
+          verticalAlignment="center"
+          horizontalArrangement={isFailed ? "center" : "spaceBetween"}
+        >
+          {isFailed ? (
+            <SheetRow
+              label="Failed"
+              icon={REFRESH_ICON}
+              onPress={run(() => onAction("retry"))}
+            />
+          ) : (
+            <>
+              {canReply && (
+                <SheetRow
+                  label="Reply"
+                  icon={REPLY_ICON}
+                  onPress={run(() => onAction("reply"))}
+                />
+              )}
+              {canEdit && (
+                <SheetRow
+                  label="Edit"
+                  icon={EDIT_ICON}
+                  onPress={run(() => onAction("edit"))}
+                />
+              )}
+              {canShare && (
+                <SheetRow
+                  label="Share"
+                  icon={SHARE_ICON}
+                  onPress={run(() => onAction("share"))}
+                />
+              )}
+              {canDelete && (
+                <SheetRow
+                  label="Delete"
+                  icon={DELETE_ICON}
+                  onPress={run(() => onAction("delete"))}
+                  destructive
+                />
+              )}
+            </>
+          )}
+        </Row>
+      </Column>
+    </BottomSheet>
   );
 };
-
-const ICONS = {
-  delete: { ios: "trash", android: "delete" },
-  edit: { ios: "pencil", android: "edit" },
-  reply: { ios: "arrowshape.turn.up.left", android: "reply" },
-  refresh: { ios: "arrow.clockwise", android: "refresh" },
-  share: { ios: "square.and.arrow.up", android: "share" },
-} as const;
 
 function SheetRow({
   label,
@@ -146,35 +129,34 @@ function SheetRow({
   onPress,
 }: {
   label: string;
-  icon: keyof typeof ICONS;
+  icon: IconProps["source"];
   destructive?: boolean;
   onPress: () => void;
 }) {
+  const materialColors = useMaterialColors();
+
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      className="active:bg-surface-secondary"
+    <TextButton
+      onClick={() => {
+        onPress();
+      }}
     >
-      <View className="flex-row items-center gap-3 px-4 py-3.5">
-        <StyledSymbolView
-          size={18}
-          tintColorClassName={
-            destructive ? "text-danger" : "text-muted-foreground"
-          }
-          name={ICONS[icon]}
+      <Column
+        horizontalAlignment="center"
+        verticalArrangement={{
+          spacedBy: 6,
+        }}
+      >
+        <Icon
+          tint={destructive ? materialColors.error : materialColors.tertiary}
+          source={icon}
         />
-        <ThemedText
-          className={
-            destructive
-              ? "text-danger text-[15px] font-notosans-medium"
-              : "text-foreground text-[15px]"
-          }
+        <Text
+          color={destructive ? materialColors.error : materialColors.tertiary}
         >
           {label}
-        </ThemedText>
-      </View>
-    </Pressable>
+        </Text>
+      </Column>
+    </TextButton>
   );
 }

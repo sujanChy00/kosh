@@ -1129,7 +1129,17 @@ export const chatRouter = router({
 
       await db
         .update(chatMessage)
-        .set({ content: null, attachments: null, deletedAt: new Date() })
+        .set({
+          content: null,
+          attachments: null,
+          // The quote goes too. A tombstone that still carries `reply_to_id`
+          // keeps shipping the replied-to text to every client, which is the
+          // same leak the nulled `content` above exists to prevent - and the
+          // row renders as "deleted" while quoting something the user chose to
+          // erase. The message keeps its slot, not its relationships.
+          replyToId: null,
+          deletedAt: new Date(),
+        })
         .where(eq(chatMessage.id, row.id));
 
       // Reactions have to go with the message. A tombstone that keeps its

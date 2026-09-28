@@ -2,12 +2,7 @@ import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { cn } from "@kosh-app/utils";
 import { useCallback } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, TextInput, View } from "react-native";
 
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 
@@ -50,9 +45,7 @@ export const ChatComposer = ({
 
   return (
     <View className="border-t-hairline bg-background">
-      {target && (
-        <TargetBanner target={target} onCancel={onCancelTarget} />
-      )}
+      {target && <TargetBanner target={target} onCancel={onCancelTarget} />}
 
       <View className="flex-row items-end gap-2 px-3 py-2">
         <Pressable
@@ -93,7 +86,9 @@ export const ChatComposer = ({
           onPress={handlePrimary}
           disabled={!canSend}
           accessibilityRole="button"
-          accessibilityLabel={target?.mode === "edit" ? "Save edit" : "Send message"}
+          accessibilityLabel={
+            target?.mode === "edit" ? "Save edit" : "Send message"
+          }
           className={cn(
             "size-9 rounded-full items-center justify-center",
             canSend ? "bg-primary" : "bg-surface-tertiary",
@@ -126,16 +121,20 @@ function TargetBanner({
   const { message, mode } = target;
   const quoted = message.deletedAt
     ? "Deleted message"
-    : (message.content ??
-      (message.attachments?.length ? "Sent a photo" : ""));
+    : (message.content ?? (message.attachments?.length ? "Sent a photo" : ""));
 
   return (
     <View className="flex-row items-center gap-2 px-3 pt-2">
       <View className="flex-1 rounded-lg border-l-2 border-primary bg-surface-secondary px-2 py-1.5">
         <ThemedText className="text-primary text-[11px] font-notosans-semibold">
-          {mode === "edit" ? "Editing message" : `Replying to ${message.sender.name}`}
+          {mode === "edit"
+            ? "Editing message"
+            : `Replying to ${message.sender.name}`}
         </ThemedText>
-        <ThemedText numberOfLines={1} className="text-muted-foreground text-[11px]">
+        <ThemedText
+          numberOfLines={1}
+          className="text-muted-foreground text-[11px]"
+        >
           {quoted}
         </ThemedText>
       </View>

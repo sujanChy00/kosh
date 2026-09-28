@@ -3,9 +3,6 @@ import { File } from "expo-file-system";
 
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`;
 
-export const isRemoteImage = (value?: string | null) =>
-  !!value && /^https?:\/\//i.test(value);
-
 export type CloudinaryUpload = {
   url: string;
   width?: number;
