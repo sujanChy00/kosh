@@ -3,6 +3,7 @@ import { Link } from "expo-router";
 import { View } from "react-native";
 import { KoshCard } from "../kosh/kosh-card";
 import { KoshCardSkeleton } from "../kosh/kosh-card-skeleton";
+import { KoshEmptyComponent } from "../kosh/kosh-empty-component";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { SecondaryButton } from "../ui/button";
@@ -25,6 +26,9 @@ export const HomeKoshList = ({ koshList, isPending }: HomeKoshListProps) => {
         />
       </Wrapper>
     );
+
+  if (koshList.length === 0) return <KoshEmptyComponent className="pt-20" />;
+
   return (
     <Wrapper>
       <Card className="gap-y-2 p-0 overflow-hidden">

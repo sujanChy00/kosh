@@ -302,7 +302,7 @@ const Indicator = ({
       ],
       opacity: withTiming(1, { duration: 200 }),
     };
-  }, [activeMeasurements, isAnimationDisabled]);
+  });
 
   return (
     <Animated.View
@@ -340,7 +340,7 @@ const Separator = ({
         ? targetOpacity
         : withTiming(targetOpacity, { duration: 200 }),
     };
-  }, [value, betweenValues, isAlwaysVisible, isAnimationDisabled]);
+  });
 
   return (
     <Animated.View

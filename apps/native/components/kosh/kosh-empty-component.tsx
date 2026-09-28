@@ -1,3 +1,4 @@
+import { cn } from "@kosh-app/utils";
 import { useRouter } from "expo-router";
 import { memo, useState } from "react";
 import { View } from "react-native";
@@ -5,22 +6,27 @@ import { ThemedText } from "../themed-text";
 import { OutlineButton, PrimaryButton } from "../ui/button";
 import { JoinNewKoshDialog } from "./join-new-kosh-dialog";
 
-export const KoshEmptyComponent = memo(() => {
-  const router = useRouter();
-  const [isVisible, setIsVisible] = useState(false);
-  return (
-    <>
-      <JoinNewKoshDialog
-        isVisible={isVisible}
-        setIsVisible={setIsVisible}
-        onConfirm={(token) => {
-          router.push({
-            pathname: "/kosh/join",
-            params: { token },
-          });
-        }}
-      />
-      <View className="flex-1 items-center justify-center gap-4 p-6">
+export const KoshEmptyComponent = memo(
+  ({ className }: { className?: string }) => {
+    const router = useRouter();
+    const [isVisible, setIsVisible] = useState(false);
+    return (
+      <View
+        className={cn(
+          "flex-1 items-center justify-center gap-4 p-6",
+          className,
+        )}
+      >
+        <JoinNewKoshDialog
+          isVisible={isVisible}
+          setIsVisible={setIsVisible}
+          onConfirm={(token) => {
+            router.push({
+              pathname: "/kosh/join",
+              params: { token },
+            });
+          }}
+        />
         <View className="gap-y-0.5">
           <ThemedText className="text-center text-muted text-base">
             You are not part of any kosh yet.
@@ -48,6 +54,6 @@ export const KoshEmptyComponent = memo(() => {
           </OutlineButton.Label>
         </OutlineButton>
       </View>
-    </>
-  );
-});
+    );
+  },
+);
