@@ -1,22 +1,16 @@
+import { ChatAttachmentItem } from "@/components/chat/chat-attachment-item";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { ListFetchingMoreComponent } from "@/components/layout/list-fetching-more-component";
-import { StyledImage } from "@/components/styled-image";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { Card } from "@/components/ui/card";
 import { trpc } from "@/utils/trpc";
-import type { ChatAttachmentItem } from "@kosh-app/api/routers/chat";
-import { formatBytes } from "@kosh-app/utils";
+import type { ChatAttachmentItem as ChatAttachmentItemType } from "@kosh-app/api/routers/chat";
 import { LegendList } from "@legendapp/list/react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { ActivityIndicator, useWindowDimensions, View } from "react-native";
 
 const PAGE_SIZE = 24;
 const COLUMNS = 3;
@@ -71,20 +65,14 @@ const ChatAttachments = () => {
   // on the first page only.
   const total = data?.pages[0]?.total ?? attachments.length;
 
-  const keyExtractor = useCallback((item: ChatAttachmentItem) => item.key, []);
+  const keyExtractor = useCallback(
+    (item: ChatAttachmentItemType) => item.key,
+    [],
+  );
 
   const renderItem = useCallback(
-    ({ item }: { item: ChatAttachmentItem }) => (
-      <AttachmentTile
-        item={item}
-        cellSize={cellSize}
-        onPress={() =>
-          router.push({
-            pathname: "/view/[image]",
-            params: { image: item.url },
-          })
-        }
-      />
+    ({ item }: { item: ChatAttachmentItemType }) => (
+      <ChatAttachmentItem item={item} cellSize={cellSize} />
     ),
     [cellSize, router],
   );
@@ -155,65 +143,6 @@ const ChatAttachments = () => {
         showsVerticalScrollIndicator={false}
       />
     </>
-  );
-};
-
-const AttachmentTile = ({
-  item,
-  cellSize,
-  onPress,
-}: {
-  item: ChatAttachmentItem;
-  cellSize: number;
-  onPress: () => void;
-}) => {
-  // p-0.5 on each side is the gutter: it eats 4px of the cell, and the tile
-  // fills what is left via flex-1, so the grid needs no width arithmetic.
-  if (item.isImage) {
-    return (
-      <View className="p-0.5" style={{ height: cellSize }}>
-        <Pressable
-          className="flex-1"
-          onPress={onPress}
-          accessibilityRole="imagebutton"
-          accessibilityLabel={item.name ?? "Shared photo"}
-          accessibilityHint="Tap to view full screen"
-        >
-          <StyledImage
-            source={{ uri: item.url }}
-            className="flex-1"
-            contentFit="cover"
-            transition={150}
-          />
-        </Pressable>
-      </View>
-    );
-  }
-
-  const extension = (item.name?.split(".").pop() ?? "file")
-    .slice(0, 4)
-    .toUpperCase();
-  const size = item.size ? formatBytes(item.size) : null;
-
-  return (
-    <View className="p-0.5" style={{ height: cellSize }}>
-      <View className="flex-1 bg-surface-tertiary items-center justify-center gap-y-1 p-1">
-        <ThemedText className="text-primary text-[10px] font-notosans-semibold">
-          {extension}
-        </ThemedText>
-        <ThemedText
-          numberOfLines={2}
-          className="text-muted-foreground text-[10px] text-center"
-        >
-          {item.name ?? "File"}
-        </ThemedText>
-        {size && (
-          <ThemedText className="text-muted-foreground text-[9px]">
-            {size}
-          </ThemedText>
-        )}
-      </View>
-    </View>
   );
 };
 
