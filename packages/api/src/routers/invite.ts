@@ -7,6 +7,7 @@ import { and, eq, lt, sql } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 
+import { ensureGroupParticipant } from "../helpers/chat";
 import { protectedProcedure, router } from "../index";
 
 const koshIdSchema = z.uuid();
@@ -505,6 +506,9 @@ export const inviteRouter = router({
               leftAt: null,
             })
             .where(eq(koshMembership.id, membership.id));
+
+          // Seat the new member in the kosh's group chat.
+          await ensureGroupParticipant(tx, request.koshId, request.userId);
 
           const [updated] = await tx
             .update(joinRequest)

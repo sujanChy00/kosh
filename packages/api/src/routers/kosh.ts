@@ -10,6 +10,7 @@ import { and, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { randomInt } from "node:crypto";
 import { z } from "zod";
 
+import { ensureGroupParticipant } from "../helpers/chat";
 import { protectedProcedure, router } from "../index";
 
 const listKoshSchema = z.object({
@@ -632,6 +633,10 @@ export const koshRouter = router({
             status: "active",
             joinedAt: new Date(),
           });
+
+          // Every kosh gets one permanent group chat, created with its
+          // creator as the first participant.
+          await ensureGroupParticipant(tx, row.id, userId);
 
           await tx
             .update(user)

@@ -20,6 +20,7 @@
   "devDependencies": {
     "@kosh-app/config": "workspace:*",
     "@kosh-app/language": "workspace:*",
+    "@kosh-app/api": "workspace:*",
     "typescript": "^6.0.3"
   },
   "dependencies": {

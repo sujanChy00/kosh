@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -8,6 +8,7 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { kosh } from "./kosh";
 import { chatThreadTypeEnum, chatMessageTypeEnum } from "./enums";
@@ -21,9 +22,24 @@ export const chatThread = pgTable(
       .notNull()
       .references(() => kosh.id, { onDelete: "cascade" }),
     type: chatThreadTypeEnum("type").notNull(),
+    // Denormalised so the thread list can sort by recency off an index
+    // instead of aggregating max(chat_message.created_at) on every poll.
+    lastMessageAt: timestamp("last_message_at"),
+    lastMessagePreview: text("last_message_preview"),
+    // Direct threads only: `${koshId}:${lowerUserId}:${higherUserId}`. The
+    // unique index on it is what guarantees one DM thread per kosh per pair.
+    directKey: text("direct_key"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("chat_thread_kosh_id_idx").on(table.koshId)],
+  (table) => [
+    index("chat_thread_kosh_id_idx").on(table.koshId),
+    index("chat_thread_last_message_at_idx").on(table.lastMessageAt),
+    uniqueIndex("chat_thread_direct_key_uidx").on(table.directKey),
+    // One group thread per kosh, forever.
+    uniqueIndex("chat_thread_group_kosh_uidx")
+      .on(table.koshId)
+      .where(sql`${table.type} = 'group'`),
+  ],
 );
 
 // ─── Chat Thread Participants ───────────────────────────────────────────────
@@ -43,6 +59,10 @@ export const chatThreadParticipant = pgTable(
   (table) => [
     index("chat_participant_thread_id_idx").on(table.threadId),
     index("chat_participant_user_id_idx").on(table.userId),
+    uniqueIndex("chat_participant_thread_user_uidx").on(
+      table.threadId,
+      table.userId,
+    ),
   ],
 );
 
@@ -57,10 +77,15 @@ export const chatMessage = pgTable(
     senderId: text("sender_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    replyToId: uuid("reply_to_id"), // self-reference for message replies
+    replyToId: uuid("reply_to_id").references((): AnyPgColumn => chatMessage.id, {
+      onDelete: "set null",
+    }), // self-reference for message replies
     type: chatMessageTypeEnum("type").notNull().default("text"),
     content: text("content"), // optional if message contains media/attachments only
     attachments: jsonb("attachments"), // array of { url, name, size, mimeType }
+    // Client-generated id echoed back so an optimistic row can be replaced by
+    // the real one instead of showing up twice once polling catches up.
+    clientId: text("client_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     editedAt: timestamp("edited_at"),
     deletedAt: timestamp("deleted_at"),
@@ -69,6 +94,9 @@ export const chatMessage = pgTable(
     index("chat_message_thread_id_idx").on(table.threadId),
     index("chat_message_created_at_idx").on(table.threadId, table.createdAt),
     index("chat_message_reply_to_id_idx").on(table.replyToId),
+    uniqueIndex("chat_message_sender_client_uidx")
+      .on(table.senderId, table.clientId)
+      .where(sql`${table.clientId} is not null`),
   ],
 );
 

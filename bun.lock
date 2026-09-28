@@ -233,6 +233,7 @@
         "tailwind-variants": "^3.3.1",
       },
       "devDependencies": {
+        "@kosh-app/api": "workspace:*",
         "@kosh-app/config": "workspace:*",
         "@kosh-app/language": "workspace:*",
         "typescript": "^6.0.3",

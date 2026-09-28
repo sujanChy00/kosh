@@ -65,7 +65,7 @@ export const ProfileImagePicker = ({
         onPress={() => {
           if (!source) return;
           router.push({
-            pathname: "/image/[image]",
+            pathname: "/view/[image]",
             params: {
               image: source,
             },

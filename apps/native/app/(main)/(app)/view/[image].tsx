@@ -1,8 +1,22 @@
+import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { useShareImage } from "@/hooks/use-share-image";
+import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { useWindowDimensions, View } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import {
+  ActivityIndicator,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import {
+  GestureDetector,
+  useExclusiveGestures,
+  usePanGesture,
+  usePinchGesture,
+  useSimultaneousGestures,
+  useTapGesture,
+} from "react-native-gesture-handler";
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -12,10 +26,10 @@ import Animated, {
 import { scheduleOnRN } from "react-native-worklets";
 
 const ImageScreen = () => {
-  const router = useRouter();
   const [isZoomed, setIsZoomed] = useState(false);
   const { width, height } = useWindowDimensions();
   const { image } = useLocalSearchParams<{ image: string }>();
+  const { downloadImage, isDownloading } = useShareImage(image);
 
   const scale = useSharedValue(1);
   const savedScale = useSharedValue(1);
@@ -25,17 +39,18 @@ const ImageScreen = () => {
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
-  const pinchGesture = Gesture.Pinch()
-    .onUpdate((e) => {
+  const pinchGesture = usePinchGesture({
+    onUpdate: (e) => {
       scale.value = Math.max(1, savedScale.value * e.scale);
-    })
-    .onEnd(() => {
+    },
+    onDeactivate: () => {
       savedScale.value = scale.value;
-    });
+    },
+  });
 
-  const panGesture = Gesture.Pan()
-    .enabled(isZoomed)
-    .onUpdate((e) => {
+  const panGesture = usePanGesture({
+    enabled: isZoomed,
+    onUpdate: (e) => {
       const maxTranslateX = (width * scale.value - width) / 2;
       const maxTranslateY = (height * scale.value - height) / 2;
       const nextX = savedTranslateX.value + e.translationX;
@@ -48,15 +63,16 @@ const ImageScreen = () => {
         Math.max(nextY, -maxTranslateY),
         maxTranslateY,
       );
-    })
-    .onEnd(() => {
+    },
+    onDeactivate: () => {
       savedTranslateX.value = translateX.value;
       savedTranslateY.value = translateY.value;
-    });
+    },
+  });
 
-  const doubleTap = Gesture.Tap()
-    .numberOfTaps(2)
-    .onStart(() => {
+  const doubleTap = useTapGesture({
+    numberOfTaps: 2,
+    onActivate: () => {
       if (scale.value !== 1) {
         scale.value = withTiming(1);
         translateX.value = withTiming(0);
@@ -68,7 +84,8 @@ const ImageScreen = () => {
         scale.value = withTiming(2);
         savedScale.value = 2;
       }
-    });
+    },
+  });
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -78,8 +95,8 @@ const ImageScreen = () => {
     ],
   }));
 
-  const combinedGesture = Gesture.Exclusive(
-    Gesture.Simultaneous(pinchGesture, panGesture),
+  const combinedGesture = useExclusiveGestures(
+    useSimultaneousGestures(pinchGesture, panGesture),
     doubleTap,
   );
 
@@ -102,22 +119,41 @@ const ImageScreen = () => {
     );
 
   return (
-    <View className="flex-1 justify-center items-center">
+    <View className="flex-1 justify-center items-center bg-black/80">
       <GestureDetector gesture={combinedGesture}>
-        <Link.AppleZoomTarget>
-          <Animated.Image
-            style={[
-              {
-                width: "100%",
-                height: "100%",
-              },
-              animatedStyle,
-            ]}
-            source={{ uri: image }}
-            resizeMode="contain"
-          />
-        </Link.AppleZoomTarget>
+        <Animated.Image
+          style={[
+            {
+              width: "100%",
+              height: "100%",
+            },
+            animatedStyle,
+          ]}
+          source={{ uri: image }}
+          resizeMode="contain"
+        />
       </GestureDetector>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={downloadImage}
+        disabled={isDownloading}
+        accessibilityRole="button"
+        accessibilityLabel="Save image"
+        className="absolute right-4 top-14 size-10 items-center justify-center rounded-full bg-black/50 dark:bg-muted/50"
+      >
+        {isDownloading ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <StyledSymbolView
+            size={20}
+            name={{
+              ios: "arrow.down.circle.fill",
+              android: "download",
+            }}
+            tintColorClassName="accent-primary-foreground"
+          />
+        )}
+      </TouchableOpacity>
     </View>
   );
 };

@@ -38,9 +38,11 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="image/[image]"
+        name="view/[image]"
         options={{
           headerShown: false,
+          presentation: "transparentModal",
+          animation: "fade_from_bottom",
         }}
       />
       <Stack.Screen
@@ -89,12 +91,6 @@ const AppLayout = () => {
         name="kosh/[id]/join-request"
         options={{
           headerTitle: "Join requests",
-        }}
-      />
-      <Stack.Screen
-        name="kosh/[id]/[userId]/index"
-        options={{
-          headerTitle: "Member details",
         }}
       />
       <Stack.Screen

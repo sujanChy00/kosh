@@ -25,7 +25,7 @@ const KoshMembershipScreen = () => {
   const router = useRouter();
   const haptics = useHaptics();
 
-  const { data, isLoading, isError, error, refetch, isRefetching } = useQuery({
+  const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
     ...trpc.membership.getMemberDetail.queryOptions({
       koshId: koshId!,
       userId: userId!,
@@ -71,6 +71,26 @@ const KoshMembershipScreen = () => {
       errorToast({ title: err.message ?? "Failed to remove member" });
     },
   });
+
+  // Find-or-create, so tapping this repeatedly reuses the same DM thread rather
+  // than stacking up duplicates.
+  const directThreadMutation = useMutation(
+    trpc.chat.getOrCreateDirectThread.mutationOptions({
+      onSuccess: ({ threadId }) => {
+        haptics("success");
+        router.push(`/chat/${threadId}`);
+      },
+      onError: (err) => {
+        haptics("error");
+        errorToast({ title: err.message ?? "Failed to open chat" });
+      },
+    }),
+  );
+
+  const handleMessage = () => {
+    if (!koshId || !userId) return;
+    directThreadMutation.mutate({ koshId, userId });
+  };
 
   const handleInviteTreasurer = () => {
     Alert.alert(
@@ -125,14 +145,24 @@ const KoshMembershipScreen = () => {
     );
   };
 
-  if (isLoading) return <PendingComponent />;
+  if (isPending)
+    return (
+      <>
+        <Stack.Title>Loading...</Stack.Title>
+
+        <PendingComponent />
+      </>
+    );
 
   if (isError || !data) {
     return (
-      <ErrorComponent
-        refetch={refetch}
-        message={error?.message ?? "Failed to load member details."}
-      />
+      <>
+        <Stack.Title>!Oops </Stack.Title>
+        <ErrorComponent
+          refetch={refetch}
+          message={error?.message ?? "Failed to load member details."}
+        />
+      </>
     );
   }
 
@@ -241,6 +271,25 @@ const KoshMembershipScreen = () => {
             </View>
           </Card>
         </View>
+
+        {/* Direct Message */}
+        {!isSelf && (
+          <SecondaryButton
+            onPress={handleMessage}
+            disabled={directThreadMutation.isPending}
+          >
+            <StyledSymbolView
+              tintColorClassName="accent-primary"
+              size={18}
+              name={{ android: "forum", ios: "bubble.left.and.bubble.right" }}
+            />
+            <SecondaryButton.Label>
+              {directThreadMutation.isPending
+                ? "Opening chat…"
+                : `Message ${member.name?.split(" ")[0] ?? "member"}`}
+            </SecondaryButton.Label>
+          </SecondaryButton>
+        )}
 
         {/* Stats Grid */}
         <View className="gap-y-2">
