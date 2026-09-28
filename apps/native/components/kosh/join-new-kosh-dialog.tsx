@@ -64,8 +64,8 @@ export const JoinNewKoshDialog = ({
     setIsVisible(false);
   }, [code, router]);
 
-  return (
-    isVisible && (
+  if (isVisible)
+    return (
       <Host matchContents>
         <BasicAlertDialog onDismissRequest={() => setIsVisible(false)}>
           <Surface
@@ -134,6 +134,7 @@ export const JoinNewKoshDialog = ({
           </Surface>
         </BasicAlertDialog>
       </Host>
-    )
-  );
+    );
+
+  return null;
 };

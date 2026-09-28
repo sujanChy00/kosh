@@ -64,34 +64,36 @@ export default function Home() {
         }}
       />
       <HomeHeader />
-      <View className="flex-row items-center gap-3">
-        <Link href="/kosh/add" asChild>
-          <PrimaryButton wrapperClassName="flex-1">
-            <StyledSymbolView
-              tintColorClassName="accent-primary-foreground"
-              size={18}
-              name={{ android: "add_circle", ios: "plus.circle" }}
-            />
-            <PrimaryButton.Label className="text-xs font-mono-semibold">
-              New Kosh
-            </PrimaryButton.Label>
-          </PrimaryButton>
-        </Link>
+      {koshList?.items && koshList?.items?.length > 0 && (
+        <View className="flex-row items-center gap-3">
+          <Link href="/kosh/add" asChild>
+            <PrimaryButton wrapperClassName="flex-1">
+              <StyledSymbolView
+                tintColorClassName="accent-primary-foreground"
+                size={18}
+                name={{ android: "add_circle", ios: "plus.circle" }}
+              />
+              <PrimaryButton.Label className="text-xs font-mono-semibold">
+                New Kosh
+              </PrimaryButton.Label>
+            </PrimaryButton>
+          </Link>
 
-        <SecondaryButton
-          wrapperClassName="flex-1"
-          onPress={() => setIsVisible(true)}
-        >
-          <StyledSymbolView
-            tintColorClassName="accent-primary"
-            size={18}
-            name={{ android: "group_add", ios: "person.badge.plus" }}
-          />
-          <SecondaryButton.Label className="text-xs font-mono-semibold">
-            Join Kosh
-          </SecondaryButton.Label>
-        </SecondaryButton>
-      </View>
+          <SecondaryButton
+            wrapperClassName="flex-1"
+            onPress={() => setIsVisible(true)}
+          >
+            <StyledSymbolView
+              tintColorClassName="accent-primary"
+              size={18}
+              name={{ android: "group_add", ios: "person.badge.plus" }}
+            />
+            <SecondaryButton.Label className="text-xs font-mono-semibold">
+              Join Kosh
+            </SecondaryButton.Label>
+          </SecondaryButton>
+        </View>
+      )}
       <View className="pt-3 gap-y-6">
         <HomeKoshList
           koshList={koshList?.items ?? []}
