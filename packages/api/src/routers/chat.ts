@@ -118,6 +118,7 @@ export type ChatMessageItem = {
     senderId: string;
     senderName: string;
     content: string | null;
+    attachments?: ChatAttachment[] | null;
     deletedAt: string | null;
   } | null;
   reactions: { emoji: string; userIds: string[] }[];
@@ -196,7 +197,7 @@ const messageQueryConfig = {
   with: {
     sender: { columns: { id: true, name: true, image: true } },
     replyTo: {
-      columns: { id: true, senderId: true, content: true, deletedAt: true },
+      columns: { id: true, senderId: true, content: true, attachments: true, deletedAt: true },
       with: { sender: { columns: { name: true } } },
     },
     reactions: {
@@ -221,6 +222,7 @@ type MessageRow = {
     id: string;
     senderId: string;
     content: string | null;
+    attachments?: unknown;
     deletedAt: Date | null;
     sender: { name: string };
   } | null;
@@ -257,6 +259,9 @@ function toMessageItem(row: MessageRow): ChatMessageItem {
           senderId: row.replyTo.senderId,
           senderName: row.replyTo.sender.name,
           content: row.replyTo.deletedAt ? null : row.replyTo.content,
+          attachments: row.replyTo.deletedAt
+            ? null
+            : (row.replyTo.attachments as ChatAttachment[] | null),
           deletedAt: row.replyTo.deletedAt?.toISOString() ?? null,
         }
       : null,

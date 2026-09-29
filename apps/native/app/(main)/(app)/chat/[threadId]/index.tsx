@@ -42,7 +42,6 @@ const ChatThreadContent = () => {
       <ChatThreadHeader />
       <ChatTranscript />
       <MessageActionsSheet />
-
       <ChatComposer
         value={composer.draft}
         onChangeText={composer.setDraft}

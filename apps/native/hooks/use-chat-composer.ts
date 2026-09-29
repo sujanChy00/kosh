@@ -98,6 +98,7 @@ export const useChatComposer = ({
             senderId: replied.senderId,
             senderName: replied.sender.name,
             content: replied.content,
+            attachments: replied.attachments,
             deletedAt: replied.deletedAt,
           }
         : null,

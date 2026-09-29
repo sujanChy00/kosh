@@ -1,6 +1,7 @@
 import { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { cn } from "@kosh-app/utils";
 import { Pressable } from "react-native";
+import { StyledImage } from "../styled-image";
 import { ThemedText } from "../themed-text";
 
 interface Props {
@@ -24,6 +25,23 @@ export const MessageRowReplyText = ({
     }
   };
 
+  const photoUrl = !reply.deletedAt ? reply.attachments?.[0]?.url : null;
+  const displayText = reply.deletedAt
+    ? "Deleted message"
+    : (reply.content ?? (photoUrl ? "Photo" : "Sent a photo"));
+
+  if (!!photoUrl)
+    return (
+      <Pressable onPress={handlePress}>
+        <StyledImage
+          source={{ uri: photoUrl }}
+          alt={displayText ?? "chat photo"}
+          contentFit="cover"
+          className="size-20 rounded-lg opacity-50 translate-y-2"
+        />
+      </Pressable>
+    );
+
   return (
     <Pressable
       onPress={handlePress}
@@ -37,13 +55,11 @@ export const MessageRowReplyText = ({
         className="text-[11px] dark:text-muted text-foreground"
         ellipsizeMode="tail"
       >
-        {reply.deletedAt
-          ? "Deleted message"
-          : (reply.content ?? "Sent a photo")}
+        {displayText}
       </ThemedText>
       <ThemedText
         className={cn(
-          "text-[10px] text-primary font-notosans-semibold",
+          "text-[10px] text-primary font-notosans-semibold mb-0.5",
           isMine ? "text-right" : "text-left",
         )}
       >
