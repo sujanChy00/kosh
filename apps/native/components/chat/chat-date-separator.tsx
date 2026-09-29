@@ -7,7 +7,7 @@ import { formatDayLabel } from "@kosh-app/utils";
 
 type DateEntry = Extract<ChatListEntry, { kind: "date" }>;
 
-function DateSeparatorImpl({ entry }: { entry: DateEntry }) {
+function ChatDateSeparatorImpl({ entry }: { entry: DateEntry }) {
   return (
     <View className="items-center py-3">
       <View className="px-3 py-1 rounded-full bg-surface-secondary">
@@ -19,4 +19,4 @@ function DateSeparatorImpl({ entry }: { entry: DateEntry }) {
   );
 }
 
-export const DateSeparator = memo(DateSeparatorImpl);
+export const ChatDateSeparator = memo(ChatDateSeparatorImpl);

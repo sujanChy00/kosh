@@ -1,4 +1,4 @@
-import { DateSeparator } from "@/components/chat/date-separator";
+import { ChatDateSeparator } from "@/components/chat/chat-date-separator";
 import { MessageRow } from "@/components/chat/message-row";
 import { ThemedText } from "@/components/themed-text";
 import {
@@ -67,7 +67,7 @@ export const ChatTranscript = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: ChatListEntry }) => {
-      if (item.kind === "date") return <DateSeparator entry={item} />;
+      if (item.kind === "date") return <ChatDateSeparator entry={item} />;
       return (
         <MessageRow
           entry={item}
