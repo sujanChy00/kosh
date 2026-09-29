@@ -18,6 +18,7 @@ export const MessageRowReplyText = ({ isMine, reply, isDeleted }: Props) => {
       )}
     >
       <ThemedText
+        selectable={false}
         numberOfLines={2}
         className="text-[11px] dark:text-muted text-foreground"
         ellipsizeMode="tail"
