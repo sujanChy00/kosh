@@ -24,7 +24,7 @@ const TabLayout = () => {
 
   return (
     <NativeTabs
-      labelVisibilityMode="selected"
+      labelVisibilityMode="labeled"
       tintColor={"#0e5250"}
       indicatorColor={"#0e52504d"}
     >

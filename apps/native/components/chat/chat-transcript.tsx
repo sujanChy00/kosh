@@ -11,6 +11,7 @@ import type { LegendListRef } from "@legendapp/list/react-native";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
+import { ChatFetchingIndicator } from "./chat-fetching-indicator";
 
 /**
  * Static helpers extracted outside the component to avoid recreating function references on each render.
@@ -98,41 +99,44 @@ export const ChatTranscript = () => {
     );
   }, [isHistoryPending]);
 
-  const ListHeader = useMemo(
-    () =>
-      isFetchingOlder ? (
-        <View className="py-4 items-center justify-center">
-          <ActivityIndicator />
-        </View>
-      ) : null,
-    [isFetchingOlder],
-  );
+  // const ListHeader = useMemo(
+  //   () =>
+  //     isFetchingOlder ? (
+  //       <View className="py-4 items-center justify-center">
+  //         <ActivityIndicator />
+  //       </View>
+  //     ) : null,
+  //   [isFetchingOlder],
+  // );
 
   return (
-    <KeyboardAwareLegendList
-      ref={listRef}
-      data={entries}
-      recycleItems
-      drawDistance={1500}
-      estimatedItemSize={70}
-      keyExtractor={keyExtractor}
-      getItemType={getItemType}
-      renderItem={renderItem}
-      ListEmptyComponent={ListEmpty}
-      ListHeaderComponent={ListHeader}
-      ListFooterComponent={ListFooter}
-      initialScrollAtEnd
-      maintainScrollAtEnd
-      maintainVisibleContentPosition={{ size: true }}
-      onStartReached={loadOlder}
-      ItemSeparatorComponent={ItemSeparator}
-      onStartReachedThreshold={0.3}
-      onRefresh={refresh}
-      refreshing={isRefetching}
-      contentContainerClassName="p-3"
-      keyboardDismissMode="interactive"
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-    />
+    <>
+      <ChatFetchingIndicator visible={isFetchingOlder} />
+      <KeyboardAwareLegendList
+        ref={listRef}
+        data={entries}
+        recycleItems
+        drawDistance={1500}
+        estimatedItemSize={70}
+        keyExtractor={keyExtractor}
+        getItemType={getItemType}
+        renderItem={renderItem}
+        ListEmptyComponent={ListEmpty}
+        // ListHeaderComponent={ListHeader}
+        ListFooterComponent={ListFooter}
+        initialScrollAtEnd
+        maintainScrollAtEnd
+        maintainVisibleContentPosition={{ size: true }}
+        onStartReached={loadOlder}
+        ItemSeparatorComponent={ItemSeparator}
+        onStartReachedThreshold={0.3}
+        onRefresh={refresh}
+        refreshing={isRefetching}
+        contentContainerClassName="p-3"
+        keyboardDismissMode="interactive"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      />
+    </>
   );
 };

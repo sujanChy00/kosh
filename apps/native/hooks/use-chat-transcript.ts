@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const POLL_INTERVAL_MS = 3000;
-const HISTORY_PAGE_SIZE = 20;
+const HISTORY_PAGE_SIZE = 15;
 const RECENT_PAGE_SIZE = 50;
 
 export type ChatTranscript = {
