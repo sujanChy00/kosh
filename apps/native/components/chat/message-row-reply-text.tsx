@@ -18,7 +18,9 @@ export const MessageRowReplyText = ({ isMine, reply, isDeleted }: Props) => {
       )}
     >
       <ThemedText className="text-[11px] dark:text-muted text-foreground">
-        MessageRowReplyText
+        {reply.deletedAt
+          ? "Deleted message"
+          : (reply.content ?? "Sent a photo")}
       </ThemedText>
       <ThemedText
         className={cn(

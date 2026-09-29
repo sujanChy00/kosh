@@ -10,7 +10,6 @@ import {
 } from "@/contexts/chat-thread-context";
 import { useLocalSearchParams } from "expo-router";
 import { View } from "react-native";
-import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 /**
  * An open chat thread.
@@ -43,23 +42,17 @@ const ChatThreadContent = () => {
       <ChatThreadHeader />
       <ChatTranscript />
       <MessageActionsSheet />
-      <KeyboardStickyView
-        offset={{
-          closed: -20,
-          opened: -10,
-        }}
-      >
-        <ChatComposer
-          value={composer.draft}
-          onChangeText={composer.setDraft}
-          onSend={composer.send}
-          onPickImage={composer.pickImage}
-          uploading={composer.uploading}
-          target={composer.target}
-          onCancelTarget={composer.cancelTarget}
-          onConfirmEdit={composer.confirmEdit}
-        />
-      </KeyboardStickyView>
+
+      <ChatComposer
+        value={composer.draft}
+        onChangeText={composer.setDraft}
+        onSend={composer.send}
+        onPickImage={composer.pickImage}
+        uploading={composer.uploading}
+        target={composer.target}
+        onCancelTarget={composer.cancelTarget}
+        onConfirmEdit={composer.confirmEdit}
+      />
     </View>
   );
 };
