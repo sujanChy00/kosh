@@ -45,7 +45,6 @@ export const JoinNewKoshDialog = ({
 
   const handleValueChange = useCallback(
     (value: string) => {
-      "worklet";
       code.value = value;
     },
     [code],

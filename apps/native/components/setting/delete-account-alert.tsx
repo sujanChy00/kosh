@@ -57,7 +57,6 @@ export const DeleteAccountAlert = () => {
 
   const handleValueChange = useCallback(
     (value: string) => {
-      "worklet";
       password.value = value;
     },
     [password],

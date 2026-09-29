@@ -1,10 +1,19 @@
-import { StyledSymbolView } from "@/components/styled-symbol-view";
-import { ThemedText } from "@/components/themed-text";
-import { cn } from "@kosh-app/utils";
 import { useCallback } from "react";
-import { ActivityIndicator, Pressable, TextInput, View } from "react-native";
+import { TextInput, View } from "react-native";
 
+import PHOTO_ICON from "@expo/material-symbols/add_photo_alternate.xml";
+import SEND_ICON from "@expo/material-symbols/arrow_upward_alt.xml";
+import CHECK_ICON from "@expo/material-symbols/check.xml";
+
+import {
+  CircularProgressIndicator,
+  FilledIconButton,
+  Icon,
+  IconButton,
+} from "@expo/ui/jetpack-compose";
+import { size } from "@expo/ui/jetpack-compose/modifiers";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
+import { Host } from "../layout/host";
 
 export type ComposerTarget =
   | { mode: "reply"; message: ChatMessageItem }
@@ -20,8 +29,6 @@ export type ChatComposerProps = {
   onCancelTarget: () => void;
   onConfirmEdit: (text: string) => void;
 };
-
-const MAX_HEIGHT = 120;
 
 export const ChatComposer = ({
   value,
@@ -44,68 +51,35 @@ export const ChatComposer = ({
   }, [canSend, onConfirmEdit, onSend, target, value]);
 
   return (
-    <View className="border-t-hairline bg-background">
+    <View className="bg-background pt-2">
       {target && <TargetBanner target={target} onCancel={onCancelTarget} />}
-
-      <View className="flex-row items-end gap-2 px-3 py-2">
-        <Pressable
-          onPress={onPickImage}
-          disabled={uploading}
-          accessibilityRole="button"
-          accessibilityLabel="Attach a photo"
-          className="size-9 rounded-full items-center justify-center bg-surface-secondary"
-        >
-          {uploading ? (
-            <ActivityIndicator size="small" />
-          ) : (
-            <StyledSymbolView
-              size={18}
-              tintColorClassName="text-muted-foreground"
-              name={{ ios: "photo.badge.plus", android: "add_photo_alternate" }}
-            />
-          )}
-        </Pressable>
-
-        <View className="flex-1 rounded-3xl bg-surface-secondary px-3 py-2 justify-center">
+      <View className="flex-row items-center px-3">
+        <View className="flex-1 flex-row items-center bg-surface rounded-3xl">
+          <Host matchContents>
+            <IconButton onClick={onPickImage} enabled={!uploading}>
+              {uploading ? (
+                <CircularProgressIndicator
+                  modifiers={[size(20, 20)]}
+                  strokeWidth={2}
+                />
+              ) : (
+                <Icon source={PHOTO_ICON} />
+              )}
+            </IconButton>
+          </Host>
           <TextInput
             value={value}
             onChangeText={onChangeText}
-            placeholder={
-              target?.mode === "edit" ? "Edit your message" : "Message"
-            }
-            placeholderTextColor="var(--color-muted-foreground)"
+            placeholder="Your message"
+            className="flex-1 text-foreground"
             multiline
-            maxLength={4000}
-            className="text-foreground text-[15px] font-notosans-regular p-0"
-            style={{ maxHeight: MAX_HEIGHT, minHeight: 22 }}
-            accessibilityLabel="Message input"
           />
         </View>
-
-        <Pressable
-          onPress={handlePrimary}
-          disabled={!canSend}
-          accessibilityRole="button"
-          accessibilityLabel={
-            target?.mode === "edit" ? "Save edit" : "Send message"
-          }
-          className={cn(
-            "size-9 rounded-full items-center justify-center",
-            canSend ? "bg-primary" : "bg-surface-tertiary",
-          )}
-        >
-          <StyledSymbolView
-            size={18}
-            tintColorClassName={
-              canSend ? "text-primary-foreground" : "text-muted-foreground"
-            }
-            name={
-              target?.mode === "edit"
-                ? { ios: "checkmark", android: "check" }
-                : { ios: "paperplane.fill", android: "send" }
-            }
-          />
-        </Pressable>
+        <Host matchContents>
+          <FilledIconButton onClick={handlePrimary} enabled={canSend}>
+            <Icon source={target?.mode === "edit" ? CHECK_ICON : SEND_ICON} />
+          </FilledIconButton>
+        </Host>
       </View>
     </View>
   );
@@ -123,35 +97,33 @@ function TargetBanner({
     ? "Deleted message"
     : (message.content ?? (message.attachments?.length ? "Sent a photo" : ""));
 
-  return (
-    <View className="flex-row items-center gap-2 px-3 pt-2">
-      <View className="flex-1 rounded-lg border-l-2 border-primary bg-surface-secondary px-2 py-1.5">
-        <ThemedText className="text-primary text-[11px] font-notosans-semibold">
-          {mode === "edit"
-            ? "Editing message"
-            : `Replying to ${message.sender.name}`}
-        </ThemedText>
-        <ThemedText
-          numberOfLines={1}
-          className="text-muted-foreground text-[11px]"
-        >
-          {quoted}
-        </ThemedText>
-      </View>
+  return <View></View>;
 
-      <Pressable
-        onPress={onCancel}
-        hitSlop={8}
-        accessibilityRole="button"
-        accessibilityLabel={mode === "edit" ? "Cancel editing" : "Cancel reply"}
-        className="p-1"
-      >
-        <StyledSymbolView
-          size={16}
-          tintColorClassName="text-muted-foreground"
-          name={{ ios: "xmark", android: "close" }}
-        />
-      </Pressable>
-    </View>
-  );
+  // return (
+  //   <View className="flex-row items-center gap-2 px-3 pt-2">
+  //     <View className="flex-1 rounded-lg border-l-2 border-primary bg-surface-secondary px-2 py-1.5">
+  //       <ThemedText className="text-primary text-[11px] font-notosans-semibold">
+  //         {mode === "edit"
+  //           ? "Editing message"
+  //           : `Replying to ${message.sender.name}`}
+  //       </ThemedText>
+  //       <ThemedText
+  //         numberOfLines={1}
+  //         className="text-muted-foreground text-[11px]"
+  //       >
+  //         {quoted}
+  //       </ThemedText>
+  //     </View>
+
+  //     <Pressable
+  //       onPress={onCancel}
+  //       hitSlop={8}
+  //       accessibilityRole="button"
+  //       accessibilityLabel={mode === "edit" ? "Cancel editing" : "Cancel reply"}
+  //       className="p-1"
+  //     >
+  //       <StyledSymbolView size={16} name={{ ios: "xmark", android: "close" }} />
+  //     </Pressable>
+  //   </View>
+  // );
 }

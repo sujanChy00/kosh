@@ -1,13 +1,16 @@
-import { ChatThreadComposer } from "@/components/chat/chat-thread-composer";
+import { ChatComposer } from "@/components/chat/chat-composer";
 import { ChatThreadHeader } from "@/components/chat/chat-thread-header";
 import { ChatTranscript } from "@/components/chat/chat-transcript";
 import { MessageActionsSheet } from "@/components/chat/message-actions-sheet";
 import { ErrorComponent } from "@/components/layout/error-component";
 import {
   ChatThreadProvider,
+  useChatComposerContext,
   useChatThreadView,
 } from "@/contexts/chat-thread-context";
 import { useLocalSearchParams } from "expo-router";
+import { View } from "react-native";
+import { KeyboardStickyView } from "react-native-keyboard-controller";
 
 /**
  * An open chat thread.
@@ -29,19 +32,35 @@ const ChatThreadScreen = () => {
 };
 
 const ChatThreadContent = () => {
+  const composer = useChatComposerContext();
   const { isHistoryError, errorMessage, refresh } = useChatThreadView();
-
   if (isHistoryError) {
     return <ErrorComponent refetch={refresh} message={errorMessage} />;
   }
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <ChatThreadHeader />
       <ChatTranscript />
       <MessageActionsSheet />
-      <ChatThreadComposer />
-    </>
+      <KeyboardStickyView
+        offset={{
+          closed: -20,
+          opened: -10,
+        }}
+      >
+        <ChatComposer
+          value={composer.draft}
+          onChangeText={composer.setDraft}
+          onSend={composer.send}
+          onPickImage={composer.pickImage}
+          uploading={composer.uploading}
+          target={composer.target}
+          onCancelTarget={composer.cancelTarget}
+          onConfirmEdit={composer.confirmEdit}
+        />
+      </KeyboardStickyView>
+    </View>
   );
 };
 

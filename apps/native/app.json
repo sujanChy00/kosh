@@ -10,9 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.koshapp.app",
-      "associatedDomains": [
-        "webcredentials:kosh-fd5d.onrender.com"
-      ]
+      "associatedDomains": ["webcredentials:kosh-fd5d.onrender.com"]
     },
     "android": {
       "adaptiveIcon": {

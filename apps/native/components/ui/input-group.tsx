@@ -1,5 +1,6 @@
 import { cn, tv } from "@kosh-app/utils";
 import {
+  ComponentRef,
   createContext,
   forwardRef,
   useCallback,
@@ -57,7 +58,7 @@ const input = tv({
 const InputGroupContext = createContext<InputGroupContextValue | null>(null);
 const useInputGroup = () => useContext(InputGroupContext);
 
-const Root = forwardRef<View, InputGroupRootProps>(
+const Root = forwardRef<ComponentRef<typeof View>, InputGroupRootProps>(
   (
     { children, isDisabled = false, isInvalid = false, className, ...rest },
     ref,
@@ -102,7 +103,7 @@ interface InputGroupAffixProps extends ViewProps {
   isDecorative?: boolean;
 }
 
-const Prefix = forwardRef<View, InputGroupAffixProps>(
+const Prefix = forwardRef<ComponentRef<typeof View>, InputGroupAffixProps>(
   (
     {
       children,
@@ -133,7 +134,7 @@ const Prefix = forwardRef<View, InputGroupAffixProps>(
   },
 );
 
-const Suffix = forwardRef<View, InputGroupAffixProps>(
+const Suffix = forwardRef<ComponentRef<typeof View>, InputGroupAffixProps>(
   (
     {
       children,
@@ -164,7 +165,7 @@ const Suffix = forwardRef<View, InputGroupAffixProps>(
   },
 );
 
-const Input = forwardRef<TextInput, TextInputProps>(
+const Input = forwardRef<ComponentRef<typeof TextInput>, TextInputProps>(
   (
     { className, editable, onFocus: onFocusProp, onBlur: onBlurProp, ...rest },
     ref,

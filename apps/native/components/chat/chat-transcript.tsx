@@ -6,7 +6,7 @@ import {
   useMessageActionsContext,
 } from "@/contexts/chat-thread-context";
 import type { ChatListEntry } from "@kosh-app/utils";
-import { LegendList } from "@legendapp/list/react-native";
+import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -32,10 +32,6 @@ export const ChatTranscript = () => {
   const { openMessage } = useMessageActionsContext();
   const router = useRouter();
 
-  // Tapping an attachment hands off to the shared full-screen viewer, which
-  // already handles pinch / pan / double-tap. Long-press never reaches here:
-  // React Native suppresses `onPress` once `onLongPress` has fired, so a
-  // long-press opens the actions sheet instead of navigating away.
   const onPressImage = useCallback(
     (url: string) => {
       router.push({ pathname: "/view/[image]", params: { image: url } });
@@ -60,6 +56,10 @@ export const ChatTranscript = () => {
 
   const keyExtractor = useCallback((item: ChatListEntry) => item.key, []);
   const getItemType = useCallback((item: ChatListEntry) => item.kind, []);
+  const ItemSeparatorComponent = useCallback(
+    () => <View style={{ height: 10 }} />,
+    [],
+  );
 
   const ListEmpty = useMemo(() => {
     if (isHistoryPending) {
@@ -78,7 +78,7 @@ export const ChatTranscript = () => {
     );
   }, [isHistoryPending]);
 
-  const ListFooter = useMemo(
+  const ListHeader = useMemo(
     () =>
       isFetchingOlder ? (
         <View className="py-4 items-center justify-center">
@@ -88,23 +88,27 @@ export const ChatTranscript = () => {
     [isFetchingOlder],
   );
 
+  const ListFooter = useMemo(() => <View style={{ height: 20 }} />, []);
+
   return (
-    <LegendList
+    <KeyboardAwareLegendList
       data={entries}
       recycleItems
       keyExtractor={keyExtractor}
       getItemType={getItemType}
       renderItem={renderItem}
       ListEmptyComponent={ListEmpty}
+      ListHeaderComponent={ListHeader}
       ListFooterComponent={ListFooter}
       initialScrollAtEnd
       maintainScrollAtEnd
-      maintainVisibleContentPosition={{ data: true, size: true }}
+      maintainVisibleContentPosition={{ size: true }}
       onStartReached={loadOlder}
+      ItemSeparatorComponent={ItemSeparatorComponent}
       onStartReachedThreshold={0.3}
       onRefresh={refresh}
       refreshing={isRefetching}
-      contentContainerClassName="py-3"
+      contentContainerClassName="p-3"
       keyboardDismissMode="interactive"
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}

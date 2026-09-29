@@ -44,12 +44,17 @@ export const MessageActionsSheet = () => {
       isPresented={isOpen}
       onDismiss={onClose}
       showDragIndicator={false}
+      contentPadding={{
+        left: 0,
+        right: 0,
+      }}
     >
       <Column>
         {canReact && (
           <Row
             verticalAlignment="center"
             horizontalArrangement={"spaceBetween"}
+            modifiers={[paddingAll(6)]}
           >
             {QUICK_REACTIONS.map((emoji) => (
               <TextButton key={emoji} onClick={run(() => onReact(emoji))}>
@@ -62,7 +67,13 @@ export const MessageActionsSheet = () => {
         <Row
           modifiers={[paddingAll(10), fillMaxWidth()]}
           verticalAlignment="center"
-          horizontalArrangement={isFailed ? "center" : "spaceBetween"}
+          horizontalArrangement={
+            isFailed
+              ? "center"
+              : !canShare && !canDelete
+                ? "spaceAround"
+                : "spaceBetween"
+          }
         >
           {isFailed ? (
             <SheetRow
