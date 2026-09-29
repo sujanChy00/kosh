@@ -1,6 +1,8 @@
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { cn, formatBytes } from "@kosh-app/utils";
-import { Pressable, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
+import { FadeIn, FadeOut } from "react-native-reanimated";
+import { AnimatedView } from "../animated-view";
 import { StyledImage } from "../styled-image";
 import { ThemedText } from "../themed-text";
 
@@ -9,6 +11,7 @@ interface AttachmentProps {
   isMine: boolean;
   onPress: (url: string) => void;
   onLongPress?: () => void;
+  isUploading: boolean;
 }
 
 export function MessageRowAttachment({
@@ -16,6 +19,7 @@ export function MessageRowAttachment({
   isMine,
   onPress,
   onLongPress,
+  isUploading = false,
 }: AttachmentProps) {
   const isImage =
     !attachment.mimeType || attachment.mimeType.startsWith("image/");
@@ -23,16 +27,26 @@ export function MessageRowAttachment({
   if (isImage) {
     return (
       <Pressable
-        onPress={() => onPress(attachment.url)}
+        onPress={isUploading ? undefined : () => onPress(attachment.url)}
         onLongPress={onLongPress}
         delayLongPress={280}
         accessibilityRole="imagebutton"
         accessibilityLabel={attachment.name ?? "Photo attachment"}
+        className="size-56 rounded-xl relative overflow-hidden"
         accessibilityHint="Tap to view full screen, long press for actions"
       >
+        {isUploading && (
+          <AnimatedView
+            entering={FadeIn}
+            exiting={FadeOut}
+            className="absolute size-full z-20 bg-black/60 items-center justify-center"
+          >
+            <ActivityIndicator />
+          </AnimatedView>
+        )}
         <StyledImage
           source={{ uri: attachment.url }}
-          className="size-56 rounded-xl"
+          className="size-full"
           contentFit="cover"
           transition={150}
         />

@@ -1,11 +1,11 @@
 import { authClient } from "@/lib/auth-client";
 import { queryClient, trpc } from "@/utils/trpc";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
-import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const POLL_INTERVAL_MS = 3000;
-const HISTORY_PAGE_SIZE = 30;
+const HISTORY_PAGE_SIZE = 20;
 const RECENT_PAGE_SIZE = 50;
 
 export type ChatTranscript = {

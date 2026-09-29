@@ -1,6 +1,7 @@
 import { cn, formatMessageTime } from "@kosh-app/utils";
 import { View } from "react-native";
-import { ThemedText } from "../themed-text";
+import { FadeIn, FadeOut } from "react-native-reanimated";
+import { AnimatedText } from "../animated-text";
 
 interface Props {
   isMine: boolean;
@@ -8,7 +9,7 @@ interface Props {
     createdAt: string;
     editedAt: string | null;
   };
-  delivery: "uploading" | "sending" | "failed" | "sent" | undefined;
+  isSending: boolean;
   failed: boolean;
   isDeleted: boolean;
 }
@@ -16,7 +17,7 @@ interface Props {
 export const MessageRowStatus = ({
   isMine,
   message,
-  delivery,
+  isSending = false,
   failed,
   isDeleted,
 }: Props) => {
@@ -27,28 +28,40 @@ export const MessageRowStatus = ({
         isMine ? "justify-end" : "justify-start",
       )}
     >
-      <ThemedText className="text-muted-foreground text-[10px] font-mono-medium-italic">
-        {formatMessageTime(message.createdAt)}
-      </ThemedText>
-      {message.editedAt && !isDeleted && (
-        <ThemedText className="text-muted-foreground text-[10px] font-notosans-italic">
+      {!isSending && (
+        <AnimatedText
+          entering={FadeIn}
+          className="text-muted-foreground text-[10px] font-mono-medium-italic"
+        >
+          {formatMessageTime(message.createdAt)}
+        </AnimatedText>
+      )}
+      {message.editedAt && !isDeleted && !isSending && (
+        <AnimatedText
+          entering={FadeIn}
+          className="text-muted-foreground text-[10px] font-notosans-italic"
+        >
           edited
-        </ThemedText>
+        </AnimatedText>
       )}
-      {delivery === "uploading" && (
-        <ThemedText className="text-muted-foreground font-notosans-italic text-[10px]">
-          Uploading…
-        </ThemedText>
-      )}
-      {delivery === "sending" && (
-        <ThemedText className="text-muted-foreground text-[10px] font-notosans-italic">
+
+      {isSending && (
+        <AnimatedText
+          entering={FadeIn}
+          exiting={FadeOut}
+          className="text-muted-foreground text-[10px] font-notosans-italic"
+        >
           Sending…
-        </ThemedText>
+        </AnimatedText>
       )}
-      {failed && (
-        <ThemedText className="text-danger text-[10px] font-notosans-semibold">
+      {failed && !isSending && (
+        <AnimatedText
+          entering={FadeIn}
+          exiting={FadeOut}
+          className="text-danger text-[10px] font-notosans-semibold"
+        >
           Failed · tap to retry
-        </ThemedText>
+        </AnimatedText>
       )}
     </View>
   );

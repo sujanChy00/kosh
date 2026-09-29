@@ -5,13 +5,8 @@ import PHOTO_ICON from "@expo/material-symbols/add_photo_alternate.xml";
 import SEND_ICON from "@expo/material-symbols/arrow_upward_alt.xml";
 import CHECK_ICON from "@expo/material-symbols/check.xml";
 
-import {
-  CircularProgressIndicator,
-  FilledIconButton,
-  Icon,
-  IconButton,
-} from "@expo/ui/jetpack-compose";
-import { size } from "@expo/ui/jetpack-compose/modifiers";
+import { useAppTheme } from "@/contexts/app-theme-context";
+import { FilledIconButton, Icon, IconButton } from "@expo/ui/jetpack-compose";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { Host } from "../layout/host";
@@ -42,6 +37,7 @@ export const ChatComposer = ({
   onCancelTarget,
   onConfirmEdit,
 }: ChatComposerProps) => {
+  const { colors } = useAppTheme();
   const canSend = value.trim().length > 0;
 
   const handlePrimary = useCallback(() => {
@@ -59,7 +55,12 @@ export const ChatComposer = ({
         opened: -10,
       }}
     >
-      <View className="bg-background pt-2">
+      <View
+        className="pt-2"
+        style={{
+          backgroundColor: colors.background,
+        }}
+      >
         {target && (
           <ChatReplyTextHolder target={target} onCancel={onCancelTarget} />
         )}
@@ -67,14 +68,7 @@ export const ChatComposer = ({
           <View className="flex-1 flex-row items-center bg-surface rounded-3xl">
             <Host matchContents>
               <IconButton onClick={onPickImage} enabled={!uploading}>
-                {uploading ? (
-                  <CircularProgressIndicator
-                    modifiers={[size(20, 20)]}
-                    strokeWidth={2}
-                  />
-                ) : (
-                  <Icon source={PHOTO_ICON} />
-                )}
+                <Icon source={PHOTO_ICON} />
               </IconButton>
             </Host>
             <TextInput

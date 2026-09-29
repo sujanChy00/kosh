@@ -33,7 +33,9 @@ function MessageRowImpl({
   const { message, showSender, delivery } = entry;
   const isMine = message.senderId === myUserId;
   const isPending = message.id.startsWith("pending:");
+  const isUploading = delivery === "uploading";
   const failed = delivery === "failed";
+  const isSending = delivery === "sending";
   const isDeleted = message.deletedAt != null;
 
   const handleLongPress = useCallback(() => {
@@ -100,6 +102,7 @@ function MessageRowImpl({
               {message.attachments &&
                 message.attachments?.map((attachment) => (
                   <MessageRowAttachment
+                    isUploading={isUploading}
                     key={attachment.url}
                     attachment={attachment}
                     isMine={isMine}
@@ -124,7 +127,7 @@ function MessageRowImpl({
         <MessageRowStatus
           isMine={isMine}
           message={message}
-          delivery={delivery}
+          isSending={isSending}
           failed={failed}
           isDeleted={isDeleted}
         />
