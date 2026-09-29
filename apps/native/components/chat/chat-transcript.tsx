@@ -7,8 +7,9 @@ import {
 } from "@/contexts/chat-thread-context";
 import type { ChatListEntry } from "@kosh-app/utils";
 import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
+import type { LegendListRef } from "@legendapp/list/react-native";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 /**
@@ -28,6 +29,7 @@ const ListFooter = () => <View style={{ height: 20 }} />;
  * thing - the id setter each row hands to `onLongPress`.
  */
 export const ChatTranscript = () => {
+  const listRef = useRef<LegendListRef>(null);
   const {
     entries,
     myUserId,
@@ -47,6 +49,22 @@ export const ChatTranscript = () => {
     [router],
   );
 
+  const scrollToMessage = useCallback(
+    (targetId: string) => {
+      const index = entries.findIndex(
+        (e) => e.kind === "message" && e.message.id === targetId,
+      );
+      if (index !== -1) {
+        listRef.current?.scrollToIndex({
+          index,
+          animated: true,
+          viewPosition: 0.5,
+        });
+      }
+    },
+    [entries],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: ChatListEntry }) => {
       if (item.kind === "date") return <DateSeparator entry={item} />;
@@ -56,10 +74,11 @@ export const ChatTranscript = () => {
           myUserId={myUserId}
           onLongPress={openMessage}
           onPressImage={onPressImage}
+          onPressReply={scrollToMessage}
         />
       );
     },
-    [myUserId, openMessage, onPressImage],
+    [myUserId, openMessage, onPressImage, scrollToMessage],
   );
 
   const ListEmpty = useMemo(() => {
@@ -91,6 +110,7 @@ export const ChatTranscript = () => {
 
   return (
     <KeyboardAwareLegendList
+      ref={listRef}
       data={entries}
       recycleItems
       drawDistance={1500}
@@ -116,4 +136,3 @@ export const ChatTranscript = () => {
     />
   );
 };
-

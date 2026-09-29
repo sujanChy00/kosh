@@ -12,6 +12,18 @@ import { ActivityIndicator, View } from "react-native";
 
 const PAGE_SIZE = 20;
 
+const keyExtractor = (item: ChatThreadListItem) => item.id;
+
+const renderItem = ({ item }: { item: ChatThreadListItem }) => (
+  <ChatThreadRow thread={item} />
+);
+
+const ListHeader = () => (
+  <View className="pb-2 pt-safe-offset-10 px-4">
+    <ThemedText className="text-2xl font-notosans-semibold">Chat</ThemedText>
+  </View>
+);
+
 const ChatScreen = () => {
   const {
     data,
@@ -30,6 +42,10 @@ const ChatScreen = () => {
     ),
   );
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const threads = useMemo(() => {
     const byId = new Map<string, ChatThreadListItem>();
     for (const page of data?.pages ?? []) {
@@ -44,24 +60,6 @@ const ChatScreen = () => {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const keyExtractor = useCallback((item: ChatThreadListItem) => item.id, []);
-
-  const renderItem = useCallback(
-    ({ item }: { item: ChatThreadListItem }) => <ChatThreadRow thread={item} />,
-    [],
-  );
-
-  const ListHeader = useMemo(
-    () => (
-      <View className="pb-2 pt-safe-offset-10 px-4">
-        <ThemedText className="text-2xl font-notosans-semibold">
-          Chat
-        </ThemedText>
-      </View>
-    ),
-    [],
-  );
-
   const ListEmpty = useMemo(() => {
     if (isPending) {
       return (
@@ -70,6 +68,13 @@ const ChatScreen = () => {
         </View>
       );
     }
+    if (isError)
+      return (
+        <ErrorComponent
+          refetch={handleRefresh}
+          message={error?.message ?? "Failed to load chats."}
+        />
+      );
     return (
       <View className="p-8 pt-20 items-center justify-center gap-y-2 mx-4">
         <StyledSymbolView
@@ -82,7 +87,7 @@ const ChatScreen = () => {
         </ThemedText>
       </View>
     );
-  }, [isPending]);
+  }, [isPending, isError, error]);
 
   const ListFooter = useMemo(
     () => (
@@ -93,19 +98,6 @@ const ChatScreen = () => {
     ),
     [isFetchingNextPage, hasNextPage],
   );
-
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  if (isError) {
-    return (
-      <ErrorComponent
-        refetch={handleRefresh}
-        message={error?.message ?? "Failed to load chats."}
-      />
-    );
-  }
 
   return (
     <LegendList

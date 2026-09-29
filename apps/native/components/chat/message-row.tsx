@@ -20,6 +20,7 @@ export type MessageRowProps = {
   myUserId: string;
   onLongPress: (messageId: string) => void;
   onPressImage: (url: string) => void;
+  onPressReply?: (messageId: string) => void;
 };
 
 function MessageRowImpl({
@@ -27,6 +28,7 @@ function MessageRowImpl({
   myUserId,
   onLongPress,
   onPressImage,
+  onPressReply,
 }: MessageRowProps) {
   const { message, showSender, delivery } = entry;
   const isMine = message.senderId === myUserId;
@@ -88,6 +90,7 @@ function MessageRowImpl({
               reply={message.replyTo}
               isMine={isMine}
               isDeleted={isDeleted}
+              onPressReply={onPressReply}
             />
             <View
               style={{
@@ -132,6 +135,7 @@ function MessageRowImpl({
 
 export const MessageRow = memo(MessageRowImpl, (prev, next) => {
   if (prev.myUserId !== next.myUserId) return false;
+  if (prev.onPressReply !== next.onPressReply) return false;
   if (prev.entry === next.entry) return true;
   return chatEntrySignature(prev.entry) === chatEntrySignature(next.entry);
 });

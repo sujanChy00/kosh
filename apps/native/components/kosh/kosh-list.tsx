@@ -11,6 +11,8 @@ import { KoshCardSkeleton } from "./kosh-card-skeleton";
 import { KoshEmptyComponent } from "./kosh-empty-component";
 
 const PAGE_SIZE = 10;
+const keyExtractor = ({ id }: KoshListItem) => id.toString();
+const ListSeparator = () => <ListSeparatorComponent />;
 
 export const KoshList = () => {
   const {
@@ -20,7 +22,7 @@ export const KoshList = () => {
     isFetchingNextPage,
     isRefetching,
     refetch,
-    isLoading,
+    isPending,
     error,
     isError,
   } = useInfiniteQuery(
@@ -40,6 +42,10 @@ export const KoshList = () => {
     }
   }, [hasNextPage, isFetchingNextPage]);
 
+  const handleRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
   const renderItem = useCallback(
     ({ item }: { item: KoshListItem }) => (
       <KoshCard
@@ -49,8 +55,7 @@ export const KoshList = () => {
     ),
     [],
   );
-  const keyExtractor = useCallback(({ id }: KoshListItem) => id.toString(), []);
-  const ListSeparator = useCallback(() => <ListSeparatorComponent />, []);
+
   const ListFooterComponent = useCallback(
     () => (
       <ListFetchingMoreComponent
@@ -61,23 +66,23 @@ export const KoshList = () => {
     [isFetchingNextPage, hasNextPage],
   );
 
-  if (isLoading)
-    return (
-      <KoshCardSkeleton
-        className="bg-surface rounded-3xl shadow overflow-hidden"
-        wrapperClassName="p-2"
-      />
-    );
-
-  if (isError)
-    return (
-      <ErrorComponent
-        message={error?.message ?? "Could not load your kosh."}
-        refetch={refetch}
-      />
-    );
-
-  if (koshList.length === 0) return <KoshEmptyComponent />;
+  const ListEmptyComponent = useCallback(() => {
+    if (isPending)
+      return (
+        <KoshCardSkeleton
+          className="bg-surface rounded-3xl shadow overflow-hidden"
+          wrapperClassName="p-2"
+        />
+      );
+    if (isError)
+      return (
+        <ErrorComponent
+          refetch={handleRefresh}
+          message={error?.message ?? "Failed to load"}
+        />
+      );
+    return <KoshEmptyComponent className="pt-14" />;
+  }, [isPending, isError, error]);
 
   return (
     <LegendList
@@ -88,11 +93,12 @@ export const KoshList = () => {
       onEndReachedThreshold={0.5}
       onEndReached={loadMore}
       refreshing={isRefetching}
-      onRefresh={refetch}
+      onRefresh={handleRefresh}
       ItemSeparatorComponent={ListSeparator}
       estimatedItemSize={110.25}
       showsVerticalScrollIndicator={false}
       recycleItems
+      ListEmptyComponent={ListEmptyComponent}
       renderItem={renderItem}
       keyExtractor={keyExtractor}
       ListFooterComponent={ListFooterComponent}
