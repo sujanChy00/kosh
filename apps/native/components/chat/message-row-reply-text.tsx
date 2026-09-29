@@ -17,7 +17,11 @@ export const MessageRowReplyText = ({ isMine, reply, isDeleted }: Props) => {
         "px-3 pt-3 translate-y-2 pb-3 rounded-3xl bg-gray-300 dark:bg-zinc-900 gap-y-1",
       )}
     >
-      <ThemedText className="text-[11px] dark:text-muted text-foreground">
+      <ThemedText
+        numberOfLines={2}
+        className="text-[11px] dark:text-muted text-foreground"
+        ellipsizeMode="tail"
+      >
         {reply.deletedAt
           ? "Deleted message"
           : (reply.content ?? "Sent a photo")}

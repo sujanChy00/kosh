@@ -9,7 +9,6 @@ import ACCOUNT_BALANCE_ICON from "@expo/material-symbols/account_balance.xml";
 import CALENDAR_ICON from "@expo/material-symbols/calendar_month.xml";
 import EVENT_REPEAT_ICON from "@expo/material-symbols/event_repeat.xml";
 import GROUP_ICON from "@expo/material-symbols/group.xml";
-import NOTES_ICON from "@expo/material-symbols/notes.xml";
 import PAYMENT_ICON from "@expo/material-symbols/payments.xml";
 import PERCENTAGE_ICON from "@expo/material-symbols/percent.xml";
 import PERSON_ICON from "@expo/material-symbols/person.xml";
@@ -239,7 +238,7 @@ export const KoshForm = ({ data, ...rest }: KoshFormProps) => {
                 />
               )}
             />
-            <form.AppField
+            {/*<form.AppField
               name="description"
               children={(field) => (
                 <field.TextField
@@ -249,7 +248,7 @@ export const KoshForm = ({ data, ...rest }: KoshFormProps) => {
                   placeholder="What is this kosh for?"
                 />
               )}
-            />
+            />*/}
           </View>
 
           <View className="gap-y-4">

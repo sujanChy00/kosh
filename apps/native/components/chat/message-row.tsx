@@ -2,7 +2,7 @@ import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { cn } from "@kosh-app/utils";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { Pressable, View } from "react-native";
 
 import type { ChatListEntry } from "@kosh-app/utils";
@@ -34,8 +34,14 @@ function MessageRowImpl({
   const failed = delivery === "failed";
   const isDeleted = message.deletedAt != null;
 
+  const handleLongPress = useCallback(() => {
+    if (!isPending && !isDeleted) {
+      onLongPress(message.id);
+    }
+  }, [isPending, isDeleted, onLongPress, message.id]);
+
   const onLongPressPressable =
-    isPending || isDeleted ? undefined : () => onLongPress(message.id);
+    isPending || isDeleted ? undefined : handleLongPress;
 
   return (
     <View
@@ -63,11 +69,9 @@ function MessageRowImpl({
       <View className="flex-1">
         <Pressable
           className="flex-1"
-          onLongPress={
-            isPending || isDeleted ? undefined : () => onLongPress(message.id)
-          }
+          onLongPress={onLongPressPressable}
           delayLongPress={280}
-          onPress={failed ? () => onLongPress(message.id) : undefined}
+          onPress={failed ? handleLongPress : undefined}
           disabled={isPending && !failed}
           accessibilityRole="button"
           accessibilityLabel={
@@ -80,12 +84,6 @@ function MessageRowImpl({
               isMine ? "ml-auto items-end" : "mr-auto items-start",
             )}
           >
-            {/*{showSender && (
-              <ThemedText className="text-[11px] font-notosans-semibold px-1 mb-0.5">
-                {message.sender.name}
-              </ThemedText>
-            )}*/}
-
             <MessageRowReplyText
               reply={message.replyTo}
               isMine={isMine}
@@ -134,6 +132,7 @@ function MessageRowImpl({
 
 export const MessageRow = memo(MessageRowImpl, (prev, next) => {
   if (prev.myUserId !== next.myUserId) return false;
+  if (prev.entry === next.entry) return true;
   return chatEntrySignature(prev.entry) === chatEntrySignature(next.entry);
 });
 

@@ -12,6 +12,14 @@ import { useCallback, useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 /**
+ * Static helpers extracted outside the component to avoid recreating function references on each render.
+ */
+const keyExtractor = (item: ChatListEntry) => item.key;
+const getItemType = (item: ChatListEntry) => item.kind;
+const ItemSeparator = () => <View style={{ height: 10 }} />;
+const ListFooter = () => <View style={{ height: 20 }} />;
+
+/**
  * The scrolling transcript.
  *
  * Reads the merged entry list rather than the raw queries, so the list component
@@ -54,13 +62,6 @@ export const ChatTranscript = () => {
     [myUserId, openMessage, onPressImage],
   );
 
-  const keyExtractor = useCallback((item: ChatListEntry) => item.key, []);
-  const getItemType = useCallback((item: ChatListEntry) => item.kind, []);
-  const ItemSeparatorComponent = useCallback(
-    () => <View style={{ height: 10 }} />,
-    [],
-  );
-
   const ListEmpty = useMemo(() => {
     if (isHistoryPending) {
       return (
@@ -88,12 +89,12 @@ export const ChatTranscript = () => {
     [isFetchingOlder],
   );
 
-  const ListFooter = useMemo(() => <View style={{ height: 20 }} />, []);
-
   return (
     <KeyboardAwareLegendList
       data={entries}
       recycleItems
+      drawDistance={1500}
+      estimatedItemSize={70}
       keyExtractor={keyExtractor}
       getItemType={getItemType}
       renderItem={renderItem}
@@ -104,7 +105,7 @@ export const ChatTranscript = () => {
       maintainScrollAtEnd
       maintainVisibleContentPosition={{ size: true }}
       onStartReached={loadOlder}
-      ItemSeparatorComponent={ItemSeparatorComponent}
+      ItemSeparatorComponent={ItemSeparator}
       onStartReachedThreshold={0.3}
       onRefresh={refresh}
       refreshing={isRefetching}
@@ -115,3 +116,4 @@ export const ChatTranscript = () => {
     />
   );
 };
+

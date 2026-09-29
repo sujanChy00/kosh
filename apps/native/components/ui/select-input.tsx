@@ -1,3 +1,4 @@
+import ARROW_DROP_DOWN from "@expo/material-symbols/arrow_drop_down.xml";
 import { ScrollView, Text } from "@expo/ui";
 import {
   BasicAlertDialog,
@@ -8,6 +9,7 @@ import {
   ExposedDropdownMenu,
   ExposedDropdownMenuBox,
   HorizontalDivider,
+  Icon,
   OutlinedTextField,
   RadioButton,
   Row,
@@ -111,11 +113,9 @@ export const SelectInput = ({
                 <Text>{placeholder}</Text>
               </OutlinedTextField.Placeholder>
             )}
-            {suffix && (
-              <OutlinedTextField.TrailingIcon>
-                {suffix}
-              </OutlinedTextField.TrailingIcon>
-            )}
+            <OutlinedTextField.TrailingIcon>
+              {suffix ?? <Icon source={ARROW_DROP_DOWN} />}
+            </OutlinedTextField.TrailingIcon>
             {description && (
               <OutlinedTextField.SupportingText>
                 <Text
@@ -245,11 +245,9 @@ export const SelectInput = ({
               {prefix}
             </OutlinedTextField.LeadingIcon>
           )}
-          {suffix && (
-            <OutlinedTextField.TrailingIcon>
-              {suffix}
-            </OutlinedTextField.TrailingIcon>
-          )}
+          <OutlinedTextField.TrailingIcon>
+            {suffix ?? <Icon source={ARROW_DROP_DOWN} />}
+          </OutlinedTextField.TrailingIcon>
           {description && (
             <OutlinedTextField.SupportingText>
               <Text
