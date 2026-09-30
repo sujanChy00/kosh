@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChatOptimistic } from "./use-chat-optimistic";
 import type { ChatTranscript } from "./use-chat-transcript";
 import { useHaptics } from "./use-haptics";
+import { useKeyboard } from "./use-keyboard";
 
 export type MessageActions = {
   /** Opens the sheet against a message id. Called by each transcript row. */
@@ -58,6 +59,7 @@ export const useMessageActions = ({
   onReply,
   onEdit,
 }: UseMessageActionsOptions): MessageActions => {
+  const { dismissKeyboard, isKeyboardVisible } = useKeyboard();
   const haptics = useHaptics();
   const { history, recent, myUserId } = transcript;
   const { pending, patches } = optimistic;
@@ -176,10 +178,22 @@ export const useMessageActions = ({
   );
 
   const onClose = useCallback(() => setMessageId(null), []);
-  const openMessage = useCallback((id: string) => {
-    haptics("impact-light");
-    setMessageId(id);
-  }, []);
+  const openMessage = useCallback(
+    (id: string) => {
+      haptics("impact-light");
+      // react-native-keyboard-controller intercepts native keyboard events,
+      // so the standard RN `keyboardDidHide` listener is unreliable here.
+      // Instead, dismiss + defer with a short delay that lets the keyboard
+      // animation finish before the Modal tries to present.
+      if (isKeyboardVisible) {
+        dismissKeyboard();
+        setTimeout(() => setMessageId(id), 150);
+      } else {
+        setMessageId(id);
+      }
+    },
+    [isKeyboardVisible],
+  );
 
   const onReact = useCallback(
     (emoji: string) => {

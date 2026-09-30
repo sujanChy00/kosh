@@ -1,6 +1,6 @@
 import { uploadChatImage } from "@/lib/cloudinary";
 import { errorToast } from "@/utils/toast";
-import { trpc } from "@/utils/trpc";
+import { queryClient, trpc } from "@/utils/trpc";
 import type {
   ChatAttachment,
   ChatMessageItem,

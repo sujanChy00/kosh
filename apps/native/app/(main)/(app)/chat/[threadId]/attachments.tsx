@@ -124,7 +124,9 @@ const ChatAttachments = () => {
 
   return (
     <>
-      <Stack.Title>Attachments ({total})</Stack.Title>
+      <Stack.Title>
+        {isPending ? "Loading..." : `Attachments (${total})`}
+      </Stack.Title>
 
       <LegendList
         data={attachments}

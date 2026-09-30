@@ -104,16 +104,19 @@ export const ChatTranscript = () => {
   }, [isHistoryPending]);
 
   const ListFooter = useMemo(
-    () =>
-      isFetchingOlder ? (
-        <AnimatedView
-          entering={ZoomIn}
-          exiting={ZoomOut}
-          className="items-center justify-center"
-        >
-          <ActivityIndicator size="small" />
-        </AnimatedView>
-      ) : undefined,
+    () => (
+      <View className="pt-safe-offset-20">
+        {isFetchingOlder && (
+          <AnimatedView
+            entering={ZoomIn}
+            exiting={ZoomOut}
+            className="items-center justify-center"
+          >
+            <ActivityIndicator size="small" />
+          </AnimatedView>
+        )}
+      </View>
+    ),
     [isFetchingOlder],
   );
 

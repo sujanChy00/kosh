@@ -87,13 +87,28 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
   }, [messagesQuery]);
 
   const invalidateThreadLists = useCallback(() => {
+    queryClient.setQueriesData(
+      { queryKey: trpc.chat.listThreads.queryKey() },
+      (oldData: any) => {
+        if (!oldData?.pages) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            items: page.items.map((item: any) =>
+              item.id === threadId ? { ...item, unreadCount: 0 } : item,
+            ),
+          })),
+        };
+      },
+    );
     void queryClient.invalidateQueries({
       queryKey: trpc.chat.listThreads.queryKey(),
     });
     void queryClient.invalidateQueries({
       queryKey: trpc.chat.unreadTotal.queryKey(),
     });
-  }, []);
+  }, [threadId]);
 
   const markRead = useMutation(
     trpc.chat.markRead.mutationOptions({ onSuccess: invalidateThreadLists }),

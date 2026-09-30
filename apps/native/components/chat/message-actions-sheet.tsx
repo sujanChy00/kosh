@@ -1,23 +1,12 @@
 import { useMessageActionsContext } from "@/contexts/chat-thread-context";
-import CONTENT_COPY_ICON from "@expo/material-symbols/content_copy.xml";
-import DELETE_ICON from "@expo/material-symbols/delete.xml";
-import EDIT_ICON from "@expo/material-symbols/edit.xml";
-import REFRESH_ICON from "@expo/material-symbols/refresh.xml";
-import REPLY_ICON from "@expo/material-symbols/reply_all.xml";
-import SHARE_ICON from "@expo/material-symbols/share.xml";
-import { BottomSheet } from "@expo/ui";
-import {
-  Column,
-  HorizontalDivider,
-  Icon,
-  IconProps,
-  Row,
-  Text,
-  TextButton,
-  useMaterialColors,
-} from "@expo/ui/jetpack-compose";
-import { fillMaxWidth, paddingAll } from "@expo/ui/jetpack-compose/modifiers";
-import { QUICK_REACTIONS } from "@kosh-app/utils";
+import { cn, QUICK_REACTIONS } from "@kosh-app/utils";
+import { SymbolViewProps } from "expo-symbols";
+import { Modal, TouchableOpacity, View } from "react-native";
+import { FadeInDown } from "react-native-reanimated";
+import { AnimatedView } from "../animated-view";
+import { StyledSymbolView } from "../styled-symbol-view";
+import { ThemedText } from "../themed-text";
+import { Separator } from "../ui/separator";
 
 export const MessageActionsSheet = () => {
   const {
@@ -40,90 +29,109 @@ export const MessageActionsSheet = () => {
   };
 
   return (
-    <BottomSheet
-      isPresented={isOpen}
-      onDismiss={onClose}
-      showDragIndicator={false}
-      contentPadding={{
-        left: 0,
-        right: 0,
-      }}
+    <Modal
+      transparent
+      animationType="fade"
+      visible={isOpen}
+      onRequestClose={onClose}
     >
-      <Column>
-        {canReact && (
-          <Row
-            verticalAlignment="center"
-            horizontalArrangement={"spaceBetween"}
-            modifiers={[paddingAll(6)]}
-          >
-            {QUICK_REACTIONS.map((emoji) => (
-              <TextButton key={emoji} onClick={run(() => onReact(emoji))}>
-                <Text>{emoji}</Text>
-              </TextButton>
-            ))}
-          </Row>
-        )}
-        {canReact && <HorizontalDivider />}
-        <Row
-          modifiers={[paddingAll(10), fillMaxWidth()]}
-          verticalAlignment="center"
-          horizontalArrangement={
-            isFailed
-              ? "center"
-              : !canShare && !canDelete
-                ? "spaceAround"
-                : "spaceBetween"
-          }
-        >
-          {isFailed ? (
-            <SheetRow
-              label="Failed"
-              icon={REFRESH_ICON}
-              onPress={run(() => onAction("retry"))}
-            />
-          ) : (
-            <>
-              {canReply && (
-                <SheetRow
-                  label="Reply"
-                  icon={REPLY_ICON}
-                  onPress={run(() => onAction("reply"))}
-                />
-              )}
-              {canCopy && (
-                <SheetRow
-                  label="Copy"
-                  icon={CONTENT_COPY_ICON}
-                  onPress={run(() => onAction("copy"))}
-                />
-              )}
-              {canEdit && (
-                <SheetRow
-                  label="Edit"
-                  icon={EDIT_ICON}
-                  onPress={run(() => onAction("edit"))}
-                />
-              )}
-              {canShare && (
-                <SheetRow
-                  label="Share"
-                  icon={SHARE_ICON}
-                  onPress={run(() => onAction("share"))}
-                />
-              )}
-              {canDelete && (
-                <SheetRow
-                  label="Delete"
-                  icon={DELETE_ICON}
-                  onPress={run(() => onAction("delete"))}
-                  destructive
-                />
-              )}
-            </>
+      <View className="flex-1 justify-end">
+        <AnimatedView entering={FadeInDown} className={"bg-surface pb-8"}>
+          {canReact && (
+            <View className="flex-row items-center justify-between p-4">
+              {QUICK_REACTIONS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  onPress={run(() => onReact(emoji))}
+                >
+                  <ThemedText>{emoji}</ThemedText>
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
-        </Row>
-      </Column>
-    </BottomSheet>
+          {canReact && <Separator />}
+          <View
+            className={cn(
+              "items-center flex-row p-4",
+              isFailed
+                ? "justify-center"
+                : !canShare && !canDelete
+                  ? "justify-around"
+                  : "justify-between",
+            )}
+          >
+            {isFailed ? (
+              <SheetRow
+                label="Failed"
+                icon={{
+                  ios: "arrow.clockwise",
+                  android: "refresh",
+                }}
+                onPress={run(() => onAction("retry"))}
+              />
+            ) : (
+              <>
+                {canReply && (
+                  <SheetRow
+                    label="Reply"
+                    icon={{
+                      ios: "arrowshape.turn.up.left.2",
+                      android: "reply_all",
+                    }}
+                    onPress={run(() => onAction("reply"))}
+                  />
+                )}
+
+                {canCopy && (
+                  <SheetRow
+                    label="Copy"
+                    icon={{
+                      ios: "doc.on.doc",
+                      android: "content_copy",
+                    }}
+                    onPress={run(() => onAction("copy"))}
+                  />
+                )}
+
+                {canEdit && (
+                  <SheetRow
+                    label="Edit"
+                    icon={{
+                      ios: "pencil",
+                      android: "edit",
+                    }}
+                    onPress={run(() => onAction("edit"))}
+                  />
+                )}
+
+                {canShare && (
+                  <SheetRow
+                    label="Share"
+                    icon={{
+                      ios: "square.and.arrow.up",
+                      android: "share",
+                    }}
+                    onPress={run(() => onAction("share"))}
+                  />
+                )}
+
+                {canDelete && (
+                  <SheetRow
+                    label="Delete"
+                    icon={{
+                      ios: "trash",
+                      android: "delete",
+                    }}
+                    onPress={run(() => onAction("delete"))}
+                    destructive
+                  />
+                )}
+              </>
+            )}
+          </View>
+        </AnimatedView>
+      </View>
+    </Modal>
   );
 };
 
@@ -134,34 +142,27 @@ function SheetRow({
   onPress,
 }: {
   label: string;
-  icon: IconProps["source"];
+  icon: SymbolViewProps["name"];
   destructive?: boolean;
   onPress: () => void;
 }) {
-  const materialColors = useMaterialColors();
-
   return (
-    <TextButton
-      onClick={() => {
+    <TouchableOpacity
+      onPress={() => {
         onPress();
       }}
     >
-      <Column
-        horizontalAlignment="center"
-        verticalArrangement={{
-          spacedBy: 6,
-        }}
-      >
-        <Icon
-          tint={destructive ? materialColors.error : materialColors.tertiary}
-          source={icon}
+      <View className="gap-y-1.5 items-center">
+        <StyledSymbolView
+          name={icon}
+          tintColorClassName={
+            destructive ? "accent-danger" : "accent-foreground"
+          }
         />
-        <Text
-          color={destructive ? materialColors.error : materialColors.tertiary}
-        >
+        <ThemedText className={destructive ? "text-danger" : "text-foreground"}>
           {label}
-        </Text>
-      </Column>
-    </TextButton>
+        </ThemedText>
+      </View>
+    </TouchableOpacity>
   );
 }

@@ -7,6 +7,7 @@ import { trpc } from "@/utils/trpc";
 import type { ChatThreadListItem } from "@kosh-app/api/routers/chat";
 import { LegendList } from "@legendapp/list/react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
 
@@ -45,6 +46,12 @@ const ChatScreen = () => {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const threads = useMemo(() => {
     const byId = new Map<string, ChatThreadListItem>();

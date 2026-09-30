@@ -147,8 +147,8 @@ const ImageScreen = () => {
           <StyledSymbolView
             size={20}
             name={{
-              ios: "arrow.down.circle.fill",
-              android: "download",
+              ios: "square.and.arrow.up",
+              android: "share",
             }}
             tintColorClassName="accent-primary-foreground"
           />

@@ -105,6 +105,12 @@ const AppLayout = () => {
           headerTitle: "Join requests",
         }}
       />
+      <Stack.Screen
+        name="chat/[threadId]/index"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 };

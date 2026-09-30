@@ -117,7 +117,9 @@ const ChatMembers = () => {
 
   return (
     <>
-      <Stack.Title>Members ({total})</Stack.Title>
+      <Stack.Title>
+        {isPending ? "Loading..." : `Members (${total})`}
+      </Stack.Title>
 
       <LegendList
         data={members}

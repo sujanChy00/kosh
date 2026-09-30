@@ -40,7 +40,7 @@ const ChatThreadContent = () => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1 }}>
       <ChatThreadHeader />
       <ChatTranscript />
       <MessageActionsSheet />
