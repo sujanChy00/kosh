@@ -38,9 +38,11 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="image/[image]"
+        name="view/[image]"
         options={{
           headerShown: false,
+          presentation: "transparentModal",
+          animation: "fade_from_bottom",
         }}
       />
       <Stack.Screen
@@ -92,12 +94,6 @@ const AppLayout = () => {
         }}
       />
       <Stack.Screen
-        name="kosh/[id]/[userId]/index"
-        options={{
-          headerTitle: "Member details",
-        }}
-      />
-      <Stack.Screen
         name="kosh/[id]/(loans)"
         options={{
           headerShown: false,
@@ -107,6 +103,12 @@ const AppLayout = () => {
         name="join-requests"
         options={{
           headerTitle: "Join requests",
+        }}
+      />
+      <Stack.Screen
+        name="chat/[threadId]/index"
+        options={{
+          headerShown: false,
         }}
       />
     </Stack>

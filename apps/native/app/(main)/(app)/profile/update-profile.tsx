@@ -9,11 +9,12 @@ import {
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
 import { authClient } from "@/lib/auth-client";
-import { isRemoteImage, uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { errorToast, successToast } from "@/utils/toast";
 import MAIL_ICON from "@expo/material-symbols/mail.xml";
 import PERSON_ICON from "@expo/material-symbols/person.xml";
 import { Icon } from "@expo/ui/jetpack-compose";
+import { isRemoteImage } from "@kosh-app/utils";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";

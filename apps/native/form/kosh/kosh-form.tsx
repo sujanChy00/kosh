@@ -2,14 +2,13 @@ import { ProfileImagePicker } from "@/components/setting/profile-image-picker";
 import { ThemedText } from "@/components/themed-text";
 import { useForm } from "@/hooks/use-form";
 import { useHaptics } from "@/hooks/use-haptics";
-import { isRemoteImage, uploadToCloudinary } from "@/lib/cloudinary";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { errorToast, successToast } from "@/utils/toast";
 import { queryClient, trpc } from "@/utils/trpc";
 import ACCOUNT_BALANCE_ICON from "@expo/material-symbols/account_balance.xml";
 import CALENDAR_ICON from "@expo/material-symbols/calendar_month.xml";
 import EVENT_REPEAT_ICON from "@expo/material-symbols/event_repeat.xml";
 import GROUP_ICON from "@expo/material-symbols/group.xml";
-import NOTES_ICON from "@expo/material-symbols/notes.xml";
 import PAYMENT_ICON from "@expo/material-symbols/payments.xml";
 import PERCENTAGE_ICON from "@expo/material-symbols/percent.xml";
 import PERSON_ICON from "@expo/material-symbols/person.xml";
@@ -22,6 +21,7 @@ import type {
   KoshDetail,
   UpdateKoshInput,
 } from "@kosh-app/api/routers/kosh";
+import { isRemoteImage } from "@kosh-app/utils";
 import { DUE_DAY_OPTIONS } from "@kosh-app/utils/constants/data";
 import { dateFormatterWithSeparator } from "@kosh-app/utils/date";
 import { useSelector } from "@tanstack/react-form";
@@ -238,7 +238,7 @@ export const KoshForm = ({ data, ...rest }: KoshFormProps) => {
                 />
               )}
             />
-            <form.AppField
+            {/*<form.AppField
               name="description"
               children={(field) => (
                 <field.TextField
@@ -248,7 +248,7 @@ export const KoshForm = ({ data, ...rest }: KoshFormProps) => {
                   placeholder="What is this kosh for?"
                 />
               )}
-            />
+            />*/}
           </View>
 
           <View className="gap-y-4">
