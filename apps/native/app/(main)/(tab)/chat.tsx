@@ -3,12 +3,13 @@ import { ErrorComponent } from "@/components/layout/error-component";
 import { ListFetchingMoreComponent } from "@/components/layout/list-fetching-more-component";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { chatThreadsQuery } from "@/utils/trpc";
+import { useRefetchOnFocus } from "@/hooks/use-refetch-on-focus";
+import { CHAT_THREADS_POLL_INTERVAL_MS, chatThreadsQuery } from "@/utils/trpc";
 import type { ChatThreadListItem } from "@kosh-app/api/routers/chat";
 import { LegendList } from "@legendapp/list/react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useFocusEffect } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useIsFocused } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 
 const keyExtractor = (item: ChatThreadListItem) => item.id;
@@ -24,27 +25,35 @@ const ListHeader = () => (
 );
 
 const ChatScreen = () => {
+  const isFocused = useIsFocused();
+
+  /**
+   * Tied to the user's own gesture, not to `isRefetching`. That flag is true
+   * for background polls too, so binding `refreshing` to it would pop the
+   * pull-to-refresh spinner every few seconds for no reason.
+   */
+  const [isPulling, setIsPulling] = useState(false);
+
   const {
     data,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
-    isRefetching,
     refetch,
+    isRefetching,
     isPending,
     error,
     isError,
-  } = useInfiniteQuery(chatThreadsQuery());
+  } = useInfiniteQuery({
+    ...chatThreadsQuery(),
+    // The tab layout keeps visited tabs mounted, so without this the list would
+    // keep polling every few seconds for the whole session, including while the
+    // user is on another tab. React-query already pauses the interval when the
+    // app itself is backgrounded.
+    refetchInterval: isFocused ? CHAT_THREADS_POLL_INTERVAL_MS : false,
+  });
 
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
-  useFocusEffect(
-    useCallback(() => {
-      refetch();
-    }, [refetch]),
-  );
+  useRefetchOnFocus(refetch);
 
   const threads = useMemo(() => {
     const byId = new Map<string, ChatThreadListItem>();
@@ -71,7 +80,7 @@ const ChatScreen = () => {
     if (isError)
       return (
         <ErrorComponent
-          refetch={handleRefresh}
+          refetch={refetch}
           message={error?.message ?? "Failed to load chats."}
         />
       );
@@ -111,7 +120,7 @@ const ChatScreen = () => {
       maintainVisibleContentPosition={{ data: true, size: true }}
       onEndReached={loadMore}
       onEndReachedThreshold={0.5}
-      onRefresh={handleRefresh}
+      onRefresh={refetch}
       refreshing={isRefetching}
       estimatedItemSize={76}
       contentContainerClassName="pt-4 pb-safe-offset-10"

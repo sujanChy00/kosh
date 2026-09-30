@@ -7,6 +7,19 @@ import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
 import { PrimaryButton } from "../ui/button";
 
+// <Host matchContents>
+//   <BadgedBox>
+//     <BadgedBox.Badge>
+//       <Badge>
+//         <Text>3</Text>
+//       </Badge>
+//     </BadgedBox.Badge>
+//     <Button onClick={() => alert('Pressed!')}>
+//       <Text>Press me</Text>
+//     </Button>
+//   </BadgedBox>
+// </Host>
+
 export const HomeHeader = () => {
   const { data: session } = authClient.useSession();
   const user = session?.user;
