@@ -3,6 +3,7 @@ import { useChatThreadView } from "@/contexts/chat-thread-context";
 import ARROW_LEFT from "@expo/material-symbols/arrow_left_alt.xml";
 import ATTACH_FILE_ICON from "@expo/material-symbols/attach_file.xml";
 import MEMBERS_ICON from "@expo/material-symbols/group.xml";
+import INFO_ICON from "@expo/material-symbols/info.xml";
 import MORE_HORIZ_ICON from "@expo/material-symbols/more_horiz.xml";
 import {
   DropdownMenu,
@@ -39,7 +40,12 @@ export const ChatThreadHeader = () => {
   const router = useRouter();
 
   return (
-    <View className="absolute top-safe-offset-10 w-full z-20">
+    <View
+      className="absolute top-0 pt-safe-offset-10 w-full z-20"
+      style={{
+        backgroundColor: isDark ? "#00000080" : "#FFFFFF80",
+      }}
+    >
       <Host
         matchContents={{ vertical: true }}
         style={{ width: "100%", backgroundColor: "transparent" }}
@@ -49,18 +55,10 @@ export const ChatThreadHeader = () => {
           horizontalArrangement={{ spacedBy: 10 }}
           modifiers={[fillMaxWidth(), padding(10, 0, 10, 0)]}
         >
-          <IconButton
-            colors={{
-              containerColor: isDark ? "#00000080" : "#FFFFFF80",
-            }}
-            onClick={router.back}
-          >
+          <IconButton onClick={router.back}>
             <Icon source={ARROW_LEFT} />
           </IconButton>
           <TextButton
-            colors={{
-              containerColor: isDark ? "#00000080" : "#FFFFFF80",
-            }}
             onClick={() => {
               if (isHistoryPending || !isGroup) return;
               router.push({
@@ -90,16 +88,27 @@ export const ChatThreadHeader = () => {
               onDismissRequest={() => setIsExpanded(false)}
             >
               <DropdownMenu.Trigger>
-                <IconButton
-                  colors={{
-                    containerColor: isDark ? "#00000080" : "#FFFFFF80",
-                  }}
-                  onClick={() => setIsExpanded(true)}
-                >
+                <IconButton onClick={() => setIsExpanded(true)}>
                   <Icon tint={colors.text} source={MORE_HORIZ_ICON} size={24} />
                 </IconButton>
               </DropdownMenu.Trigger>
               <DropdownMenu.Items>
+                <DropdownMenuItem
+                  onClick={() => {
+                    router.push({
+                      pathname: "/kosh/[id]",
+                      params: { id: koshId },
+                    });
+                    setIsExpanded(false);
+                  }}
+                >
+                  <DropdownMenuItem.Text>
+                    <Text>Kosh Details</Text>
+                  </DropdownMenuItem.Text>
+                  <DropdownMenuItem.LeadingIcon>
+                    <Icon source={INFO_ICON} size={24} />
+                  </DropdownMenuItem.LeadingIcon>
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
                     router.push({
