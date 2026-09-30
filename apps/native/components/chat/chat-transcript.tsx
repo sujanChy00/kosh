@@ -6,12 +6,13 @@ import {
   useMessageActionsContext,
 } from "@/contexts/chat-thread-context";
 import type { ChatListEntry } from "@kosh-app/utils";
-import { KeyboardAwareLegendList } from "@legendapp/list/keyboard";
-import type { LegendListRef } from "@legendapp/list/react-native";
 import { useRouter } from "expo-router";
-import { useCallback, useMemo, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
-import { ChatFetchingIndicator } from "./chat-fetching-indicator";
+import { useCallback, useMemo } from "react";
+import { ActivityIndicator, ScrollViewProps, View } from "react-native";
+import Animated, { ZoomIn, ZoomOut } from "react-native-reanimated";
+import { AnimatedView } from "../animated-view";
+import { VirtualizedListScrollView } from "../layout/virtualized-list-scroll-view";
+import { StyledSymbolView } from "../styled-symbol-view";
 
 /**
  * Static helpers extracted outside the component to avoid recreating function references on each render.
@@ -19,7 +20,8 @@ import { ChatFetchingIndicator } from "./chat-fetching-indicator";
 const keyExtractor = (item: ChatListEntry) => item.key;
 const getItemType = (item: ChatListEntry) => item.kind;
 const ItemSeparator = () => <View style={{ height: 10 }} />;
-const ListFooter = () => <View style={{ height: 20 }} />;
+const ListHeader = () => <View style={{ height: 20 }} />;
+const contentContainerStyle = { padding: 12 };
 
 /**
  * The scrolling transcript.
@@ -30,7 +32,6 @@ const ListFooter = () => <View style={{ height: 20 }} />;
  * thing - the id setter each row hands to `onLongPress`.
  */
 export const ChatTranscript = () => {
-  const listRef = useRef<LegendListRef>(null);
   const {
     entries,
     myUserId,
@@ -39,6 +40,7 @@ export const ChatTranscript = () => {
     isFetchingOlder,
     loadOlder,
     refresh,
+    listRef,
   } = useChatThreadView();
   const { openMessage } = useMessageActionsContext();
   const router = useRouter();
@@ -50,20 +52,21 @@ export const ChatTranscript = () => {
     [router],
   );
 
+  const data = useMemo(() => entries.toReversed(), [entries]);
   const scrollToMessage = useCallback(
     (targetId: string) => {
-      const index = entries.findIndex(
+      const dataIndex = data.findIndex(
         (e) => e.kind === "message" && e.message.id === targetId,
       );
-      if (index !== -1) {
+      if (dataIndex !== -1) {
         listRef.current?.scrollToIndex({
-          index,
+          index: dataIndex,
           animated: true,
           viewPosition: 0.5,
         });
       }
     },
-    [entries],
+    [data],
   );
 
   const renderItem = useCallback(
@@ -85,58 +88,64 @@ export const ChatTranscript = () => {
   const ListEmpty = useMemo(() => {
     if (isHistoryPending) {
       return (
-        <View className="py-10 items-center justify-center">
-          <ActivityIndicator />
+        <View className="pb-32 items-center justify-center">
+          <ActivityIndicator size={"large"} />
         </View>
       );
     }
     return (
-      <View className="py-16 px-8 items-center justify-center">
-        <ThemedText className="text-muted-foreground text-sm text-center">
-          No messages yet. Say hello.
+      <View className="pb-32 items-center justify-center gap-3">
+        <StyledSymbolView size={50} name={{ android: "sms", ios: "message" }} />
+        <ThemedText className="italic text-center text-base">
+          Start a conversation
         </ThemedText>
       </View>
     );
   }, [isHistoryPending]);
 
-  // const ListHeader = useMemo(
-  //   () =>
-  //     isFetchingOlder ? (
-  //       <View className="py-4 items-center justify-center">
-  //         <ActivityIndicator />
-  //       </View>
-  //     ) : null,
-  //   [isFetchingOlder],
-  // );
+  const ListFooter = useMemo(
+    () =>
+      isFetchingOlder ? (
+        <AnimatedView
+          entering={ZoomIn}
+          exiting={ZoomOut}
+          className="items-center justify-center"
+        >
+          <ActivityIndicator size="small" />
+        </AnimatedView>
+      ) : undefined,
+    [isFetchingOlder],
+  );
+
+  const memoList = useCallback(
+    (props: ScrollViewProps) => <VirtualizedListScrollView {...props} />,
+    [],
+  );
 
   return (
-    <>
-      <ChatFetchingIndicator visible={isFetchingOlder} />
-      <KeyboardAwareLegendList
-        ref={listRef}
-        data={entries}
-        recycleItems
-        drawDistance={1500}
-        estimatedItemSize={70}
-        keyExtractor={keyExtractor}
-        getItemType={getItemType}
-        renderItem={renderItem}
-        ListEmptyComponent={ListEmpty}
-        // ListHeaderComponent={ListHeader}
-        ListFooterComponent={ListFooter}
-        initialScrollAtEnd
-        maintainScrollAtEnd
-        maintainVisibleContentPosition={{ size: true }}
-        onStartReached={loadOlder}
-        ItemSeparatorComponent={ItemSeparator}
-        onStartReachedThreshold={0.3}
-        onRefresh={refresh}
-        refreshing={isRefetching}
-        contentContainerClassName="p-3"
-        keyboardDismissMode="interactive"
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      />
-    </>
+    <Animated.FlatList
+      ref={listRef}
+      data={data}
+      keyExtractor={keyExtractor}
+      renderItem={renderItem}
+      ListEmptyComponent={ListEmpty}
+      ListHeaderComponent={ListHeader}
+      ListFooterComponent={ListFooter}
+      inverted
+      onEndReached={loadOlder}
+      ItemSeparatorComponent={ItemSeparator}
+      contentContainerStyle={contentContainerStyle}
+      keyboardDismissMode="interactive"
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+      initialNumToRender={20}
+      maxToRenderPerBatch={15}
+      windowSize={21}
+      updateCellsBatchingPeriod={10}
+      removeClippedSubviews={false}
+      scrollEventThrottle={16}
+      onEndReachedThreshold={0.5}
+      renderScrollComponent={memoList}
+    />
   );
 };

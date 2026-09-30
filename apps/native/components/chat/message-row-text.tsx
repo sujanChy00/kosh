@@ -4,6 +4,7 @@ import { ThemedText } from "../themed-text";
 
 interface Props {
   deletedAt: string | null;
+  editedAt?: string | null;
   content: string | null;
   isMine: boolean;
   isPending: boolean;
@@ -11,6 +12,7 @@ interface Props {
 
 export const MessageRowText = ({
   deletedAt,
+  editedAt,
   content,
   isMine,
   isPending,
@@ -48,6 +50,16 @@ export const MessageRowText = ({
           )}
         >
           {content}
+          {editedAt ? (
+            <ThemedText
+              className={cn(
+                "text-[10px] font-notosans-italic opacity-70 ml-1",
+                isMine ? "text-primary-foreground/75" : "text-muted-foreground",
+              )}
+            >
+              {" (edited)"}
+            </ThemedText>
+          ) : null}
         </ThemedText>
       </View>
     );

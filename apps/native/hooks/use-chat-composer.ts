@@ -1,4 +1,4 @@
-import type { ComposerTarget } from "@/components/chat/chat-composer";
+import type { ComposerTarget } from "@/components/chat/chat-thread-composer";
 import { errorToast } from "@/utils/toast";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { createMessageClientId } from "@kosh-app/utils";
@@ -7,6 +7,12 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { ChatOptimistic } from "./use-chat-optimistic";
 import type { ChatTranscript } from "./use-chat-transcript";
+
+interface ChatComposerProps {
+  transcript: ChatTranscript;
+  optimistic: ChatOptimistic;
+  scrollToEnd: () => void;
+}
 
 export type ChatComposerState = {
   draft: string;
@@ -30,10 +36,8 @@ export type ChatComposerState = {
 export const useChatComposer = ({
   transcript,
   optimistic,
-}: {
-  transcript: ChatTranscript;
-  optimistic: ChatOptimistic;
-}): ChatComposerState => {
+  scrollToEnd,
+}: ChatComposerProps): ChatComposerState => {
   const { threadId, myUserId, me } = transcript;
 
   const [draft, setDraft] = useState("");
@@ -111,6 +115,7 @@ export const useChatComposer = ({
       message: localMessage,
     });
 
+    scrollToEnd();
     setDraft("");
     setTarget(null);
 
@@ -120,7 +125,7 @@ export const useChatComposer = ({
       content,
       replyToId: replied?.id ?? null,
     });
-  }, [draft, myUserId, threadId, target, me, optimistic]);
+  }, [draft, myUserId, threadId, target, me, optimistic, scrollToEnd]);
 
   const pickImage = useCallback(async () => {
     if (uploading || !threadId || !myUserId) return;
@@ -178,9 +183,10 @@ export const useChatComposer = ({
         reactions: [],
       },
     });
+    scrollToEnd();
 
     await optimistic.uploadAndSend(clientId, asset.uri, name, mimeType);
-  }, [uploading, threadId, myUserId, me, optimistic]);
+  }, [uploading, threadId, myUserId, me, optimistic, scrollToEnd]);
   return useMemo(
     () => ({
       draft,

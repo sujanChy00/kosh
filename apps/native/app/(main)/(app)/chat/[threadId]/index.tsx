@@ -1,4 +1,4 @@
-import { ChatComposer } from "@/components/chat/chat-composer";
+import { ChatThreadComposer } from "@/components/chat/chat-thread-composer";
 import { ChatThreadHeader } from "@/components/chat/chat-thread-header";
 import { ChatTranscript } from "@/components/chat/chat-transcript";
 import { MessageActionsSheet } from "@/components/chat/message-actions-sheet";
@@ -44,7 +44,7 @@ const ChatThreadContent = () => {
       <ChatThreadHeader />
       <ChatTranscript />
       <MessageActionsSheet />
-      <ChatComposer
+      <ChatThreadComposer
         value={composer.draft}
         onChangeText={composer.setDraft}
         onSend={composer.send}

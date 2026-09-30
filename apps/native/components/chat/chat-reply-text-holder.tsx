@@ -2,7 +2,7 @@ import { Pressable, View } from "react-native";
 import { StyledImage } from "../styled-image";
 import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
-import { ComposerTarget } from "./chat-composer";
+import { ComposerTarget } from "./chat-thread-composer";
 
 interface Props {
   target: ComposerTarget;

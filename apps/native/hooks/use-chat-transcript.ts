@@ -5,8 +5,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 const POLL_INTERVAL_MS = 3000;
-const HISTORY_PAGE_SIZE = 15;
-const RECENT_PAGE_SIZE = 50;
+const PAGE_SIZE = 30; // was 15 for history / 50 for recent — one size now
 
 export type ChatTranscript = {
   threadId: string;
@@ -15,8 +14,8 @@ export type ChatTranscript = {
   isGroup: boolean;
   koshId: string;
   title: string;
-  history: ChatMessageItem[];
-  recent: ChatMessageItem[];
+  history: ChatMessageItem[]; // now the ONLY source — full flattened list
+  recent: ChatMessageItem[]; // kept as [] so buildChatEntries' signature is untouched
   isHistoryPending: boolean;
   isHistoryError: boolean;
   isRefetching: boolean;
@@ -25,26 +24,10 @@ export type ChatTranscript = {
   errorMessage: string;
   loadOlder: () => void;
   refresh: () => void;
-  /**
-   * Re-reads the authoritative rows for the open thread. Resolves once the
-   * refetch has landed, which is what makes it safe to clear an optimistic patch
-   * straight after awaiting this - otherwise a success would briefly snap the
-   * row back to its pre-mutation state while the refetch was still in flight.
-   */
   refetchThread: () => Promise<void>;
-  /** Drops the thread list and the unread badge. */
   invalidateThreadLists: () => void;
 };
 
-/**
- * Everything the transcript reads: the three thread queries, the flattened
- * message lists, and the handles the list and mutations drive.
- *
- * Split from the optimistic layer on purpose. This half is poll-driven and
- * changes on a 3s timer whether or not the user did anything, so keeping it in
- * its own hook makes the line between "the server told us something" and "we
- * guessed something locally" visible in the file tree.
- */
 export const useChatTranscript = (threadId: string): ChatTranscript => {
   const { data: session } = authClient.useSession();
   const myUserId = session?.user.id ?? "";
@@ -54,46 +37,56 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
     trpc.chat.getThread.queryOptions({ threadId }, { enabled: !!threadId }),
   );
 
-  const historyQuery = useInfiniteQuery(
+  const messagesQuery = useInfiniteQuery(
     trpc.chat.messages.infiniteQueryOptions(
-      { threadId, limit: HISTORY_PAGE_SIZE },
+      { threadId, limit: PAGE_SIZE },
       { getNextPageParam: (lastPage) => lastPage.nextCursor },
     ),
   );
 
-  // The polled tail. Kept as a separate query from history so that a 3s poll
-  // never re-renders the whole backlog.
-  const recentQuery = useQuery({
-    ...trpc.chat.recent.queryOptions({ threadId, limit: RECENT_PAGE_SIZE }),
-    refetchInterval: POLL_INTERVAL_MS,
-    refetchOnWindowFocus: true,
-  });
+  const messagesQueryKey = useMemo(
+    () => trpc.chat.messages.infiniteQueryKey({ threadId, limit: PAGE_SIZE }),
+    [threadId],
+  );
+
+  // Poll a small "what's new" endpoint, then splice any messages the cache
+  // doesn't already have onto page 0 — never touches older, already-loaded
+  // pages, so their identity (and the list's scroll anchor) stays stable.
+  useEffect(() => {
+    if (!threadId) return;
+    const interval = setInterval(async () => {
+      const latest = await queryClient.query(
+        trpc.chat.recent.queryOptions({ threadId, limit: 20 }),
+      );
+      if (!latest?.length) return;
+
+      queryClient.setQueryData(messagesQueryKey, (old) => {
+        if (!old) return old;
+        const page0 = old.pages[0]?.items ?? [];
+        const knownIds = new Set(page0.map((m) => m.id));
+        const fresh = latest.filter((m) => !knownIds.has(m.id));
+        if (!fresh.length) return old; // nothing new — bail without a re-render
+
+        const nextPage0 = { ...old.pages[0], items: [...page0, ...fresh] };
+        return {
+          ...old,
+          pages: [nextPage0, ...old.pages.slice(1)],
+        };
+      });
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [threadId, messagesQueryKey]);
 
   const history = useMemo(
-    () => historyQuery.data?.pages.flatMap((page) => page.items ?? []) ?? [],
-    [historyQuery.data?.pages],
+    () => messagesQuery.data?.pages.flatMap((page) => page.items ?? []) ?? [],
+    [messagesQuery.data?.pages],
   );
-  const recent = useMemo(() => recentQuery.data ?? [], [recentQuery.data]);
 
-  /**
-   * Re-reads the authoritative rows. Separate from a plain `refresh` because
-   * callers await this one before dropping an optimistic patch, so it has to
-   * resolve after the refetch has actually landed.
-   */
   const refetchThread = useCallback(async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: trpc.chat.recent.queryKey({ threadId }),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: trpc.chat.messages.queryKey({ threadId }),
-      }),
-    ]);
-  }, [threadId]);
+    await messagesQuery.refetch();
+  }, [messagesQuery]);
 
   const invalidateThreadLists = useCallback(() => {
-    // Prefix match, so every page of the list is dropped. The badge has its own
-    // query and does not read the list, so it has to be invalidated separately.
     void queryClient.invalidateQueries({
       queryKey: trpc.chat.listThreads.queryKey(),
     });
@@ -102,35 +95,38 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
     });
   }, []);
 
-  /**
-   * Clear the unread badge on open and whenever a poll brings in something from
-   * someone else, so it does not linger while the thread is on screen.
-   */
   const markRead = useMutation(
-    trpc.chat.markRead.mutationOptions({
-      onSuccess: invalidateThreadLists,
-    }),
+    trpc.chat.markRead.mutationOptions({ onSuccess: invalidateThreadLists }),
   ).mutate;
   const lastReadMessageId = useRef<string | null>(null);
 
+  // `history` is unsorted-across-pages input to buildChatEntries, which sorts
+  // internally — but for "what's newest," page 0 IS the newest page (cursor
+  // pagination goes backward from `nextCursor`), so take the max within it.
+  const newestMessage = useMemo(() => {
+    const page0 = messagesQuery.data?.pages[0]?.items ?? [];
+    if (!page0.length) return undefined;
+    return page0.reduce((max, m) =>
+      new Date(m.createdAt) > new Date(max.createdAt) ? m : max,
+    );
+  }, [messagesQuery.data?.pages]);
+
   useEffect(() => {
-    if (!threadId || !myUserId) return;
-    const newest = recent[recent.length - 1];
-    if (!newest || newest.senderId === myUserId) return;
-    if (lastReadMessageId.current === newest.id) return;
-    lastReadMessageId.current = newest.id;
+    if (!threadId || !myUserId || !newestMessage) return;
+    if (newestMessage.senderId === myUserId) return;
+    if (lastReadMessageId.current === newestMessage.id) return;
+    lastReadMessageId.current = newestMessage.id;
     markRead({ threadId });
-  }, [recent, myUserId, threadId, markRead]);
+  }, [newestMessage, myUserId, threadId, markRead]);
 
   const loadOlder = useCallback(() => {
-    if (historyQuery.isFetchingNextPage) return;
-    if (historyQuery.hasNextPage) void historyQuery.fetchNextPage();
-  }, [historyQuery]);
+    if (messagesQuery.isFetchingNextPage) return;
+    if (messagesQuery.hasNextPage) void messagesQuery.fetchNextPage();
+  }, [messagesQuery]);
 
   const refresh = useCallback(() => {
-    void historyQuery.refetch();
-    void recentQuery.refetch();
-  }, [historyQuery, recentQuery]);
+    void messagesQuery.refetch();
+  }, [messagesQuery]);
 
   const isGroup = headerQuery.data?.type === "group";
   const koshId = headerQuery.data?.koshId ?? "";
@@ -138,11 +134,6 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
     ? "Loading..."
     : (headerQuery.data?.title ?? "Chat messages");
 
-  /**
-   * Memoised so the context value is referentially stable while nothing the
-   * transcript actually shows has changed. Without this every keystroke in the
-   * composer would hand the list a new object and re-render the transcript.
-   */
   return useMemo(
     () => ({
       threadId,
@@ -152,13 +143,13 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
       koshId,
       title,
       history,
-      recent,
-      isHistoryPending: historyQuery.isPending,
-      isHistoryError: historyQuery.isError,
-      isRefetching: historyQuery.isRefetching,
-      isFetchingOlder: historyQuery.isFetchingNextPage,
-      hasOlder: !!historyQuery.hasNextPage,
-      errorMessage: historyQuery.error?.message ?? "Failed to load messages.",
+      recent: [], // buildChatEntries still accepts this param; now always empty
+      isHistoryPending: messagesQuery.isPending,
+      isHistoryError: messagesQuery.isError,
+      isRefetching: messagesQuery.isRefetching,
+      isFetchingOlder: messagesQuery.isFetchingNextPage,
+      hasOlder: !!messagesQuery.hasNextPage,
+      errorMessage: messagesQuery.error?.message ?? "Failed to load messages.",
       loadOlder,
       refresh,
       refetchThread,
@@ -172,13 +163,12 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
       koshId,
       title,
       history,
-      recent,
-      historyQuery.isPending,
-      historyQuery.isError,
-      historyQuery.isRefetching,
-      historyQuery.isFetchingNextPage,
-      historyQuery.hasNextPage,
-      historyQuery.error,
+      messagesQuery.isPending,
+      messagesQuery.isError,
+      messagesQuery.isRefetching,
+      messagesQuery.isFetchingNextPage,
+      messagesQuery.hasNextPage,
+      messagesQuery.error,
       loadOlder,
       refresh,
       refetchThread,

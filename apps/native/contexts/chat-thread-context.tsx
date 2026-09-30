@@ -12,7 +12,19 @@ import {
   type MessageActions,
 } from "@/hooks/use-message-actions";
 import { buildChatEntries, type ChatListEntry } from "@kosh-app/utils";
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import {
+  ComponentRef,
+  createContext,
+  RefObject,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
+import { FlatList } from "react-native";
+import Animated from "react-native-reanimated";
 
 /**
  * One thread's worth of chat state, assembled in a fixed order and handed out
@@ -39,6 +51,8 @@ export type ChatThreadView = ChatTranscript & {
    * expensive merge of history, recent, pending rows and patches happens once
    * per change instead of once per consumer that happens to need it.
    */
+  scrollToEnd: () => void;
+  listRef: RefObject<FlatList<any> | null>;
   entries: ChatListEntry[];
 };
 
@@ -53,6 +67,10 @@ export const ChatThreadProvider = ({
   threadId: string;
   children: ReactNode;
 }) => {
+  const listRef = useRef<ComponentRef<typeof Animated.FlatList>>(null);
+  const scrollToEnd = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, [listRef]);
   const transcript = useChatTranscript(threadId);
 
   const optimistic = useChatOptimistic({
@@ -63,7 +81,7 @@ export const ChatThreadProvider = ({
     invalidateThreadLists: transcript.invalidateThreadLists,
   });
 
-  const composer = useChatComposer({ transcript, optimistic });
+  const composer = useChatComposer({ transcript, optimistic, scrollToEnd });
 
   const actions = useMessageActions({
     transcript,
@@ -84,9 +102,36 @@ export const ChatThreadProvider = ({
     [history, recent, pending, patches, isGroup, myUserId],
   );
 
+  const prevOldestKeyRef = useRef<string | undefined>(entries[0]?.key);
+  const autoLoadingRef = useRef(false);
+
+  useEffect(() => {
+    const oldestKey = entries[0]?.key;
+
+    if (!autoLoadingRef.current) {
+      prevOldestKeyRef.current = oldestKey;
+      return;
+    }
+    if (transcript.isFetchingOlder) return;
+
+    const grew = oldestKey !== prevOldestKeyRef.current;
+    prevOldestKeyRef.current = oldestKey;
+
+    if (!grew && transcript.hasOlder) {
+      transcript.loadOlder();
+    } else {
+      autoLoadingRef.current = false;
+    }
+  }, [entries, transcript]);
+
+  const loadOlder = useCallback(() => {
+    autoLoadingRef.current = true;
+    transcript.loadOlder();
+  }, [transcript]);
+
   const view = useMemo(
-    () => ({ ...transcript, entries }),
-    [transcript, entries],
+    () => ({ ...transcript, entries, listRef, loadOlder, scrollToEnd }),
+    [transcript, entries, listRef, loadOlder, scrollToEnd],
   );
 
   return (

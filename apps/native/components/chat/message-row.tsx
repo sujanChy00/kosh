@@ -113,6 +113,7 @@ function MessageRowImpl({
 
               <MessageRowText
                 deletedAt={message.deletedAt}
+                editedAt={message.editedAt}
                 content={message.content}
                 isMine={isMine}
                 isPending={isPending}

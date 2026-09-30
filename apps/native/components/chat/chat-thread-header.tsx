@@ -1,9 +1,13 @@
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { useChatThreadView } from "@/contexts/chat-thread-context";
 import ATTACH_FILE_ICON from "@expo/material-symbols/attach_file.xml";
 import MEMBERS_ICON from "@expo/material-symbols/group.xml";
 import INFO_ICON from "@expo/material-symbols/info.xml";
 import MORE_HORIZ_ICON from "@expo/material-symbols/more_horiz.xml";
+import { Text, TextButton } from "@expo/ui/jetpack-compose";
+import { fillMaxWidth } from "@expo/ui/jetpack-compose/modifiers";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Host } from "../layout/host";
 
 /**
  * Native header for an open thread: the title, and - for kosh group chats only -
@@ -14,14 +18,22 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
  * the person already on screen.
  */
 export const ChatThreadHeader = () => {
-  const { title, isGroup, koshId } = useChatThreadView();
+  const { colors } = useAppTheme();
+  const { title, isGroup, koshId, isHistoryPending } = useChatThreadView();
   const { threadId } = useLocalSearchParams<{ threadId: string }>();
   const router = useRouter();
 
   return (
     <>
-      <Stack.Title>{title}</Stack.Title>
-      {isGroup && (
+      <Stack.Title asChild>
+        <Host matchContents={{ vertical: true }} style={{ width: "100%" }}>
+          <TextButton modifiers={[fillMaxWidth()]}>
+            <Text>{title}</Text>
+          </TextButton>
+        </Host>
+      </Stack.Title>
+
+      {!isHistoryPending && isGroup && (
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Menu>
             <Stack.Toolbar.Icon sf="ellipsis.circle" src={MORE_HORIZ_ICON} />

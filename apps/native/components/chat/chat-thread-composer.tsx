@@ -5,7 +5,6 @@ import PHOTO_ICON from "@expo/material-symbols/add_photo_alternate.xml";
 import SEND_ICON from "@expo/material-symbols/arrow_upward_alt.xml";
 import CHECK_ICON from "@expo/material-symbols/check.xml";
 
-import { useAppTheme } from "@/contexts/app-theme-context";
 import { FilledIconButton, Icon, IconButton } from "@expo/ui/jetpack-compose";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
@@ -27,7 +26,7 @@ export type ChatComposerProps = {
   onConfirmEdit: (text: string) => void;
 };
 
-export const ChatComposer = ({
+export const ChatThreadComposer = ({
   value,
   onChangeText,
   onSend,
@@ -37,7 +36,6 @@ export const ChatComposer = ({
   onCancelTarget,
   onConfirmEdit,
 }: ChatComposerProps) => {
-  const { colors } = useAppTheme();
   const canSend = value.trim().length > 0;
 
   const handlePrimary = useCallback(() => {
@@ -51,16 +49,10 @@ export const ChatComposer = ({
   return (
     <KeyboardStickyView
       offset={{
-        closed: -25,
-        opened: -10,
+        opened: 16,
       }}
     >
-      <View
-        className="pt-2"
-        style={{
-          backgroundColor: colors.background,
-        }}
-      >
+      <View className={"p-2 pb-safe-offset-6 bg-background"}>
         {target && (
           <ChatReplyTextHolder target={target} onCancel={onCancelTarget} />
         )}

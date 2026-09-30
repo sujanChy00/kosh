@@ -167,8 +167,27 @@ export const useChatOptimistic = ({
 
   const editMutation = useMutation(
     trpc.chat.editMessage.mutationOptions({
-      onError: (error) =>
-        errorToast({ title: error.message || "Failed to edit message" }),
+      onMutate: ({ messageId, content }) => {
+        setPatches((current) => {
+          const next = new Map(current);
+          const existing = next.get(messageId);
+          next.set(messageId, {
+            ...existing,
+            content,
+            editedAt: new Date().toISOString(),
+          });
+          return next;
+        });
+      },
+      onSuccess: async (_, { messageId }) => {
+        await refetchThread();
+        clearPatch(messageId);
+      },
+      onError: (error, { messageId }) => {
+        clearPatch(messageId);
+        void refetchThread();
+        errorToast({ title: error.message || "Failed to edit message" });
+      },
     }),
   );
 
