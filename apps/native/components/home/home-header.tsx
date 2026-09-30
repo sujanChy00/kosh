@@ -1,24 +1,11 @@
 import { authClient } from "@/lib/auth-client";
 import { formatLongDate } from "@kosh-app/utils/date";
 import { Link } from "expo-router";
+
 import { TouchableOpacity, View } from "react-native";
-import { StyledSymbolView } from "../styled-symbol-view";
 import { ThemedText } from "../themed-text";
 import { Avatar } from "../ui/avatar";
-import { PrimaryButton } from "../ui/button";
-
-// <Host matchContents>
-//   <BadgedBox>
-//     <BadgedBox.Badge>
-//       <Badge>
-//         <Text>3</Text>
-//       </Badge>
-//     </BadgedBox.Badge>
-//     <Button onClick={() => alert('Pressed!')}>
-//       <Text>Press me</Text>
-//     </Button>
-//   </BadgedBox>
-// </Host>
+import { NotificationButton } from "./notfication-button";
 
 export const HomeHeader = () => {
   const { data: session } = authClient.useSession();
@@ -42,25 +29,7 @@ export const HomeHeader = () => {
       </View>
 
       <View className="flex-row items-center gap-2 shrink-0">
-        <Link href="/notification" asChild>
-          <PrimaryButton className="p-0 size-10 relative bg-primary-soft">
-            <View className="size-5 bg-danger items-center justify-center rounded-full absolute -top-1 right-1">
-              <ThemedText className="text-danger-foreground text-xs font-mono">
-                1
-              </ThemedText>
-            </View>
-
-            <StyledSymbolView
-              tintColorClassName="accent-foreground"
-              size={20}
-              name={{
-                android: "notifications",
-                ios: "bell",
-              }}
-            />
-          </PrimaryButton>
-        </Link>
-
+        <NotificationButton />
         <Link href="/setting" asChild>
           <TouchableOpacity>
             <Avatar>
