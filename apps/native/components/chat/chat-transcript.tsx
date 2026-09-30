@@ -5,7 +5,7 @@ import {
   useChatThreadView,
   useMessageActionsContext,
 } from "@/contexts/chat-thread-context";
-import { useKeyboard } from "@/hooks/use-keyboard";
+import { useItemLayouts } from "@/hooks/use-chat-transcript-layouts";
 import type { ChatListEntry } from "@kosh-app/utils";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
@@ -19,7 +19,7 @@ import { StyledSymbolView } from "../styled-symbol-view";
  * Static helpers extracted outside the component to avoid recreating function references on each render.
  */
 const keyExtractor = (item: ChatListEntry) => item.key;
-const getItemType = (item: ChatListEntry) => item.kind;
+// const getItemType = (item: ChatListEntry) => item.kind;
 const ItemSeparator = () => <View style={{ height: 10 }} />;
 const ListHeader = () => <View style={{ height: 20 }} />;
 const contentContainerStyle = { padding: 12 };
@@ -44,7 +44,6 @@ export const ChatTranscript = () => {
     listRef,
   } = useChatThreadView();
   const { openMessage } = useMessageActionsContext();
-  const { isKeyboardVisible, dismissKeyboard } = useKeyboard();
   const router = useRouter();
 
   const onPressImage = useCallback(
@@ -69,6 +68,14 @@ export const ChatTranscript = () => {
       }
     },
     [data],
+  );
+
+  const itemLayouts = useItemLayouts(data);
+
+  const getItemLayout = useCallback(
+    (_data: ArrayLike<ChatListEntry> | null | undefined, index: number) =>
+      itemLayouts[index] ?? { length: 70, offset: 0, index },
+    [itemLayouts],
   );
 
   const renderItem = useCallback(
@@ -137,6 +144,7 @@ export const ChatTranscript = () => {
       ListHeaderComponent={ListHeader}
       ListFooterComponent={ListFooter}
       inverted
+      getItemLayout={getItemLayout}
       onEndReached={loadOlder}
       ItemSeparatorComponent={ItemSeparator}
       contentContainerStyle={contentContainerStyle}
@@ -144,10 +152,10 @@ export const ChatTranscript = () => {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
       initialNumToRender={20}
-      maxToRenderPerBatch={15}
-      windowSize={21}
+      maxToRenderPerBatch={10}
+      windowSize={30}
       updateCellsBatchingPeriod={10}
-      removeClippedSubviews={false}
+      removeClippedSubviews
       scrollEventThrottle={16}
       onEndReachedThreshold={0.5}
       renderScrollComponent={memoList}
