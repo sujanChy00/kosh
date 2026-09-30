@@ -50,12 +50,12 @@ function MessageRowImpl({
   return (
     <View
       className={cn(
-        !isMine ? "items-end gap-1 flex-row" : "",
+        showSender ? "items-end gap-1 flex-row" : "",
         isMine ? "justify-end" : "justify-start",
         failed && "opacity-60",
       )}
     >
-      {!isMine && (
+      {!isMine && showSender && (
         <Avatar className="size-8 bg-muted">
           <Avatar.Image
             source={message.sender.image}
@@ -89,6 +89,7 @@ function MessageRowImpl({
             )}
           >
             <MessageRowReplyText
+              showSender={showSender}
               reply={message.replyTo}
               isMine={isMine}
               isDeleted={isDeleted}
@@ -125,13 +126,15 @@ function MessageRowImpl({
             />
           </View>
         </Pressable>
-        <MessageRowStatus
-          isMine={isMine}
-          message={message}
-          isSending={isSending}
-          failed={failed}
-          isDeleted={isDeleted}
-        />
+        {showSender && (
+          <MessageRowStatus
+            isMine={isMine}
+            message={message}
+            isSending={isSending}
+            failed={failed}
+            isDeleted={isDeleted}
+          />
+        )}
       </View>
     </View>
   );

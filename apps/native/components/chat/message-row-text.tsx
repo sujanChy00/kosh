@@ -50,17 +50,19 @@ export const MessageRowText = ({
           )}
         >
           {content}
-          {editedAt ? (
-            <ThemedText
-              className={cn(
-                "text-[10px] font-notosans-italic opacity-70 ml-1",
-                isMine ? "text-primary-foreground/75" : "text-muted-foreground",
-              )}
-            >
-              {" (edited)"}
-            </ThemedText>
-          ) : null}
         </ThemedText>
+        {editedAt ? (
+          <ThemedText
+            className={cn(
+              "text-[10px] font-notosans-italic opacity-70 ml-1",
+              isMine
+                ? "text-primary-foreground/75 text-right"
+                : "text-muted-foreground text-left",
+            )}
+          >
+            {" (edited)"}
+          </ThemedText>
+        ) : null}
       </View>
     );
   return null;

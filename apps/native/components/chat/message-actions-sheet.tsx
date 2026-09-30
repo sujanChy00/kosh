@@ -1,7 +1,7 @@
 import { useMessageActionsContext } from "@/contexts/chat-thread-context";
 import { cn, QUICK_REACTIONS } from "@kosh-app/utils";
 import { SymbolViewProps } from "expo-symbols";
-import { Modal, TouchableOpacity, View } from "react-native";
+import { Modal, Pressable, TouchableOpacity, View } from "react-native";
 import { FadeInDown } from "react-native-reanimated";
 import { AnimatedView } from "../animated-view";
 import { StyledSymbolView } from "../styled-symbol-view";
@@ -36,6 +36,17 @@ export const MessageActionsSheet = () => {
       onRequestClose={onClose}
     >
       <View className="flex-1 justify-end">
+        {/* Tapping the dimmed area above the sheet dismisses it - the only
+            close affordance a user has on iOS, where there is no back button.
+            `absolute inset-0` keeps it out of the `justify-end` flow, and being
+            declared before the sheet puts it underneath in paint order, so the
+            sheet's own rows win their taps. */}
+        <Pressable
+          className="absolute inset-0 bg-black/50"
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Close message actions"
+        />
         <AnimatedView entering={FadeInDown} className={"bg-surface pb-8"}>
           {canReact && (
             <View className="flex-row items-center justify-between p-4">

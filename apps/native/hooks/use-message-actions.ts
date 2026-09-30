@@ -59,7 +59,7 @@ export const useMessageActions = ({
   onReply,
   onEdit,
 }: UseMessageActionsOptions): MessageActions => {
-  const { dismissKeyboard, isKeyboardVisible } = useKeyboard();
+  const { dismissKeyboard } = useKeyboard();
   const haptics = useHaptics();
   const { history, recent, myUserId } = transcript;
   const { pending, patches } = optimistic;
@@ -181,18 +181,10 @@ export const useMessageActions = ({
   const openMessage = useCallback(
     (id: string) => {
       haptics("impact-light");
-      // react-native-keyboard-controller intercepts native keyboard events,
-      // so the standard RN `keyboardDidHide` listener is unreliable here.
-      // Instead, dismiss + defer with a short delay that lets the keyboard
-      // animation finish before the Modal tries to present.
-      if (isKeyboardVisible) {
-        dismissKeyboard();
-        setTimeout(() => setMessageId(id), 150);
-      } else {
-        setMessageId(id);
-      }
+      setMessageId(id);
+      void dismissKeyboard();
     },
-    [isKeyboardVisible],
+    [dismissKeyboard],
   );
 
   const onReact = useCallback(

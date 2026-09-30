@@ -36,14 +36,6 @@ export const MessageRowStatus = ({
           {formatMessageTime(message.createdAt)}
         </AnimatedText>
       )}
-      {message.editedAt && !isDeleted && !isSending && (
-        <AnimatedText
-          entering={FadeIn}
-          className="text-muted-foreground text-[10px] font-notosans-italic"
-        >
-          edited
-        </AnimatedText>
-      )}
 
       {isSending && (
         <AnimatedText
