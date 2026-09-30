@@ -3,15 +3,13 @@ import { ErrorComponent } from "@/components/layout/error-component";
 import { ListFetchingMoreComponent } from "@/components/layout/list-fetching-more-component";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
-import { trpc } from "@/utils/trpc";
+import { chatThreadsQuery } from "@/utils/trpc";
 import type { ChatThreadListItem } from "@kosh-app/api/routers/chat";
 import { LegendList } from "@legendapp/list/react-native";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo } from "react";
 import { ActivityIndicator, View } from "react-native";
-
-const PAGE_SIZE = 20;
 
 const keyExtractor = (item: ChatThreadListItem) => item.id;
 
@@ -36,12 +34,7 @@ const ChatScreen = () => {
     isPending,
     error,
     isError,
-  } = useInfiniteQuery(
-    trpc.chat.listThreads.infiniteQueryOptions(
-      { limit: PAGE_SIZE },
-      { getNextPageParam: (lastPage) => lastPage.nextCursor },
-    ),
-  );
+  } = useInfiniteQuery(chatThreadsQuery());
 
   const handleRefresh = useCallback(() => {
     refetch();

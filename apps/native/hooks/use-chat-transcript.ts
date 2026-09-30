@@ -1,5 +1,5 @@
 import { authClient } from "@/lib/auth-client";
-import { queryClient, trpc } from "@/utils/trpc";
+import { chatThreadsQueryKey, queryClient, trpc } from "@/utils/trpc";
 import type { ChatMessageItem } from "@kosh-app/api/routers/chat";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -87,8 +87,12 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
   }, [messagesQuery]);
 
   const invalidateThreadLists = useCallback(() => {
+    // Built by `chatThreadsQueryKey`, NOT `trpc.chat.listThreads.queryKey()`:
+    // the bare `queryKey()` is keyed `type: "query"` while this list is an
+    // infinite query, so the filter matches nothing and the invalidation
+    // silently does nothing. See the helper for the full story.
     queryClient.setQueriesData(
-      { queryKey: trpc.chat.listThreads.queryKey() },
+      { queryKey: chatThreadsQueryKey() },
       (oldData: any) => {
         if (!oldData?.pages) return oldData;
         return {
@@ -102,9 +106,7 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
         };
       },
     );
-    void queryClient.invalidateQueries({
-      queryKey: trpc.chat.listThreads.queryKey(),
-    });
+    void queryClient.invalidateQueries({ queryKey: chatThreadsQueryKey() });
     void queryClient.invalidateQueries({
       queryKey: trpc.chat.unreadTotal.queryKey(),
     });

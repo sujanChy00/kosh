@@ -50,12 +50,12 @@ function MessageRowImpl({
   return (
     <View
       className={cn(
-        showSender ? "items-end gap-1 flex-row" : "",
+        !isMine ? "items-end gap-1 flex-row" : "",
         isMine ? "justify-end" : "justify-start",
         failed && "opacity-60",
       )}
     >
-      {!isMine && showSender && (
+      {!isMine && (
         <Avatar className="size-8 bg-muted">
           <Avatar.Image
             source={message.sender.image}

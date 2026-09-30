@@ -130,6 +130,8 @@ export type MessagePatch = {
   reactions?: ChatMessageItem["reactions"];
   deletedAt?: string | null;
   content?: string | null;
+  /** Set by the optimistic edit so the "edited" marker appears without a refetch. */
+  editedAt?: string | null;
   attachments?: ChatMessageItem["attachments"];
   /** Cleared alongside the content: a tombstone does not keep its quote. */
   replyTo?: ChatMessageItem["replyTo"];
