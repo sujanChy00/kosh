@@ -109,6 +109,9 @@ const AppLayout = () => {
         name="chat/[threadId]/index"
         options={{
           headerShown: false,
+          // contentStyle: {
+          //   backcol
+          // }
         }}
       />
     </Stack>

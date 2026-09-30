@@ -3,7 +3,7 @@ import { Text, TextProps } from "react-native";
 
 export const ThemedText = ({
   className,
-  selectable = true,
+  selectable = false,
   ...rest
 }: TextProps) => {
   return (

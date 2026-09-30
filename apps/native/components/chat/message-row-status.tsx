@@ -1,7 +1,6 @@
 import { cn, formatMessageTime } from "@kosh-app/utils";
 import { View } from "react-native";
-import { FadeIn, FadeOut } from "react-native-reanimated";
-import { AnimatedText } from "../animated-text";
+import { ThemedText } from "../themed-text";
 
 interface Props {
   isMine: boolean;
@@ -29,31 +28,20 @@ export const MessageRowStatus = ({
       )}
     >
       {!isSending && (
-        <AnimatedText
-          entering={FadeIn}
-          className="text-muted-foreground text-[10px] font-mono-medium-italic"
-        >
+        <ThemedText className="text-muted-foreground text-[10px] font-mono-medium-italic">
           {formatMessageTime(message.createdAt)}
-        </AnimatedText>
+        </ThemedText>
       )}
 
       {isSending && (
-        <AnimatedText
-          entering={FadeIn}
-          exiting={FadeOut}
-          className="text-muted-foreground text-[10px] font-notosans-italic"
-        >
+        <ThemedText className="text-muted-foreground text-[10px] font-notosans-italic">
           Sending…
-        </AnimatedText>
+        </ThemedText>
       )}
       {failed && !isSending && (
-        <AnimatedText
-          entering={FadeIn}
-          exiting={FadeOut}
-          className="text-danger text-[10px] font-notosans-semibold"
-        >
+        <ThemedText className="text-danger text-[10px] font-notosans-semibold">
           Failed · tap to retry
-        </AnimatedText>
+        </ThemedText>
       )}
     </View>
   );

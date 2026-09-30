@@ -52,6 +52,8 @@ export type ChatThreadView = ChatTranscript & {
    * per change instead of once per consumer that happens to need it.
    */
   scrollToEnd: () => void;
+  /** Loads one older page. Unlike `loadOlder`, does not chain to the end. */
+  loadOlderOnce: () => void;
   listRef: RefObject<FlatList<any> | null>;
   entries: ChatListEntry[];
 };
@@ -129,9 +131,28 @@ export const ChatThreadProvider = ({
     transcript.loadOlder();
   }, [transcript]);
 
+  /**
+   * Loads exactly one older page.
+   *
+   * Deliberately separate from `loadOlder`: that one arms `autoLoadingRef`, and
+   * the effect above then keeps loading until the history runs out. That is
+   * right for "catch me up on everything" and wrong for jumping to a reply
+   * target, which should page just far enough to reach the message and stop.
+   */
+  const loadOlderOnce = useCallback(() => {
+    transcript.loadOlder();
+  }, [transcript]);
+
   const view = useMemo(
-    () => ({ ...transcript, entries, listRef, loadOlder, scrollToEnd }),
-    [transcript, entries, listRef, loadOlder, scrollToEnd],
+    () => ({
+      ...transcript,
+      entries,
+      listRef,
+      loadOlder,
+      loadOlderOnce,
+      scrollToEnd,
+    }),
+    [transcript, entries, listRef, loadOlder, loadOlderOnce, scrollToEnd],
   );
 
   return (

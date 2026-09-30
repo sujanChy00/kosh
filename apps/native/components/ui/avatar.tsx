@@ -1,8 +1,8 @@
 import { cn, getAvatarName } from "@kosh-app/utils";
 import { ImageProps } from "expo-image";
 import { View, ViewProps } from "react-native";
-import { AnimatedText } from "../animated-text";
 import { StyledImage } from "../styled-image";
+import { ThemedText } from "../themed-text";
 
 const Root = ({ className, ...rest }: ViewProps) => {
   return (
@@ -39,19 +39,19 @@ const AvatarFallback = ({
   source,
   fallback,
   ...rest
-}: React.ComponentProps<typeof AnimatedText> & {
+}: React.ComponentProps<typeof ThemedText> & {
   source: string | null | undefined;
   fallback: string;
 }) => {
   if (!!source) return null;
 
   return (
-    <AnimatedText
+    <ThemedText
       className={cn("text-foreground text-center", className)}
       {...rest}
     >
       {getAvatarName(fallback)}
-    </AnimatedText>
+    </ThemedText>
   );
 };
 
