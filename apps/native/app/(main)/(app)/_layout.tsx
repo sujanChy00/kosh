@@ -1,6 +1,8 @@
+import { useAppTheme } from "@/contexts/app-theme-context";
 import { Stack } from "expo-router";
 
 const AppLayout = () => {
+  const { isDark } = useAppTheme();
   return (
     <Stack
       screenOptions={{
@@ -103,15 +105,6 @@ const AppLayout = () => {
         name="join-requests"
         options={{
           headerTitle: "Join requests",
-        }}
-      />
-      <Stack.Screen
-        name="chat/[threadId]/index"
-        options={{
-          headerShown: false,
-          // contentStyle: {
-          //   backcol
-          // }
         }}
       />
     </Stack>

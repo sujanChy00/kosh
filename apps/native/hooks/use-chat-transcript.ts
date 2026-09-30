@@ -44,6 +44,23 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
     ),
   );
 
+  /**
+   * Read the query result field by field rather than depending on the result
+   * object.
+   *
+   * `useInfiniteQuery` hands back a brand new result object on every render -
+   * `getOptimisticResult` rebuilds it each call even when nothing changed. The
+   * query *functions* are bound once per observer and the flags are booleans,
+   * so those are the only parts with a stable identity.
+   *
+   * Depending on `messagesQuery` itself therefore rebuilds every callback below
+   * on every render, which cascades into the hook's return memo, then into the
+   * thread context value, and finally re-renders every consumer of it - none of
+   * which changes when the messages have not.
+   */
+  const { fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
+    messagesQuery;
+
   const messagesQueryKey = useMemo(
     () => trpc.chat.messages.infiniteQueryKey({ threadId, limit: PAGE_SIZE }),
     [threadId],
@@ -83,8 +100,8 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
   );
 
   const refetchThread = useCallback(async () => {
-    await messagesQuery.refetch();
-  }, [messagesQuery]);
+    await refetch();
+  }, [refetch]);
 
   const invalidateThreadLists = useCallback(() => {
     // Built by `chatThreadsQueryKey`, NOT `trpc.chat.listThreads.queryKey()`:
@@ -137,13 +154,13 @@ export const useChatTranscript = (threadId: string): ChatTranscript => {
   }, [newestMessage, myUserId, threadId, markRead]);
 
   const loadOlder = useCallback(() => {
-    if (messagesQuery.isFetchingNextPage) return;
-    if (messagesQuery.hasNextPage) void messagesQuery.fetchNextPage();
-  }, [messagesQuery]);
+    if (isFetchingNextPage) return;
+    if (hasNextPage) void fetchNextPage();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const refresh = useCallback(() => {
-    void messagesQuery.refetch();
-  }, [messagesQuery]);
+    void refetchThread();
+  }, [refetchThread]);
 
   const isGroup = headerQuery.data?.type === "group";
   const koshId = headerQuery.data?.koshId ?? "";

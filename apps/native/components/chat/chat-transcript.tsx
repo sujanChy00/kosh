@@ -42,7 +42,8 @@ const SCROLL_RETRY_MS = 350;
  */
 const keyExtractor = (item: ChatListEntry) => item.key;
 // const getItemType = (item: ChatListEntry) => item.kind;
-const ItemSeparator = () => <View style={{ height: 10 }} />;
+const separatorStyle = { height: 10 };
+const ItemSeparator = () => <View style={separatorStyle} />;
 const ListHeader = () => <View style={{ height: 20 }} />;
 const contentContainerStyle = { padding: 12 };
 
@@ -79,10 +80,29 @@ export const ChatTranscript = () => {
 
   const data = useMemo(() => entries.toReversed(), [entries]);
 
+  /**
+   * Latest-value refs for the two things the row callbacks need to read.
+   *
+   * `MessageRow` is memoized but its comparator deliberately bails out when
+   * `onPressReply` changes identity (see message-row.tsx). An ordinary
+   * `useCallback` chain over `data` would hand rows a fresh function on every
+   * poll tick, reaction patch and pending bubble - re-rendering every visible
+   * message even though none of them changed. Reading through refs keeps the
+   * whole chain stable for the life of the component, so `renderItem` only
+   * changes when something it actually renders has changed.
+   */
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  const loadOlderOnceRef = useRef(loadOlderOnce);
+  loadOlderOnceRef.current = loadOlderOnce;
+
   const findMessageIndex = useCallback(
     (targetId: string) =>
-      data.findIndex((e) => e.kind === "message" && e.message.id === targetId),
-    [data],
+      dataRef.current.findIndex(
+        (e) => e.kind === "message" && e.message.id === targetId,
+      ),
+    [],
   );
 
   const scrollToIndex = useCallback(
@@ -113,9 +133,9 @@ export const ChatTranscript = () => {
       // Not loaded yet. Arm the jump and pull in one more page; the effect
       // below takes it from there.
       pendingJump.current = { id: targetId, pages: 0 };
-      loadOlderOnce();
+      loadOlderOnceRef.current();
     },
-    [findMessageIndex, scrollToIndex, loadOlderOnce],
+    [findMessageIndex, scrollToIndex],
   );
 
   /**
@@ -124,6 +144,14 @@ export const ChatTranscript = () => {
    * Re-runs whenever `data` changes, which is exactly when a freshly fetched
    * page has arrived, so there is no polling and no arbitrary wait between
    * attempts - the fetch resolving is the signal.
+   *
+   * `loadOlderOnceRef` is a ref rather than the value itself on purpose. The
+   * loader's identity flips when `isFetchingNextPage` changes, which happens when
+   * a fetch *starts* as well as when it lands. Depending on the value would
+   * re-run this effect on the way in, calling the loader while a fetch is
+   * already in flight - a no-op that still burns one of the jump's page
+   * attempts. Through the ref, an attempt is spent only when a page genuinely
+   * arrives, so `MAX_JUMP_PAGES` means what it says.
    */
   useEffect(() => {
     const pending = pendingJump.current;
@@ -143,8 +171,8 @@ export const ChatTranscript = () => {
     }
 
     pending.pages += 1;
-    loadOlderOnce();
-  }, [data, hasOlder, findMessageIndex, scrollToIndex, loadOlderOnce]);
+    loadOlderOnceRef.current();
+  }, [data, hasOlder, findMessageIndex, scrollToIndex]);
 
   /**
    * FlatList cannot scroll to a row whose height it has not measured. Jump to
@@ -207,19 +235,16 @@ export const ChatTranscript = () => {
   }, [isHistoryPending]);
 
   const ListFooter = useMemo(
-    () => (
-      <View className="pt-safe-offset-20">
-        {isFetchingOlder && (
-          <AnimatedView
-            entering={ZoomIn}
-            exiting={ZoomOut}
-            className="items-center justify-center"
-          >
-            <ActivityIndicator size="small" />
-          </AnimatedView>
-        )}
-      </View>
-    ),
+    () =>
+      isFetchingOlder ? (
+        <AnimatedView
+          entering={ZoomIn}
+          exiting={ZoomOut}
+          className="items-center justify-center"
+        >
+          <ActivityIndicator size="small" />
+        </AnimatedView>
+      ) : undefined,
     [isFetchingOlder],
   );
 
