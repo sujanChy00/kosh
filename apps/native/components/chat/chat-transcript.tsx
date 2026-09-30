@@ -5,6 +5,7 @@ import {
   useChatThreadView,
   useMessageActionsContext,
 } from "@/contexts/chat-thread-context";
+import { useKeyboard } from "@/hooks/use-keyboard";
 import type { ChatListEntry } from "@kosh-app/utils";
 import { useRouter } from "expo-router";
 import { useCallback, useMemo } from "react";
@@ -43,6 +44,7 @@ export const ChatTranscript = () => {
     listRef,
   } = useChatThreadView();
   const { openMessage } = useMessageActionsContext();
+  const { isKeyboardVisible, dismissKeyboard } = useKeyboard();
   const router = useRouter();
 
   const onPressImage = useCallback(

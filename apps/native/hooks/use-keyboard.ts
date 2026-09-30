@@ -1,8 +1,6 @@
-import { useCallback } from "react";
-import {
-  KeyboardController,
-  useKeyboardState,
-} from "react-native-keyboard-controller";
+import { useCallback, useEffect, useState } from "react";
+import { Keyboard } from "react-native";
+import { KeyboardController } from "react-native-keyboard-controller";
 
 interface UseKeyboardReturn {
   isKeyboardVisible: boolean;
@@ -26,7 +24,21 @@ interface UseKeyboardReturn {
  * never grew.
  */
 export const useKeyboard = (): UseKeyboardReturn => {
-  const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener("keyboardDidShow", () =>
+      setIsKeyboardVisible(true),
+    );
+    const hideSubscription = Keyboard.addListener("keyboardDidHide", () =>
+      setIsKeyboardVisible(false),
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const dismissKeyboard = useCallback(() => KeyboardController.dismiss(), []);
 

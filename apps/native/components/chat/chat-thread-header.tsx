@@ -78,6 +78,7 @@ export const ChatThreadHeader = () => {
               color={colors.text}
               style={{
                 textAlign: "center",
+                fontFamily: "notosans-medium",
               }}
             >
               {isHistoryPending ? "Loading..." : title}

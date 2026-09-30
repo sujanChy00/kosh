@@ -178,14 +178,11 @@ export const useMessageActions = ({
   );
 
   const onClose = useCallback(() => setMessageId(null), []);
-  const openMessage = useCallback(
-    (id: string) => {
-      haptics("impact-light");
-      setMessageId(id);
-      void dismissKeyboard();
-    },
-    [dismissKeyboard],
-  );
+  const openMessage = useCallback((id: string) => {
+    haptics("impact-light");
+    setMessageId(id);
+    // void dismissKeyboard();
+  }, []);
 
   const onReact = useCallback(
     (emoji: string) => {

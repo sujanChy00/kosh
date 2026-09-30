@@ -22,7 +22,7 @@ export const MessageRowText = ({
       <View
         className={cn(
           "px-4 py-2 rounded-3xl bg-surface-secondary/60",
-          isMine ? "rounded-br-none" : "rounded-bl-none",
+          isMine ? "" : "rounded-bl-none",
         )}
       >
         <ThemedText
@@ -37,9 +37,7 @@ export const MessageRowText = ({
       <View
         className={cn(
           "px-4 py-2 rounded-3xl",
-          isMine
-            ? "rounded-br-none bg-primary"
-            : "rounded-bl-none  bg-surface-secondary",
+          isMine ? "bg-primary" : "rounded-bl-none bg-surface-secondary",
         )}
       >
         <ThemedText
