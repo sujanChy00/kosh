@@ -78,3 +78,39 @@ export const chatThreadsQuery = () =>
   );
 
 export const chatThreadsQueryKey = () => chatThreadsQuery().queryKey;
+
+/**
+ * Single source of truth for the notification feed's page size and query
+ * options, for the same reason as the chat helpers above: the list, its
+ * invalidations and its optimistic updates all have to build the *same* key, and
+ * a key built anywhere else silently matches nothing.
+ *
+ * `trpc.notification.list.queryKey()` has exactly the trap documented above -
+ * it emits `{ type: "query" }` while this list is an infinite query keyed
+ * `{ type: "infinite", input: { limit } }`.
+ */
+export const NOTIFICATION_FEED_PAGE_SIZE = 20;
+
+/**
+ * The feed refreshes faster than the bell badge: the badge only has to keep a
+ * count roughly current, while the feed is the thing the user is actually
+ * looking at. There is no realtime channel in the app, so polling is the only
+ * way either of them learns about a message arriving on another device.
+ */
+export const NOTIFICATION_FEED_POLL_INTERVAL_MS = 5000;
+export const NOTIFICATION_BADGE_POLL_INTERVAL_MS = 10000;
+
+export const notificationFeedQuery = () =>
+  trpc.notification.list.infiniteQueryOptions(
+    { limit: NOTIFICATION_FEED_PAGE_SIZE },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    },
+  );
+
+export const notificationFeedQueryKey = () => notificationFeedQuery().queryKey;
+
+export const notificationUnreadCountQuery = () => ({
+  ...trpc.notification.unreadCount.queryOptions(),
+  refetchInterval: NOTIFICATION_BADGE_POLL_INTERVAL_MS,
+});

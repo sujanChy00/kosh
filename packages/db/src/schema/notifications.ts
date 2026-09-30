@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   pgTable,
   text,
@@ -53,6 +53,21 @@ export const notification = pgTable(
     index("notification_kosh_id_idx").on(table.koshId),
     index("notification_read_at_idx").on(table.userId, table.readAt),
     index("notification_type_idx").on(table.type),
+    /**
+     * Backs the in-app notification feed, which is one row per thread: it
+     * partitions by `data->>'threadId'` and takes the newest row in each
+     * partition.
+     *
+     * The thread id lives in a jsonb payload, so no index on the table's own
+     * columns can serve that grouping - without this the feed degrades into a
+     * full scan of every notification the user has ever received, on every poll.
+     *
+     * Partial on `chat_message` because that is the only type the feed reads
+     * today; the predicate keeps the other types out of the index entirely.
+     */
+    index("notification_chat_feed_idx")
+      .on(table.userId, sql`(data->>'threadId')`, table.createdAt.desc())
+      .where(sql`${table.type} = 'chat_message'`),
   ],
 );
 

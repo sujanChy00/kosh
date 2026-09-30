@@ -1,0 +1,1 @@
+CREATE INDEX "notification_chat_feed_idx" ON "notification" USING btree ("user_id",(data->>'threadId'),"created_at" DESC NULLS LAST) WHERE "notification"."type" = 'chat_message';
