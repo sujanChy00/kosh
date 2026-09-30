@@ -61,10 +61,20 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
  */
 export const CHAT_THREADS_PAGE_SIZE = 20;
 
+/**
+ * How often the thread list refreshes. Matches the in-thread poll
+ * (`POLL_INTERVAL_MS` in `use-chat-transcript`): there is no realtime channel in
+ * the app, so without this a message sent from another device stayed invisible
+ * on the list until the user pulled down to refresh.
+ */
+export const CHAT_THREADS_POLL_INTERVAL_MS = 3000;
+
 export const chatThreadsQuery = () =>
   trpc.chat.listThreads.infiniteQueryOptions(
     { limit: CHAT_THREADS_PAGE_SIZE },
-    { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    },
   );
 
 export const chatThreadsQueryKey = () => chatThreadsQuery().queryKey;
