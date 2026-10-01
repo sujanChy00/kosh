@@ -1,28 +1,27 @@
 import { KoshMemberContributionDetails } from "@/components/kosh/membership/kosh-member-contribution-details";
+import KoshMemberOptions from "@/components/kosh/membership/kosh-member-options";
 import { ErrorComponent } from "@/components/layout/error-component";
 import { PendingComponent } from "@/components/layout/pending-component";
 import { StyledSymbolView } from "@/components/styled-symbol-view";
 import { ThemedText } from "@/components/themed-text";
 import { Avatar } from "@/components/ui/avatar";
-import { DangerSoftButton, SecondaryButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { Separator } from "@/components/ui/separator";
 import { useHaptics } from "@/hooks/use-haptics";
-import { errorToast, successToast } from "@/utils/toast";
 import { trpc } from "@/utils/trpc";
+
 import { formatAmount } from "@kosh-app/utils";
 import { formatShortDate } from "@kosh-app/utils/date";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, RefreshControl, ScrollView, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { RefreshControl, ScrollView, View } from "react-native";
 
 const KoshMembershipScreen = () => {
   const { id: koshId, userId } = useLocalSearchParams<{
     id: string;
     userId: string;
   }>();
-  const router = useRouter();
   const haptics = useHaptics();
 
   const { data, isPending, isError, error, refetch, isRefetching } = useQuery({
@@ -32,118 +31,6 @@ const KoshMembershipScreen = () => {
     }),
     enabled: !!koshId && !!userId,
   });
-
-  const inviteTreasurerMutation = useMutation({
-    ...trpc.membership.inviteTreasurer.mutationOptions(),
-    onSuccess: () => {
-      haptics("success");
-      successToast({ title: "Treasurer invitation sent!" });
-      refetch();
-    },
-    onError: (err) => {
-      haptics("error");
-      errorToast({ title: err.message ?? "Failed to send invitation" });
-    },
-  });
-
-  const demoteTreasurerMutation = useMutation({
-    ...trpc.membership.demoteTreasurer.mutationOptions(),
-    onSuccess: () => {
-      haptics("success");
-      successToast({ title: "Demoted to member" });
-      refetch();
-    },
-    onError: (err) => {
-      haptics("error");
-      errorToast({ title: err.message ?? "Failed to demote member" });
-    },
-  });
-
-  const removeMemberMutation = useMutation({
-    ...trpc.membership.removeMember.mutationOptions(),
-    onSuccess: () => {
-      haptics("success");
-      successToast({ title: "Member removed from kosh" });
-      router.back();
-    },
-    onError: (err) => {
-      haptics("error");
-      errorToast({ title: err.message ?? "Failed to remove member" });
-    },
-  });
-
-  // Find-or-create, so tapping this repeatedly reuses the same DM thread rather
-  // than stacking up duplicates.
-  const directThreadMutation = useMutation(
-    trpc.chat.getOrCreateDirectThread.mutationOptions({
-      onSuccess: ({ threadId }) => {
-        haptics("success");
-        router.push(`/chat/${threadId}`);
-      },
-      onError: (err) => {
-        haptics("error");
-        errorToast({ title: err.message ?? "Failed to open chat" });
-      },
-    }),
-  );
-
-  const handleMessage = () => {
-    if (!koshId || !userId) return;
-    directThreadMutation.mutate({ koshId, userId });
-  };
-
-  const handleInviteTreasurer = () => {
-    Alert.alert(
-      "Invite Treasurer",
-      `Are you sure you want to invite ${data?.member.name ?? "this member"} to become a Koshadhyaksh (Treasurer)?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Invite",
-          onPress: () => {
-            if (!koshId || !userId) return;
-            inviteTreasurerMutation.mutate({ koshId, userId });
-          },
-        },
-      ],
-    );
-  };
-
-  const handleDemoteTreasurer = () => {
-    Alert.alert(
-      "Demote Treasurer",
-      `Are you sure you want to demote ${data?.member.name ?? "this member"} back to a Sadasya (Member)?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Demote",
-          style: "destructive",
-          onPress: () => {
-            if (!koshId || !userId) return;
-            demoteTreasurerMutation.mutate({ koshId, userId });
-          },
-        },
-      ],
-    );
-  };
-
-  const handleRemoveMember = () => {
-    Alert.alert(
-      "Remove Member",
-      `Are you sure you want to remove ${data?.member.name ?? "this member"} from the kosh? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            if (!koshId || !userId) return;
-            removeMemberMutation.mutate({ koshId, userId });
-          },
-        },
-      ],
-    );
-  };
 
   if (isPending)
     return (
@@ -176,23 +63,10 @@ const KoshMembershipScreen = () => {
     pendingTreasurerInvite,
   } = data;
 
-  const canInviteTreasurer =
-    viewerRole === "adhyaksh" &&
-    member.role === "sadasya" &&
-    !pendingTreasurerInvite &&
-    !isSelf;
-
-  const canDemoteTreasurer =
-    viewerRole === "adhyaksh" && member.role === "koshadhyaksh" && !isSelf;
-
-  const canRemoveMember =
-    (viewerRole === "adhyaksh" || viewerRole === "koshadhyaksh") &&
-    member.role !== "adhyaksh" &&
-    !isSelf;
-
   return (
     <View className="flex-1">
       <Stack.Title>{member.name ?? "Member details"}</Stack.Title>
+      <KoshMemberOptions memberDetails={data} refetch={refetch} />
       <ScrollView
         refreshControl={
           <RefreshControl
@@ -269,27 +143,20 @@ const KoshMembershipScreen = () => {
                 </ThemedText>
               )}
             </View>
+            {pendingTreasurerInvite && (
+              <View className="flex-row items-center gap-2 bg-warning/15 p-3 rounded-2xl">
+                <StyledSymbolView
+                  tintColorClassName="accent-warning"
+                  size={18}
+                  name={{ android: "schedule" }}
+                />
+                <ThemedText className="text-xs text-warning font-medium flex-1">
+                  Treasurer invitation is pending response.
+                </ThemedText>
+              </View>
+            )}
           </Card>
         </View>
-
-        {/* Direct Message */}
-        {!isSelf && (
-          <SecondaryButton
-            onPress={handleMessage}
-            disabled={directThreadMutation.isPending}
-          >
-            <StyledSymbolView
-              tintColorClassName="accent-primary"
-              size={18}
-              name={{ android: "forum", ios: "bubble.left.and.bubble.right" }}
-            />
-            <SecondaryButton.Label>
-              {directThreadMutation.isPending
-                ? "Opening chat…"
-                : `Message ${member.name?.split(" ")[0] ?? "member"}`}
-            </SecondaryButton.Label>
-          </SecondaryButton>
-        )}
 
         {/* Stats Grid */}
         <View className="gap-y-2">
@@ -461,88 +328,7 @@ const KoshMembershipScreen = () => {
           </View>
         )}
 
-        {/* Admin / Treasurer Actions */}
-        {(canInviteTreasurer ||
-          canDemoteTreasurer ||
-          canRemoveMember ||
-          pendingTreasurerInvite) && (
-          <View className="gap-y-2">
-            <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
-              Management Actions
-            </ThemedText>
-            <View className="bg-surface p-4 rounded-3xl gap-y-3">
-              {pendingTreasurerInvite && (
-                <View className="flex-row items-center gap-2 bg-warning/15 p-3 rounded-2xl">
-                  <StyledSymbolView
-                    tintColorClassName="accent-warning"
-                    size={18}
-                    name={{ android: "schedule" }}
-                  />
-                  <ThemedText className="text-xs text-warning font-medium flex-1">
-                    Treasurer invitation is pending response.
-                  </ThemedText>
-                </View>
-              )}
-
-              {canInviteTreasurer && (
-                <SecondaryButton
-                  onPress={handleInviteTreasurer}
-                  disabled={inviteTreasurerMutation.isPending}
-                >
-                  <StyledSymbolView
-                    tintColorClassName="accent-primary"
-                    size={18}
-                    name={{ android: "badge" }}
-                  />
-                  <SecondaryButton.Label>
-                    {inviteTreasurerMutation.isPending
-                      ? "Sending..."
-                      : "Invite as Koshadhyaksh (Treasurer)"}
-                  </SecondaryButton.Label>
-                </SecondaryButton>
-              )}
-
-              {canDemoteTreasurer && (
-                <SecondaryButton
-                  onPress={handleDemoteTreasurer}
-                  disabled={demoteTreasurerMutation.isPending}
-                >
-                  <StyledSymbolView
-                    tintColorClassName="accent-warning"
-                    size={18}
-                    name={{ android: "arrow_downward" }}
-                  />
-                  <SecondaryButton.Label>
-                    {demoteTreasurerMutation.isPending
-                      ? "Demoting..."
-                      : "Demote to Sadasya"}
-                  </SecondaryButton.Label>
-                </SecondaryButton>
-              )}
-
-              {canRemoveMember && (
-                <DangerSoftButton
-                  onPress={handleRemoveMember}
-                  disabled={removeMemberMutation.isPending}
-                >
-                  <StyledSymbolView
-                    tintColorClassName="accent-danger"
-                    size={18}
-                    name={{ android: "person_remove" }}
-                  />
-                  <DangerSoftButton.Label>
-                    {removeMemberMutation.isPending
-                      ? "Removing..."
-                      : "Remove Member from Kosh"}
-                  </DangerSoftButton.Label>
-                </DangerSoftButton>
-              )}
-            </View>
-          </View>
-        )}
-
         {/* Contribution History */}
-
         <View className="flex-row items-center justify-between">
           <ThemedText className="font-mono-medium text-xs uppercase text-muted-foreground">
             Contribution History ({contributions.length})

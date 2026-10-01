@@ -20,7 +20,7 @@ export type MessageRowProps = {
   myUserId: string;
   onLongPress: (messageId: string) => void;
   onPressImage: (url: string) => void;
-  onPressReply?: (messageId: string) => void;
+  onPressReply?: (messageId: string, replyDeleted: boolean) => void;
 };
 
 function MessageRowImpl({

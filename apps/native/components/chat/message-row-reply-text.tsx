@@ -8,7 +8,7 @@ interface Props {
   isMine: boolean;
   reply: ChatMessageItem["replyTo"];
   isDeleted: boolean;
-  onPressReply?: (messageId: string) => void;
+  onPressReply?: (messageId: string, replyDeleted: boolean) => void;
 }
 
 export const MessageRowReplyText = ({
@@ -21,7 +21,7 @@ export const MessageRowReplyText = ({
 
   const handlePress = () => {
     if (reply.id && onPressReply) {
-      onPressReply(reply.id);
+      onPressReply(reply.id, !!reply.deletedAt);
     }
   };
 

@@ -5,7 +5,7 @@ import {
   useChatThreadView,
   useMessageActionsContext,
 } from "@/contexts/chat-thread-context";
-import { errorToast } from "@/utils/toast";
+import { errorToast, toast } from "@/utils/toast";
 import type { ChatListEntry } from "@kosh-app/utils";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef } from "react";
@@ -124,7 +124,25 @@ export const ChatTranscript = () => {
   const pendingJump = useRef<{ id: string; pages: number } | null>(null);
 
   const scrollToMessage = useCallback(
-    (targetId: string) => {
+    (targetId: string, replyDeleted: boolean) => {
+      /**
+       * A quote pointing at a deleted message is a dead end, and an expensive
+       * one. The tombstone renders as a single grey "This message was deleted"
+       * pill (message-row-text.tsx), carrying nothing the quote the user just
+       * tapped does not already show - and reaching it can cost several pages
+       * of history. So say so plainly and stay put.
+       *
+       * Deliberately worded differently from the give-up message below: that
+       * one means the message is gone from the thread, this one means the user
+       * simply cannot go there.
+       */
+      if (replyDeleted) {
+        toast({
+          title: "This message was deleted by its sender.",
+        });
+        return;
+      }
+
       const index = findMessageIndex(targetId);
       if (index !== -1) {
         scrollToIndex(index);
